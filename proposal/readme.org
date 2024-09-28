@@ -2,4 +2,4 @@
 - Install [[https://github.com/casey/just][just]].
 - Install [[https://pandoc.org/][pandoc]].
 - Install [[https://github.com/tectonic-typesetting/tectonic][tectonic]].
-- Run `just`.
+- Run ~just~.
