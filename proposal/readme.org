@@ -3,3 +3,20 @@
 - Install [[https://pandoc.org/][pandoc]].
 - Install [[https://github.com/tectonic-typesetting/tectonic][tectonic]].
 - Run ~just~.
+
+* Notes 
+- No Github action pipeline yet, sorry folks.
+- I've included the actual PDF in Git for the time being, so that we can [[./proposal.pdf][view it]].
+- The only file you need to edit to work on the proposal text is [[./proposal.org][this one]]. The syntax is just Orgmode, and you can see an example of links and citations in the text I've added. 
+
+* Orgmode basics
+(Look at the source of this file.).
+
+Here's *bold*, _underlined_, /italics/, ~code~. 
+
+#+begin_quote
+Block quotes can be written like this.
+#+end_src
+
+Single line breaks won't be rendered.
+So I put each new sentence on a new line for better source control and code review.
