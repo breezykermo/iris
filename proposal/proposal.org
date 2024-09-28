@@ -1,0 +1,26 @@
+#+TITLE: Iris: SoTA  
+#+AUTHOR: Cedric Sirianni, Mithi Jethwa, Lachlan Kermode
+#+OPTIONS: toc:nil
+#+LATEX_CLASS: acmart
+#+LATEX_CLASS_OPTIONS: [sigconf]
+
+* Abstract
+Your abstract text here.
+
+* Introduction
+** Background
+** Motivation
+
+* Related Work
+
+* Methodology
+** Experimental Setup
+** Data Collection
+
+* Results and Discussion
+
+* Conclusion
+
+* Acknowledgments
+
+

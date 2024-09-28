@@ -1,0 +1,74 @@
+@misc{gottesburenUnleashingGraphPartitioning2024,
+  title = {Unleashing {{Graph Partitioning}} for {{Large-Scale Nearest Neighbor Search}}},
+  author = {Gottesb{\"u}ren, Lars and Dhulipala, Laxman and Jayaram, Rajesh and Lacki, Jakub},
+  year = {2024},
+  month = mar,
+  number = {arXiv:2403.01797},
+  eprint = {2403.01797},
+  primaryclass = {cs},
+  publisher = {arXiv},
+  urldate = {2024-09-28},
+  abstract = {We consider the fundamental problem of decomposing a large-scale approximate nearest neighbor search (ANNS) problem into smaller sub-problems. The goal is to partition the input points into neighborhood-preserving shards, so that the nearest neighbors of any point are contained in only a few shards. When a query arrives, a routing algorithm is used to identify the shards which should be searched for its nearest neighbors. This approach forms the backbone of distributed ANNS, where the dataset is so large that it must be split across multiple machines. In this paper, we design simple and highly efficient routing methods, and prove strong theoretical guarantees on their performance. A crucial characteristic of our routing algorithms is that they are inherently modular, and can be used with any partitioning method. This addresses a key drawback of prior approaches, where the routing algorithms are inextricably linked to their associated partitioning method. In particular, our new routing methods enable the use of balanced graph partitioning, which is a high-quality partitioning method without a naturally associated routing algorithm. Thus, we provide the first methods for routing using balanced graph partitioning that are extremely fast to train, admit low latency, and achieve high recall. We provide a comprehensive evaluation of our full partitioning and routing pipeline on billion-scale datasets, where it outperforms existing scalable partitioning methods by significant margins, achieving up to 2.14x higher QPS at 90\% recall\$@10\$ than the best competitor.},
+  archiveprefix = {arXiv},
+  keywords = {Computer Science - Data Structures and Algorithms,Computer Science - Information Retrieval},
+  file = {/home/alice/Zotero/storage/NBZGE8FY/Gottesbüren et al. - 2024 - Unleashing Graph Partitioning for Large-Scale Nearest Neighbor Search.pdf;/home/alice/Zotero/storage/YXE44C9W/2403.html}
+}
+
+@inproceedings{iwabuchiMassivescaleDistributedNeighborhood2023,
+  title = {Towards {{A Massive-scale Distributed Neighborhood Graph Construction}}},
+  booktitle = {Proceedings of the {{SC}} '23 {{Workshops}} of {{The International Conference}} on {{High Performance Computing}}, {{Network}}, {{Storage}}, and {{Analysis}}},
+  author = {Iwabuchi, Keita and Steil, Trevor and Priest, Benjamin and Pearce, Roger and Sanders, Geoffrey},
+  year = {2023},
+  month = nov,
+  series = {{{SC-W}} '23},
+  pages = {730--738},
+  publisher = {Association for Computing Machinery},
+  address = {New York, NY, USA},
+  doi = {10.1145/3624062.3625132},
+  urldate = {2024-09-25},
+  abstract = {Graph-based approximate nearest neighbor algorithms have shown high performance and quality. However, such approaches require a large amount of memory and still take a long time to construct high-quality nearest neighbor graphs (NNGs). Using distributed memory systems is important when data is large or a shorter indexing time is desired. We develop a distributed memory version of NN-Descent, a widely known graph-based ANN algorithm, closely following algorithmic advances by PyNN-Descent authors. Our distributed NN-Descent (DNND) is built on top of MPI and leverages two existing high-performance computing libraries: YGM (an asynchronous communication library) and Metall (a persistent memory allocator). We evaluate the performance of DNND on an HPC system using billion-scale datasets, demonstrating that our approach shows high performance and strong scaling and has great potential for developing massive-scale NNG frameworks.},
+  isbn = {9798400707858}
+}
+
+@misc{patelACORNPerformantPredicateAgnostic2024,
+  title = {{{ACORN}}: {{Performant}} and {{Predicate-Agnostic Search Over Vector Embeddings}} and {{Structured Data}}},
+  shorttitle = {{{ACORN}}},
+  author = {Patel, Liana and Kraft, Peter and Guestrin, Carlos and Zaharia, Matei},
+  year = {2024},
+  month = mar,
+  number = {arXiv:2403.04871},
+  eprint = {2403.04871},
+  primaryclass = {cs},
+  publisher = {arXiv},
+  doi = {10.48550/arXiv.2403.04871},
+  urldate = {2024-09-25},
+  abstract = {Applications increasingly leverage mixed-modality data, and must jointly search over vector data, such as embedded images, text and video, as well as structured data, such as attributes and keywords. Proposed methods for this hybrid search setting either suffer from poor performance or support a severely restricted set of search predicates (e.g., only small sets of equality predicates), making them impractical for many applications. To address this, we present ACORN, an approach for performant and predicate-agnostic hybrid search. ACORN builds on Hierarchical Navigable Small Worlds (HNSW), a state-of-the-art graph-based approximate nearest neighbor index, and can be implemented efficiently by extending existing HNSW libraries. ACORN introduces the idea of predicate subgraph traversal to emulate a theoretically ideal, but impractical, hybrid search strategy. ACORN's predicate-agnostic construction algorithm is designed to enable this effective search strategy, while supporting a wide array of predicate sets and query semantics. We systematically evaluate ACORN on both prior benchmark datasets, with simple, low-cardinality predicate sets, and complex multi-modal datasets not supported by prior methods. We show that ACORN achieves state-of-the-art performance on all datasets, outperforming prior methods with 2-1,000x higher throughput at a fixed recall.},
+  archiveprefix = {arXiv},
+  keywords = {Computer Science - Databases,Computer Science - Information Retrieval}
+}
+
+@inproceedings{renHMANNEfficientBillionPoint2020,
+  title = {{{HM-ANN}}: {{Efficient Billion-Point Nearest Neighbor Search}} on {{Heterogeneous Memory}}},
+  shorttitle = {{{HM-ANN}}},
+  booktitle = {Advances in {{Neural Information Processing Systems}}},
+  author = {Ren, Jie and Zhang, Minjia and Li, Dong},
+  year = {2020},
+  volume = {33},
+  pages = {10672--10684},
+  publisher = {Curran Associates, Inc.},
+  urldate = {2024-09-25},
+  abstract = {The state-of-the-art approximate nearest neighbor search (ANNS) algorithms face a fundamental tradeoff between query latency and accuracy, because of small main memory capacity: To store indices in main memory for short query latency, the ANNS algorithms have to limit dataset size or use a quantization scheme which hurts search accuracy. The emergence of heterogeneous memory (HM) brings a solution to significantly increase memory capacity and break the above tradeoff: Using HM, billions of data points can be placed in the main memory on a single machine without using any data compression. However, HM consists of both fast (but small) memory and slow (but large) memory, and using HM inappropriately slows down query significantly.  In this work, we present a novel graph-based similarity search algorithm called HM-ANN, which takes both memory and data heterogeneity into consideration and enables billion-scale similarity search on a single node without using compression. On two billion-sized datasets BIGANN and DEEP1B, HM-ANN outperforms state-of-the-art compression-based solutions such as L\&C and IMI+OPQ in recall-vs-latency by a large margin, obtaining 46\% higher recall under the same search latency. We also extend existing graph-based methods such as HNSW and NSG with two strong baseline implementations on HM. At billion-point scale, HM-ANN is 2X and 5.8X faster than our HNSWand NSG baselines respectively to reach the same accuracy.}
+}
+
+@mastersthesis{sunDistributedSystemLarge2024,
+  title = {A {{Distributed System}} for {{Large Scale Vector Search}}},
+  author = {Sun, Yuxin},
+  year = {2024},
+  doi = {10.3929/ethz-b-000664643},
+  urldate = {2024-09-25},
+  abstract = {Machine learning (ML) models can encode various types of data as vectors that represent the data semantics. Consequently, vector similarity search is now the backbone of modern information retrieval and machine learning systems. In a search engine, an ML model first encodes the query as a vector. The query vector is then compared against the database vectors, and the ones that are closest to the query are returned. Such search process is formally known as approximate nearest neighbor search. In order to support for larger scale of dataset, a fast distributed vector retrieval engine is needed.  In this thesis, we aim to build a distributed system which can support large scale vector search. More specifically, our system includes a master node and several data nodes. Given a query, the system will first traverse an in-memory index on the master node to select nearest clusters and then dispatch the query to corresponding data nodes for further search. The data nodes will do the actual search with several optimization strategies, such as buffer management, SIMD vectorization and OpenMP parallelization. Finally, data nodes will send the search results back and the master node will gather these results and return them to the users.  Evaluation results demonstrates that our system outperforms the distributed versions of Faiss, one of the most popular implementations of approximate nearest neighbor search. Our system also shows its good ability to handle hot queries.},
+  copyright = {http://rightsstatements.org/page/InC-NC/1.0/},
+  langid = {english},
+  school = {ETH Zurich},
+  annotation = {Accepted: 2024-03-18T10:01:12Z}
+}
