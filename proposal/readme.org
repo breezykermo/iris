@@ -16,7 +16,7 @@ Here's *bold*, _underlined_, /italics/, ~code~.
 
 #+begin_quote
 Block quotes can be written like this.
-#+end_src
+#+end_quote
 
 Single line breaks won't be rendered.
 So I put each new sentence on a new line for better source control and code review.
