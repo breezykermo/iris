@@ -1,26 +1,34 @@
-#+TITLE: Iris: SoTA  
+#+TITLE: Iris
+#+SUBTITLE: 
 #+AUTHOR: Cedric Sirianni, Mithi Jethwa, Lachlan Kermode
 #+OPTIONS: toc:nil
 #+LATEX_CLASS: acmart
 #+LATEX_CLASS_OPTIONS: [sigconf]
 
-* Abstract
-Your abstract text here.
-
-* Introduction
-** Background
-** Motivation
-
-* Related Work
-
-* Methodology
-** Experimental Setup
-** Data Collection
-
-* Results and Discussion
-
-* Conclusion
-
-* Acknowledgments
+#+BIBLIOGRAPHY: ./references.bib 
 
 
+* Problem
+Vector databases are growing in popularity as they become widely used in image similarity search and RAG systems.
+The current approaches for distributed vector databases port existing notions from the distribution of column-based databases (using strategies such as replication and sharding) without taking specific advantage of a vector database's unique architectural features.
+
+* Project Idea
+
+* Novelty 
+
+* Implementation 
+We first aim to appraise and benchmark the SoTA of vector database distribution.
+From a preliminary search of recent literature in vector databases and commercial offerings, we understand there to be three ways in which vector databases have been distributed:
+
+1) Replication, where all vectors are stored on all nodes, and a master node load-balances new queries. Supported in [[https://qdrant.tech/documentation/guides/distributed_deployment/#replication][Qdrant]].
+2) Random partitioning, where each node contains a distinct set of vectors. An incoming query is sent to all nodes, and results are aggregated and pruned in the user result. Supported in [[https://qdrant.tech/documentation/guides/distributed_deployment/#sharding][Qdrant]], [[https://milvus.io/docs/use-partition-key.md][Milvus]].
+3) HNSW-aware sharding, where some number of Voronoi cells is stored on each node. Incoming queries can thus be directed only to those nodes where there are vectors proximate to the query. The HNSW index is stored entirely on the coordinator node [cite:@sunDistributedSystemLarge2024;@dengPyramidGeneralFramework2019].
+* Resources 
+
+* Evaluation
+
+* Team members
+
+* Expected challenges
+
+* Bibliography
