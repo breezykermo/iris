@@ -27,7 +27,7 @@ From a preliminary search of recent literature in vector databases and commercia
 
 1) Replication, where all vectors are stored on all nodes, and a master node load-balances new queries. Supported in [[https://qdrant.tech/documentation/guides/distributed_deployment/#replication][Qdrant]], [[https://weaviate.io/developers/weaviate/concepts/replication-architecture][Weaviate]].
 2) Random partitioning, where each node contains a distinct set of vectors. An incoming query is sent to all nodes, and results are aggregated and pruned in the user result. Supported in [[https://qdrant.tech/documentation/guides/distributed_deployment/#sharding][Qdrant]], [[https://milvus.io/docs/use-partition-key.md][Milvus]].
-3) HNSW-aware sharding, where some number of Voronoi cells is stored on each node. Incoming queries can thus be directed only to those nodes where there are vectors proximate to the query. The HNSW index is stored entirely on the coordinator node [cite:@sunDistributedSystemLarge2024;@dengPyramidGeneralFramework2019;chenSPANNHighlyefficientBillionscale2021]. 
+3) HNSW-aware sharding, where some number of Voronoi cells is stored on each node. Incoming queries can thus be directed only to those nodes where there are vectors proximate to the query. The HNSW index is stored entirely on the coordinator node [cite:@sunDistributedSystemLarge2024;@dengPyramidGeneralFramework2019;@chenSPANNHighlyefficientBillionscale2021]. 
 * Resources 
 
 * Evaluation
