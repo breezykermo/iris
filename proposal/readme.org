@@ -8,6 +8,7 @@
 - No Github action pipeline yet, sorry folks.
 - I've included the actual PDF in Git for the time being, so that we can [[./proposal.pdf][view it]].
 - The only file you need to edit to work on the proposal text is [[./proposal.org][this one]]. The syntax is just Orgmode, and you can see an example of links and citations in the text I've added. 
+- Bib generated from [[https://www.zotero.org/groups/5686187/vector-databases/library][this Zotero library]].
 
 * Orgmode basics
 (Look at the source of this file.).
