@@ -14,12 +14,10 @@
 
 
 * Problem
-Vector databases are growing in popularity as they become widely used in similarity search and RAG systems.
-Recent editions of NeurIPS, for example, have featured competitions to encourage the development of better vector similarity search across various workload classes [cite:@simhadriResultsNeurIPS21Challenge2022;@simhadriResultsBigANN2024].
+Vector databases are growing in popularity as they become widely used in similarity search and RAG systems, as part of ML workloads. Recent editions of NeurIPS, for example, have featured competitions to encourage the development of better vector similarity search across various workload classes [cite:@simhadriResultsNeurIPS21Challenge2022;@simhadriResultsBigANN2024].
 
 As the size of these databases jump an order of magnitude, from million-scale to billion-scale [cite:@chenSPANNHighlyefficientBillionscale2021], it is no longer always feasible to store large databases on a single node.
 The current commercial approaches to distributing vector databases, however, port existing notions from the distribution of column-based databases, such as replication and sharding, without taking specific advantage of the architectural allowances that exist in approximate nearest neighbor search (ANNS) that do not exist in exhaustive search.
-
 * Project Idea
 Our project seeks answers to the following questions:
 
@@ -44,7 +42,7 @@ As a reach goal, we will implement a semantic cache in the shard controller in a
 Though commercial vector databases provide features such as replication and partitioning, the settings in which these features provide value is not well understood.
 First and foremost, our project aims to clarify the latency, accuracy, and cost tradeoffs of the available vector database distribution strategies.
 
-Secondarily, and following from the insight that achieving this first goal we bring, we hope to propose a novel strategy or optimization in the domain of either latency or cost with respect to handling a class of load in a distributed vector database.
+Second, following from the insights from achieving this first goal, we hope to propose a novel strategy or optimization in the domain of either latency or cost with respect to handling a class of load in a distributed vector database.
 
 * Implementation 
 We first aim to appraise and benchmark the SoTA of vector database distribution.
@@ -80,10 +78,7 @@ Some approaches to distribution host all the vectors on each node and use distri
 In these cases, we expect to see higher per-node memory usage but greater throughput, as requests can be equitably distributed across nodes, eliminating congestion.
 Where vectors are distributed across nodes in non-intersecting sets, we expect to see the reverse: lower per-node memory usage, but also lower throughput. 
 
-# TODO: How do we measure latency? Probably, given a query, what is the latency in A, B and C and then given a set of queries, how do the tail latencies compare (99th percentile).
 * Timeline
-
-# TODO: Create rough time estimates for engineering hours required for each task. Delegate work to group members (though I imagine we will do a lot of this together).
 At the time of this proposal, we have ~10 weeks until the end of the semester.
 We intend to spend this time as follows:
 
@@ -103,7 +98,12 @@ Using distributed processing and AWS EC2 nodes, this will likely take longer.
 Implement and benchmark.
 *** Semantic caching et al. (n/a, divided)
 Stretch goal, depending on how well HNSW-aware sharding goes.
+*** Report writing (1 week, divided)
+Explain the background, project idea and implementation details.
+Synthesize findings and evaluations to discuss tradeoffs and state of the art infrastructure.
+Develop a future work section stemming from insights from the implementation phase.
 
 * Expected challenges
+Some of the early challenges involve getting access to the relevant hardware resources (taking into account the delays in registration, getting credits, debugging setup and infrastructure issues) and setting up the experiment such that we can effectively compare the 4 approaches under similar workloads. This involves setting up Qdrant and familiarizing ourselves with their APIs and relevant infrastructure along with exploration of the codebase. There are also design challenges involved with implementing research systems where a master node or shardmaster helps shard in an HNSW-aware manner as this may require far-reaching code changes which cannot be scoped until we choose an open-source vectorDB to work with and nail down our design approach.
 
 * Bibliography
