@@ -1,3 +1,13 @@
+@inproceedings{babenkoEfficientIndexingBillionScale2016,
+  title = {Efficient {{Indexing}} of {{Billion-Scale Datasets}} of {{Deep Descriptors}}},
+  booktitle = {Proceedings of the {{IEEE Conference}} on {{Computer Vision}} and {{Pattern Recognition}}},
+  author = {Babenko, Artem and Lempitsky, Victor},
+  year = {2016},
+  pages = {2055--2063},
+  urldate = {2024-10-01},
+  file = {/home/alice/Zotero/storage/ADT9TAGG/Babenko and Lempitsky - 2016 - Efficient Indexing of Billion-Scale Datasets of Deep Descriptors.pdf}
+}
+
 @misc{BaiduPuckPuck,
   title = {Baidu/Puck: {{Puck}} Is a High-Performance {{ANN}} Search Engine},
   shorttitle = {Baidu/Puck},
@@ -38,6 +48,19 @@
   file = {/home/alice/Zotero/storage/M378JSKE/Deng et al. - 2019 - Pyramid A General Framework for Distributed Similarity Search on Large-scale Datasets.pdf}
 }
 
+@misc{douzeFaissLibrary2024,
+  title = {The {{Faiss}} Library},
+  author = {Douze, Matthijs and Guzhva, Alexandr and Deng, Chengqi and Johnson, Jeff and Szilvasy, Gergely and Mazar{\'e}, Pierre-Emmanuel and Lomeli, Maria and Hosseini, Lucas and J{\'e}gou, Herv{\'e}},
+  year = {2024},
+  month = jan,
+  journal = {arXiv.org},
+  urldate = {2024-10-01},
+  abstract = {Vector databases typically manage large collections of embedding vectors. Currently, AI applications are growing rapidly, and so is the number of embeddings that need to be stored and indexed. The Faiss library is dedicated to vector similarity search, a core functionality of vector databases. Faiss is a toolkit of indexing methods and related primitives used to search, cluster, compress and transform vectors. This paper describes the trade-off space of vector search and the design principles of Faiss in terms of structure, approach to optimization and interfacing. We benchmark key features of the library and discuss a few selected applications to highlight its broad applicability.},
+  howpublished = {https://arxiv.org/abs/2401.08281v2},
+  langid = {english},
+  file = {/home/alice/Zotero/storage/59I2GPJI/Douze et al. - 2024 - The Faiss library.pdf}
+}
+
 @misc{gottesburenUnleashingGraphPartitioning2024,
   title = {Unleashing {{Graph Partitioning}} for {{Large-Scale Nearest Neighbor Search}}},
   author = {Gottesb{\"u}ren, Lars and Dhulipala, Laxman and Jayaram, Rajesh and Lacki, Jakub},
@@ -52,6 +75,24 @@
   archiveprefix = {arXiv},
   keywords = {Computer Science - Data Structures and Algorithms,Computer Science - Information Retrieval},
   file = {/home/alice/Zotero/storage/NBZGE8FY/Gottesbüren et al. - 2024 - Unleashing Graph Partitioning for Large-Scale Nearest Neighbor Search.pdf;/home/alice/Zotero/storage/YXE44C9W/2403.html}
+}
+
+@misc{guoManuCloudNative2022,
+  title = {Manu: {{A Cloud Native Vector Database Management System}}},
+  shorttitle = {Manu},
+  author = {Guo, Rentong and Luan, Xiaofan and Xiang, Long and Yan, Xiao and Yi, Xiaomeng and Luo, Jigao and Cheng, Qianya and Xu, Weizhi and Luo, Jiarui and Liu, Frank and Cao, Zhenshan and Qiao, Yanliang and Wang, Ting and Tang, Bo and Xie, Charles},
+  year = {2022},
+  month = jun,
+  number = {arXiv:2206.13843},
+  eprint = {2206.13843},
+  primaryclass = {cs},
+  publisher = {arXiv},
+  doi = {10.48550/arXiv.2206.13843},
+  urldate = {2024-10-01},
+  abstract = {With the development of learning-based embedding models, embedding vectors are widely used for analyzing and searching unstructured data. As vector collections exceed billion-scale, fully managed and horizontally scalable vector databases are necessary. In the past three years, through interaction with our 1200+ industry users, we have sketched a vision for the features that next-generation vector databases should have, which include long-term evolvability, tunable consistency, good elasticity, and high performance. We present Manu, a cloud native vector database that implements these features. It is difficult to integrate all these features if we follow traditional DBMS design rules. As most vector data applications do not require complex data models and strong data consistency, our design philosophy is to relax the data model and consistency constraints in exchange for the aforementioned features. Specifically, Manu firstly exposes the write-ahead log (WAL) and binlog as backbone services. Secondly, write components are designed as log publishers while all read-only analytic and search components are designed as independent subscribers to the log services. Finally, we utilize multi-version concurrency control (MVCC) and a delta consistency model to simplify the communication and cooperation among the system components. These designs achieve a low coupling among the system components, which is essential for elasticity and evolution. We also extensively optimize Manu for performance and usability with hardware-aware implementations and support for complex search semantics.},
+  archiveprefix = {arXiv},
+  keywords = {Computer Science - Databases},
+  file = {/home/alice/Zotero/storage/77L3LAJG/Guo et al. - 2022 - Manu A Cloud Native Vector Database Management System.pdf;/home/alice/Zotero/storage/RNPQ67AU/2206.html}
 }
 
 @inproceedings{iwabuchiMassivescaleDistributedNeighborhood2023,
@@ -83,6 +124,22 @@
   file = {/home/alice/Zotero/storage/LDHCS4HB/Jayaram Subramanya et al. - 2019 - DiskANN Fast Accurate Billion-point Nearest Neighbor Search on a Single Node.pdf}
 }
 
+@inproceedings{jegouSearchingOneBillion2011,
+  title = {Searching in One Billion Vectors: {{Re-rank}} with Source Coding},
+  shorttitle = {Searching in One Billion Vectors},
+  booktitle = {2011 {{IEEE International Conference}} on {{Acoustics}}, {{Speech}} and {{Signal Processing}} ({{ICASSP}})},
+  author = {J{\'e}gou, Herv{\'e} and Tavenard, Romain and Douze, Matthijs and Amsaleg, Laurent},
+  year = {2011},
+  month = may,
+  pages = {861--864},
+  issn = {2379-190X},
+  doi = {10.1109/ICASSP.2011.5946540},
+  urldate = {2024-10-01},
+  abstract = {Recent indexing techniques inspired by source coding have been shown successful to index billions of high-dimensional vectors in memory. In this paper, we propose an approach that re-ranks the neighbor hypotheses obtained by these compressed-domain indexing methods. In contrast to the usual post-verification scheme, which performs exact distance calculation on the short-list of hypotheses, the estimated distances are refined based on short quantization codes, to avoid reading the full vectors from disk. We have released a new public dataset of one billion 128 dimensional vectors and proposed an experimental setup to evaluate high dimensional indexing algorithms on a realistic scale. Experiments show that our method accurately and efficiently re-ranks the neighbor hypotheses using little memory compared to the full vectors representation.},
+  keywords = {Approximation algorithms,Approximation methods,Artificial neural networks,high dimensional indexing,Indexing,large databases,nearest neighbor search,quantization,Quantization,source coding,Source coding},
+  file = {/home/alice/Zotero/storage/LJBBBM9E/Jégou et al. - 2011 - Searching in one billion vectors Re-rank with source coding.pdf;/home/alice/Zotero/storage/7ATJGWBX/5946540.html}
+}
+
 @inproceedings{manoharParlayANNScalableDeterministic2024,
   title = {{{ParlayANN}}: {{Scalable}} and {{Deterministic Parallel Graph-Based Approximate Nearest Neighbor Search Algorithms}}},
   shorttitle = {{{ParlayANN}}},
@@ -110,6 +167,19 @@
   copyright = {MIT},
   howpublished = {Microsoft},
   keywords = {approximate-nearest-neighbor-search,distributed-serving,fresh-update,neighborhood-graph,space-partition-tree,vector-search}
+}
+
+@misc{myrielSemanticCacheAccelerating2024,
+  title = {Semantic {{Cache}}: {{Accelerating AI}} with {{Lightning-Fast Data Retrieval}} - {{Qdrant}}},
+  shorttitle = {Semantic {{Cache}}},
+  author = {Myriel, David, Daniel Romero},
+  year = {2024},
+  month = may,
+  urldate = {2024-10-01},
+  abstract = {Semantic cache is reshaping AI applications by enabling rapid data retrieval. Discover how its implementation benefits your RAG setup.},
+  howpublished = {https://qdrant.tech/blog/semantic-cache-ai-data-retrieval/},
+  langid = {english},
+  file = {/home/alice/Zotero/storage/36K4T38A/semantic-cache-ai-data-retrieval.html}
 }
 
 @misc{patelACORNPerformantPredicateAgnostic2024,
@@ -156,6 +226,17 @@
   file = {/home/alice/Zotero/storage/XUV5YSEN/Ren et al. - 2020 - HM-ANN Efficient Billion-Point Nearest Neighbor Search on Heterogeneous Memory.pdf}
 }
 
+@misc{simhadriHarshasimhadriBigannbenchmarks2024,
+  title = {Harsha-Simhadri/Big-Ann-Benchmarks},
+  author = {Simhadri, Harsha Vardhan},
+  year = {2024},
+  month = sep,
+  urldate = {2024-10-01},
+  abstract = {Framework for evaluating ANNS algorithms on billion scale datasets.},
+  copyright = {MIT},
+  keywords = {approximate-nearest-neighbor-search,information-retrival}
+}
+
 @misc{simhadriResultsBigANN2024,
   title = {Results of the {{Big ANN}}: {{NeurIPS}}'23 Competition},
   shorttitle = {Results of the {{Big ANN}}},
@@ -172,6 +253,23 @@
   archiveprefix = {arXiv},
   keywords = {Computer Science - Data Structures and Algorithms,Computer Science - Information Retrieval,Computer Science - Machine Learning,Computer Science - Performance,H.3.3},
   file = {/home/alice/Zotero/storage/A93JH99D/Simhadri et al. - 2024 - Results of the Big ANN NeurIPS'23 competition.pdf;/home/alice/Zotero/storage/56EYK5RA/2409.html}
+}
+
+@misc{simhadriResultsNeurIPS21Challenge2022,
+  title = {Results of the {{NeurIPS}}'21 {{Challenge}} on {{Billion-Scale Approximate Nearest Neighbor Search}}},
+  author = {Simhadri, Harsha Vardhan and Williams, George and Aum{\"u}ller, Martin and Douze, Matthijs and Babenko, Artem and Baranchuk, Dmitry and Chen, Qi and Hosseini, Lucas and Krishnaswamy, Ravishankar and Srinivasa, Gopal and Subramanya, Suhas Jayaram and Wang, Jingdong},
+  year = {2022},
+  month = may,
+  number = {arXiv:2205.03763},
+  eprint = {2205.03763},
+  primaryclass = {cs},
+  publisher = {arXiv},
+  urldate = {2024-10-01},
+  abstract = {Despite the broad range of algorithms for Approximate Nearest Neighbor Search, most empirical evaluations of algorithms have focused on smaller datasets, typically of 1 million points (Aumu{\textasciidieresis}ller et al., 2020). However, deploying recent advances in embedding based techniques for search, recommendation and ranking at scale require ANNS indices at billion, trillion or larger scale. Barring a few recent papers, there is limited consensus on which algorithms are effective at this scale vis-`a-vis their hardware cost.},
+  archiveprefix = {arXiv},
+  langid = {english},
+  keywords = {Computer Science - Data Structures and Algorithms,Computer Science - Databases,Computer Science - Machine Learning,Computer Science - Performance},
+  file = {/home/alice/Zotero/storage/JVCU56MN/Simhadri et al. - 2022 - Results of the NeurIPS'21 Challenge on Billion-Scale Approximate Nearest Neighbor Search.pdf}
 }
 
 @mastersthesis{sunDistributedSystemLarge2024,
@@ -212,13 +310,4 @@
   archiveprefix = {arXiv},
   keywords = {Computer Science - Databases,Computer Science - Information Retrieval,Computer Science - Operating Systems},
   file = {/home/alice/Zotero/storage/5G8LQU7F/Tian et al. - 2024 - FusionANNS An Efficient CPUGPU Cooperative Processing Architecture for Billion-scale Approximate N.pdf;/home/alice/Zotero/storage/GY4JTF9U/2409.html}
-}
-
-@misc{romeroSemanticCacheQdrant,
-    author = {Romero, Daniel and Myriel, David},
-    title = {Semantic Cache: Accelerating AI with Lightning-Fast Data Retrieval},
-    howpublished = {\url{https://qdrant.tech/blog/semantic-cache-ai-data-retrieval/}},
-    year = {2024},
-    month = may,
-    note = {Accessed: 2024-09-30},
 }

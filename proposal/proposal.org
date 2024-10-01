@@ -1,73 +1,109 @@
 #+TITLE: Iris
-#+SUBTITLE: 
+#+SUBTITLE: Grokking SoTA for Distributed Vector Databases
 #+AUTHOR: Cedric Sirianni, Mithi Jethwa, Lachlan Kermode
 #+OPTIONS: toc:nil
 #+LATEX_CLASS: acmart
 #+LATEX_CLASS_OPTIONS: [sigconf]
 #+LATEX_HEADER: \usepackage{hyperref}
-
-#+latex: \hypersetup{ colorlinks=true, linkcolor=blue, filecolor=magenta, urlcolor=cyan, }
-
-
-
+#+LATEX_HEADER: \usepackage{adjustbox}
 #+BIBLIOGRAPHY: ./references.bib 
+
+# NB: This bib file is derived from the following Zotero library: https://www.zotero.org/groups/5686187/vector-databases/library
+
+#+LATEX: \hypersetup{linkcolor=blue}
 
 
 * Problem
-Vector databases are growing in popularity as they become widely used in similarity search and RAG systems. The current approaches for distributed vector databases port existing notions from the distribution of column-based databases (using strategies such as replication and sharding) without taking specific advantage of a vector database's unique architectural features.
+Vector databases are growing in popularity as they become widely used in similarity search and RAG systems.
+Recent editions of NeurIPS, for example, have featured competitions to encourage the development of better vector similarity search across various workload classes [cite:@simhadriResultsNeurIPS21Challenge2022;@simhadriResultsBigANN2024].
+
+As the size of these databases jump an order of magnitude, from million-scale to billion-scale [cite:@chenSPANNHighlyefficientBillionscale2021], it is no longer always feasible to store large databases on a single node.
+The current commercial approaches to distributing vector databases, however, port existing notions from the distribution of column-based databases, such as replication and sharding, without taking specific advantage of the architectural allowances that exist in approximate nearest neighbor search (ANNS) that do not exist in exhaustive search.
 
 * Project Idea
+Our project seeks answers to the following questions:
 
-We seek to answer "How do mainstream vector database vector distribution techniques differ in terms of latency and accuracy?" 
-Our codebase, nicknamed "Iris", will provide an API to distribute vectors on one or more shards using at least the following techniques:
+1) What classes of workloads, vector corpi, and/or deployment settings (i.e. cloud, data warehouse, heterogenous hardware) motivate the distribution of a vector database?
+2) What is the SoTA for ANNS in a distributed setting? 
+3) How do mainstream and research vector databases deal with the inherent tradeoff between latency and accuracy in ANNS in a distributed setting?
 
-1) Replication, where all vectors are stored on all nodes, and a master node load-balances new queries. Supported in [[https://qdrant.tech/documentation/guides/distributed_deployment/#replication][Qdrant]], [[https://weaviate.io/developers/weaviate/concepts/replication-architecture][Weaviate]].
-2) Random partitioning, where each node contains a distinct set of vectors. An incoming query is sent to all nodes, and results are aggregated and pruned in the user result. Supported in [[https://qdrant.tech/documentation/guides/distributed_deployment/#sharding][Qdrant]], [[https://milvus.io/docs/use-partition-key.md][Milvus]].
-3) HNSW-aware sharding, where some number of Voronoi cells is stored on each node. Incoming queries can thus be directed only to those nodes where there are vectors proximate to the query. The HNSW index is stored entirely on the coordinator node [cite:@sunDistributedSystemLarge2024;@dengPyramidGeneralFramework2019;@chenSPANNHighlyefficientBillionscale2021]. 
+Our codebase, *Iris*, will benchmark ANNS using /at least/ the following techniques:
 
-After evaluating each technique, we will consider areas for optimization.
-In particular, we are interested in *semantic caching*, "a method of retrieval optimization where similar queries instantly retrieve the same appropriate response from a knowledge base." [cite:@romeroSemanticCacheQdrant]
-As a reach goal, we will implement a cache in the shardcontroller.
+1) Single node baseline, where memory and performance is constrained by hardware affordances of the particular machine. Supported in all vector databases.
+2) Simple replication, where all vectors are stored on all nodes, and a master node load-balances new queries. Supported in [[https://milvus.io/docs/replica.md][Milvus]], [[https://qdrant.tech/documentation/guides/distributed_deployment/#replication][Qdrant]], [[https://docs.pinecone.io/troubleshooting/how-and-when-to-add-replicas][Pinecone]], [[https://weaviate.io/developers/weaviate/concepts/replication-architecture][Weaviate]],.
+3) Random partitioning, where each node contains a distinct set of vectors. An incoming query is sent to all nodes, and results are aggregated and pruned in the user result. Supported in [[https://milvus.io/docs/use-partition-key.md][Milvus]], [[https://qdrant.tech/documentation/guides/distributed_deployment/#sharding][Qdrant]], [[https://weaviate.io/developers/weaviate/concepts/cluster#sharding-keys-partitioning-keys][Weaviate]].
+4) HNSW-aware sharding, where some number of Voronoi cells is stored on each node. Incoming queries can thus be directed only to those nodes where there are vectors proximate to the query. The HNSW index is stored entirely on the coordinator node [cite:@dengPyramidGeneralFramework2019;@chenSPANNHighlyefficientBillionscale2021;@sunDistributedSystemLarge2024]. 
+
+We will also search consider more recent approaches such as distributed indexing [cite:@sunSOARImprovedIndexing2023] and using graph partitioning algorithms to determine node partitioning [cite:@gottesburenUnleashingGraphPartitioning2024].
+
+After evaluating and benchmarking each technique, we will consider areas for optimization.
+In particular, we are interested in *semantic caching*, ``a method of retrieval optimization where similar queries instantly retrieve the same appropriate response from a knowledge base" [cite:@myrielSemanticCacheAccelerating2024].
+As a reach goal, we will implement a semantic cache in the shard controller in an attempt to improve latency for certain classes of workloads.
 
 * Novelty 
+Though commercial vector databases provide features such as replication and partitioning, the settings in which these features provide value is not well understood.
+First and foremost, our project aims to clarify the latency, accuracy, and cost tradeoffs of the available vector database distribution strategies.
+
+Secondarily, and following from the insight that achieving this first goal we bring, we hope to propose a novel strategy or optimization in the domain of either latency or cost with respect to handling a class of load in a distributed vector database.
 
 * Implementation 
 We first aim to appraise and benchmark the SoTA of vector database distribution.
-From a preliminary search of recent literature in vector databases and commercial offerings, we understand there to be three ways in which vector databases have been distributed, listed in [[Project Idea][Project Idea]].
+From a preliminary search of recent literature in vector databases and commercial offerings, we understand there to be three major ways in which vector databases have been distributed, listed in [[Project Idea][Project Idea]].
 As we review more relevant literature on distribution models for vector databases, we may extend this list to benchmark other models.
 
-Next, we will implement and evaluate each distribution technique in Rust on top of a system such as Qdrant or Faiss. [[https://qdrant.tech/documentation/guides/distributed_deployment/#sharding][Qdrant]] supports two forms of sharding: automatic sharding and user-defined sharding, which roughly correspond to replication and random partitioning, respectively. [[https://qdrant.tech/documentation/guides/distributed_deployment/#user-defined-sharding][User-defined partitioning]] can be extended to HSNW-aware sharding by defining the ~sharding technique~ as ~custom~ and using our own shard key.
+Next, we will implement and evaluate each distribution technique using a framework such as Qdrant or Faiss [cite:@douzeFaissLibrary2024].
+[[https://qdrant.tech/documentation/guides/distributed_deployment/#sharding][Qdrant]], for example, supports two forms of sharding: automatic sharding and user-defined sharding. 
+Automatic sharding is a form of random partitioning, whereas [[https://qdrant.tech/documentation/guides/distributed_deployment/#user-defined-sharding][user-defined sharding]] may allow us to implement HSNW-aware sharding by defining the ~sharding technique~ as ~custom~ and using our own shard key.
+We will also consider adapting research implementations such as [[https://github.com/larsgottesbueren/gp-ann][the codebase]] from [cite:@gottesburenUnleashingGraphPartitioning2024].
 
-TODO: Explain cache
-
+To implement semantic caching or related optimizations, we will similarly extend upon one of these available vector indices/databases.
 * Resources 
 
 To deploy and evaluate our system, we see three major approaches, each with different tradeoffs:
 
-1) Brown Computing Cluster: Free resource intended for research purposes, but we are unsure about registration eligibility and resource availability.
-2) AWS/GCP/Azure: Consumption-based cost model with excellent resource availability and ease-of-use. We wanted to know if Brown can provide credits or help with costs beyond the student free credits.
-3) Cloudlab: Free, but resource availability seems sparse and usability is inferior to AWS/GCP/Azure.
+1) *Brown Computing Cluster*. Free resource intended for research purposes, but we are unsure about registration eligibility and resource availability. Presumably we would need to simulate distribution using Docker or similar containerization technology. We suspect that this option would also be suboptimal in terms of ease-of-use.
+2) *AWS/GCP/Azure*. Consumption-based cost model with excellent resource availability and ease-of-use. We are unsure, however, if Brown can provide credits, and/or whether the cost of our experimentation would be within reason.
+3) *Cloudlab*. Free, but resource availability seems sparse, and usability is lesser in comparison to AWS/GCP/Azure.
 
 * Evaluation
+DEEP1B [cite:@babenkoEfficientIndexingBillionScale2016] and SIFT1B [cite:@jegouSearchingOneBillion2011] are datasets commonly used to test performance and accuracy for VectorDBs.
+Similarly, the big ANN benchmarks repository [cite:@simhadriHarshasimhadriBigannbenchmarks2024;@simhadriResultsBigANN2024] provides various datasets calibrated to four different classes of load: filtered (including metadata), out-of distribution (queries are significantly different in distribution than the database), sparse (vectors have a majority of zero values), and streaming (load includes insertion and deletion operations).
 
-DEEP1B is a dataset commonly used to test performance and accuracy for VectorDBs. Similarly, the SIFT1B dataset is also used to evaluate vectorDB performance at billion-scale. 
-Some of the evaluation metrics we will consider when comparing approaches is looking at per-node memory usage, scalability using COST graphs to deduce whether the distributed vectorDB becomes more performant as we scale the database to a greater number of nodes, query latency, throughput, and finally, accuracy. Some appraoches to distribution host all the vectors on each node and use distribution primarily for load balancing. In that case, we would see higher per-node memory usage due to replication but greater throughput as requests can be equitably distributed across nodes, allowing the database to service many clients and requests at the same time. We expect to see a reversal when we use the default version of Qdrant where the vectors are distributed across nodes in non-intersecting sets which likely reports lower per-node memory usage but lower throughput. 
+We intend to measure /at least/ the following attributes across some set of loads for each distribution strategy noted in [[Project Idea]]:
+- Query latency
+- Throughput
+- Accuracy (ANNS compared against exhaustive search, using a metric called [[https://engineering.fb.com/2017/03/29/data-infrastructure/faiss-a-library-for-efficient-similarity-search/][1-recall@1]])
+- Per-node memory usage
+- Scalability (using COST graphs to deduce the change in performance as we scale nodes up)
 
-We can use a "brute-force" approach to compute the objective similarity: for each query vector, compute the similarity with every other vector i
-Then, we can compare the "brute-force" result to each distribution technique by counting the number of queries for which the true nearest neighbor is returned first in the result list (a measure called 1-recall@1) or by measuring the average fraction of 10 nearest neighbors that are returned in the first 10 results (the "10-intersection" measure) [CITATION NEEDED, FOUND HERE: https://engineering.fb.com/2017/03/29/data-infrastructure/faiss-a-library-for-efficient-similarity-search/]
+Some approaches to distribution host all the vectors on each node and use distribution primarily for load balancing.
+In these cases, we expect to see higher per-node memory usage but greater throughput, as requests can be equitably distributed across nodes, eliminating congestion.
+Where vectors are distributed across nodes in non-intersecting sets, we expect to see the reverse: lower per-node memory usage, but also lower throughput. 
 
-TODO: How do we measure latency? Probably, given a query, what is the latency in A, B and C and then given a set of queries, how do the tail latencies compare (99th percentile).
-
-* Team members
-
+# TODO: How do we measure latency? Probably, given a query, what is the latency in A, B and C and then given a set of queries, how do the tail latencies compare (99th percentile).
 * Timeline
 
-TODO: Create rough time estimates for engineering hours required for each task. Delegate work to group members (though I imagine we will do a lot of this together).
-After the proposal, we have ~10 weeks.
-- First, we will conduct literature review of existing approaches to distribution, specifically HNSW-aware approaches. We also need to nail down evaluation workloads, datasets, and query sets in this process. This will likely take 2 weeks and can be distributed between the 3 of us. We likely also want to make sure that Qdrant is the best option for a codebase to work with this semester.
-- Second, we will set up access to hardware resources and benchmark Qdrant using its replication strategy and its automatic sharding strategy. This will help us understand what are the best metrics to use in our evaluation and reason about sharding methodologies. This will take 2-3 weeks as we will finalize experiment setup and get the system running on billion-scale datasets. Each dataset needs to first get indexed into the vectorDB which involves a significant time lag. The DEEP1B index takes 12 hours to get indexed using FAISS on Titan GPUs (https://engineering.fb.com/2017/03/29/data-infrastructure/faiss-a-library-for-efficient-similarity-search/). Using distributed processing and AWS EC2 nodes, this will likely take longer. We also need to define a set of queries that we will work with that depict the nuances of how different workloads may optimize for different types of distribution.
-- Third, we will implement HNSW-aware sharding following the architecture from this (TODO: add citation to Master's thesis) paper. This involves using Qdrant's user-defined sharding API to follow a novel HNSW-aware sharding technique. This will take 4 weeks.
-- As a stretch goal, we also hope to implement Semantic Caching on a per-node basis and analyze latency improvements and accuracy metrics.
+# TODO: Create rough time estimates for engineering hours required for each task. Delegate work to group members (though I imagine we will do a lot of this together).
+At the time of this proposal, we have ~10 weeks until the end of the semester.
+We intend to spend this time as follows:
+
+*** Literature review (2-3 weeks, group work)
+Review of existing approaches to distribution, specifically HNSW-aware approaches.
+Evaluate workloads, datasets, and query sets.
+Decide on baseline implementations.
+*** Benchmark baselines (2-3 weeks, group work)
+Set up access to hardware.
+Benchmark baseline implementations.
+Define workloads and query sets of interest. 
+
+In order to provide ANNS, a dataset must first be indexed in our implementation, which can take significant amounts of time.
+The DEEP1B index, for example, can take [[https://engineering.fb.com/2017/03/29/data-infrastructure/faiss-a-library-for-efficient-similarity-search/][up to 12 hours to index]] using FAISS on Titan GPUs.
+Using distributed processing and AWS EC2 nodes, this will likely take longer.
+*** HNSW-aware sharding (4 weeks, divided)
+Implement and benchmark.
+*** Semantic caching et al. (n/a, divided)
+Stretch goal, depending on how well HNSW-aware sharding goes.
+
 * Expected challenges
 
 * Bibliography
