@@ -14,8 +14,7 @@
 
 
 * Problem
-Vector databases are growing in popularity as they become widely used in image similarity search and RAG systems.
-The current approaches for distributed vector databases port existing notions from the distribution of column-based databases (using strategies such as replication and sharding) without taking specific advantage of a vector database's unique architectural features.
+Vector databases are growing in popularity as they become widely used in similarity search and RAG systems. The current approaches for distributed vector databases port existing notions from the distribution of column-based databases (using strategies such as replication and sharding) without taking specific advantage of a vector database's unique architectural features.
 
 * Project Idea
 
@@ -46,23 +45,29 @@ TODO: Explain cache
 To deploy and evaluate our system, we see three major approaches, each with different tradeoffs:
 
 1) Brown Computing Cluster: Free resource intended for research purposes, but we are unsure about registration eligibility and resource availability.
-2) AWS/GCP/Azure: Consumption-based cost model with excellent resource availability and ease-of-use. Can Brown provide credits?
+2) AWS/GCP/Azure: Consumption-based cost model with excellent resource availability and ease-of-use. We wanted to know if Brown can provide credits or help with costs beyond the student free credits.
 3) Cloudlab: Free, but resource availability seems sparse and usability is inferior to AWS/GCP/Azure.
 
 * Evaluation
 
-Big-ANN and DEEP1B are datasets commonly used in benchmarking.
-We can use a "brute-force" approach to compute the objective similarity: for each query vector, compute the similarity with every other vector in the database.
+DEEP1B is a dataset commonly used to test performance and accuracy for VectorDBs. Similarly, the SIFT1B dataset is also used to evaluate vectorDB performance at billion-scale. 
+Some of the evaluation metrics we will consider when comparing approaches is looking at per-node memory usage, scalability using COST graphs to deduce whether the distributed vectorDB becomes more performant as we scale the database to a greater number of nodes, query latency, throughput, and finally, accuracy. Some appraoches to distribution host all the vectors on each node and use distribution primarily for load balancing. In that case, we would see higher per-node memory usage due to replication but greater throughput as requests can be equitably distributed across nodes, allowing the database to service many clients and requests at the same time. We expect to see a reversal when we use the default version of Qdrant where the vectors are distributed across nodes in non-intersecting sets which likely reports lower per-node memory usage but lower throughput. 
+
+We can use a "brute-force" approach to compute the objective similarity: for each query vector, compute the similarity with every other vector i
 Then, we can compare the "brute-force" result to each distribution technique by counting the number of queries for which the true nearest neighbor is returned first in the result list (a measure called 1-recall@1) or by measuring the average fraction of 10 nearest neighbors that are returned in the first 10 results (the "10-intersection" measure) [CITATION NEEDED, FOUND HERE: https://engineering.fb.com/2017/03/29/data-infrastructure/faiss-a-library-for-efficient-similarity-search/]
 
-TODO: How do we measure latency?
+TODO: How do we measure latency? Probably, given a query, what is the latency in A, B and C and then given a set of queries, how do the tail latencies compare (99th percentile).
 
 * Team members
 
 * Timeline
 
 TODO: Create rough time estimates for engineering hours required for each task. Delegate work to group members (though I imagine we will do a lot of this together).
-
+After the proposal, we have ~10 weeks.
+- First, we will conduct literature review of existing approaches to distribution, specifically HNSW-aware approaches. We also need to nail down evaluation workloads, datasets, and query sets in this process. This will likely take 2 weeks and can be distributed between the 3 of us. We likely also want to make sure that Qdrant is the best option for a codebase to work with this semester.
+- Second, we will set up access to hardware resources and benchmark Qdrant using its replication strategy and its automatic sharding strategy. This will help us understand what are the best metrics to use in our evaluation and reason about sharding methodologies. This will take 2-3 weeks as we will finalize experiment setup and get the system running on billion-scale datasets. Each dataset needs to first get indexed into the vectorDB which involves a significant time lag. The DEEP1B index takes 12 hours to get indexed using FAISS on Titan GPUs (https://engineering.fb.com/2017/03/29/data-infrastructure/faiss-a-library-for-efficient-similarity-search/). Using distributed processing and AWS EC2 nodes, this will likely take longer. We also need to define a set of queries that we will work with that depict the nuances of how different workloads may optimize for different types of distribution.
+- Third, we will implement HNSW-aware sharding following the architecture from this (TODO: add citation to Master's thesis) paper. This involves using Qdrant's user-defined sharding API to follow a novel HNSW-aware sharding technique. This will take 4 weeks.
+- As a stretch goal, we also hope to implement Semantic Caching on a per-node basis and analyze latency improvements and accuracy metrics.
 * Expected challenges
 
 * Bibliography
