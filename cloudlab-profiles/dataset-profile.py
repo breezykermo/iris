@@ -13,7 +13,7 @@ request = portal.context.makeRequestRSpec()
 # Create the container node.
 node = ig.DockerContainer("node")
 
-node.docker_dockerfile = ""
+node.docker_dockerfile = "https://github.com/breezykermo/iris/blob/main/docker/Dockerfile"
 bs = node.Blockstore("bs", "/deep1b")
 bs.size = "30GB"
 
