@@ -1,5 +1,14 @@
 The intention is to build a benchmarking suite that supports the following *datasets*, *loads*, and *architectures*.
-For each point on each 
+
+A rough approximation of the steps we need to complete:
+- store different datasets
+- manufacture the default query load
+- write the API to send query load to different databases with different architectures, indices, etc.
+- implement each architecture independently.
+  + scoping hnsw-lib, implementing bindings.
+  + faiss.
+- write up a plan to run each experiment.
+
 ** Initial Benchmarks
 *** Datasets 
 - Deep1B, ~360Gb. 
@@ -22,3 +31,6 @@ For each point on each
   + 5 nodes
   + 10 nodes
 
+*** Indices
+- HNSW
+- LSH
