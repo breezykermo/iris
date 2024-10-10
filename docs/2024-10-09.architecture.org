@@ -1,0 +1,24 @@
+The intention is to build a benchmarking suite that supports the following *datasets*, *loads*, and *architectures*.
+For each point on each 
+** Initial Benchmarks
+*** Datasets 
+- Deep1B, ~360Gb. 
+  + 1M
+  + 10M
+  + 100M
+  + 1B
+
+*** Loads (queries over time)
+- 10k queries sync.
+
+*** Architectures
+- SSD, standalone. ~qdrant feature to store on SSD?~
+- DRAM, random partitioning. ~qdrant automatic sharding?~
+  + 2 nodes
+  + 5 nodes
+  + 10 nodes
+- DRAM, balanced partitioning. ~qdrant custom sharding API?~
+  + 2 nodes
+  + 5 nodes
+  + 10 nodes
+
