@@ -4,7 +4,7 @@ mod query;
 mod stubs;
 
 use crate::architecture::HardwareArchitecture;
-use crate::dataset::{Dataset, Deep1B};
+use crate::dataset::{Dataset, StubVectorDataset};
 use crate::query::{Load, SyncQueries};
 
 use tracing::info;
@@ -31,23 +31,28 @@ pub fn benchmark<D: Dataset, L: Load>(dataset: &D, load: &L) -> Result<(), Bench
     info!("Architecture: {:?}", hw_arch.unwrap());
     info!("Load: {}", load.load_info());
 
-    todo!("Implement the benchmarking logic here");
+    unimplemented!();
 }
 
-fn main() {
+fn main() -> Result<()> {
     // Initialize logging
     tracing_subscriber::fmt()
         .with_max_level(tracing::Level::DEBUG)
         .init();
 
-    let mut dataset = Deep1B::new();
+    let mut dataset = StubVectorDataset::new();
 
     let load = SyncQueries {
         num_queries: 10_000,
     }; // 10k sync queries
 
-    dataset.train(HardwareArchitecture::SsdStandalone);
+    let partitions = dataset.train(HardwareArchitecture::SsdStandalone)?;
+
+    // TODO: put the dataset on the right hardware
+    // let _ = dataset.load(partitions);
 
     // Run the benchmark
     benchmark(&dataset, &load);
+
+    Ok(())
 }

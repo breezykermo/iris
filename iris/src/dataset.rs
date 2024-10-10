@@ -9,13 +9,17 @@ use anyhow::Result;
 pub trait Dataset {
     // Provide basic information about the characteristics of the dataset.
     fn dataset_info(&self) -> String;
-    // Train the dataset according to a particular architecture.
-    fn train(&mut self, hardware_architecture: HardwareArchitecture) -> Result<()>;
     // Returns None if the data is not yet trained, else the HardwareArchitecture on which it was
     // trained.
     fn get_hardware_architecture(&self) -> Option<HardwareArchitecture>;
-    // Returns None if the data is not yet trained, else the dataset appropriately partitioned.
-    fn get_partitions(&self) -> Option<Vec<DataPartition>>;
+    // Train the dataset according to a particular architecture. This doesn't actually put the data
+    // in the hardware itself, but rather calculates any partitions necessary for that next step.
+    // Should set the result of `get_hardware_architecture`, and then returns the appropriate
+    // partitions for the target architecture.
+    fn train(&mut self, hardware_architecture: HardwareArchitecture) -> Result<Vec<DataPartition>>;
+
+    // Assuming a trained dataset, loads the data onto the actual hardware.
+    fn load(&mut self, partitions: Vec<DataPartition>) -> Result<()>;
 }
 
 const DIMSTANDARD: usize = 100;
@@ -26,7 +30,7 @@ const VSIZE: usize = ONE_THOUSAND;
 const VLEN: usize = VDIMS * VSIZE;
 
 #[derive(Clone)]
-struct DataPartition {
+pub struct DataPartition {
     data: Box<[f64]>,
 }
 
@@ -42,36 +46,33 @@ impl DataPartition {
 }
 
 /// Deep1B Dataset implementation
-pub struct Deep1B {
+pub struct StubVectorDataset {
     pub data: DataPartition,
-    is_single_partition: bool,
     hardware_architecture: Option<HardwareArchitecture>,
 }
 
-impl Deep1B {
+impl StubVectorDataset {
     pub fn new() -> Self {
         // TODO: replace this stub data with the actual data.
         let underlying_data = gen_random_vecs::<VDIMS, VLEN>();
 
         Self {
             data: DataPartition::new(underlying_data),
-            is_single_partition: false,
             hardware_architecture: None,
         }
     }
 }
 
-impl Dataset for Deep1B {
+impl Dataset for StubVectorDataset {
     fn dataset_info(&self) -> String {
-        format!("Deep1B with {:?} vectors", VSIZE)
+        format!("Deep1B stub with {:?} vectors", VSIZE)
     }
 
-    fn train(&mut self, hardware_architecture: HardwareArchitecture) -> Result<()> {
+    fn train(&mut self, hardware_architecture: HardwareArchitecture) -> Result<Vec<DataPartition>> {
         match hardware_architecture {
             hw @ HardwareArchitecture::SsdStandalone => {
-                self.is_single_partition = true;
                 self.hardware_architecture = Some(hw);
-                Ok(())
+                Ok(vec![self.data.clone()])
             }
             HardwareArchitecture::DramBalancedPartitioning => unimplemented!(),
             HardwareArchitecture::DramRandomPartitioning => unimplemented!(),
@@ -82,13 +83,7 @@ impl Dataset for Deep1B {
         self.hardware_architecture
     }
 
-    // Once the dataset is trained, this returns the number of partitions.  In the case that there
-    // is only one partition, this will have length one.
-    fn get_partitions(&self) -> Option<Vec<DataPartition>> {
-        if self.is_single_partition {
-            Some(vec![self.data.clone()])
-        } else {
-            None
-        }
+    fn load(&mut self, partitions: Vec<DataPartition>) -> Result<()> {
+        unimplemented!()
     }
 }
