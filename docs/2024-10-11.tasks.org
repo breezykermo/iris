@@ -1,0 +1,10 @@
+* TODO [Mithi] Work on Python script to provision the vectors into three different partition sets:
+- SsdStandalone
+- RandomPartition
+- BalancedPartitioning (need to look at what they're doing in the paper).
+
+* TODO [Cedric, Lachlan] Work out how to benchmark with SSD with Deep1M
+  + Does the file format have implications for performance?
+  + Should we use something equivalent to numpy memmap?
+- Work out how to benchmark in memory (agent nodes) with Deep1M.
+
