@@ -2,3 +2,4 @@
 First and foremost a system for PDF generation.
 Secondarily, a benchmarking suite for distributed vector databases.
 
+- [[https://docs.google.com/document/d/1onOyrmmMB24bZhNPwj8jB9SDM3plAWI5tPQ78N-uQBM/edit][Google doc notes]]
