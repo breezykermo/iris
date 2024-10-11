@@ -1,1 +1,4 @@
 .DS_Store
+iris/data/deep1M
+iris/data/deep1b_gt
+iris/data/deep1M.tar.gz
