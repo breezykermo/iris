@@ -2,5 +2,3 @@
 First and foremost a system for PDF generation.
 Secondarily, a benchmarking suite for distributed vector databases.
 
-** Data files
-Download the Deep1M dataset from [[https://www.dropbox.com/scl/fo/9q8tah1kkdwqszjftrch1/AF_nrjGv9j6AK59I7BIVyCk?rlkey=fgapkq5cm68m4yxs580ejze2w&st=la7h5ma1&dl=0][here]].
