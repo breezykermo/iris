@@ -1,0 +1,11 @@
+* Scripts to download and partition vectors
+
+** Download the Deep1M dataset and unzip
+#+begin_src
+wget https://www.dropbox.com/scl/fo/9q8tah1kkdwqszjftrch1/AF_nrjGv9j6AK59I7BIVyCk?rlkey=fgapkq5cm68m4yxs580ejze2w&st=la7h5ma1&dl=1
+#+end_src
+
+#+begin_src
+tar -xvzf deep1M.tar.gz
+#+end_src
+
