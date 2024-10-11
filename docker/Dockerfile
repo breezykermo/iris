@@ -19,5 +19,4 @@ RUN apt-get update && apt-get install -y \
  emacs-nox\
  vim\
  jq \
- file \
-
+ file 

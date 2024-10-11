@@ -7,8 +7,11 @@ import geni.rspec.igext as ig
 # Import the Emulab specific extensions.
 import geni.rspec.emulab as emulab
 
+# Create a portal object,
+pc = portal.Context()
+
 # Create a Request object to start building the RSpec.
-request = portal.context.makeRequestRSpec()
+request = pc.makeRequestRSpec()
 
 # Create the container node.
 node = ig.DockerContainer("node")
@@ -21,4 +24,4 @@ bs.size = "30GB"
 request.addResource(node)
 
 # Dump the request as an XML RSpec.
-portal.context.printRequestRSpec(request)
+pc.printRequestRSpec(request)
