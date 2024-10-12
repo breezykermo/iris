@@ -2,88 +2,109 @@
 use crate::architecture::HardwareArchitecture;
 use crate::stubs::gen_random_vecs;
 use std::ffi::c_void;
+use std::fs::File;
+use std::path::PathBuf;
 
 use anyhow::Result;
+use memmap2::Mmap;
 
-// Trait for different datasets
-pub trait Dataset {
-    // Provide basic information about the characteristics of the dataset.
+/// Trait for a dataset of vectors.
+pub trait Dataset: Sized {
+    /// Create a new dataset, loading into memory or keeping on disk as per `hw_arch`.
+    fn new(hw_arch: HardwareArchitecture) -> Result<Self>;
+    /// Provide basic information about the characteristics of the dataset.
     fn dataset_info(&self) -> String;
-    // Returns None if the data is not yet trained, else the HardwareArchitecture on which it was
-    // trained.
-    fn get_hardware_architecture(&self) -> Option<HardwareArchitecture>;
-    // Train the dataset according to a particular architecture. This doesn't actually put the data
-    // in the hardware itself, but rather calculates any partitions necessary for that next step.
-    // Should set the result of `get_hardware_architecture`, and then returns the appropriate
-    // partitions for the target architecture.
-    fn train(&mut self, hardware_architecture: HardwareArchitecture) -> Result<Vec<DataPartition>>;
-
-    // Assuming a trained dataset, loads the data onto the actual hardware.
-    fn load(&mut self, partitions: Vec<DataPartition>) -> Result<()>;
+    /// Returns None if the data is not yet trained, else the HardwareArchitecture on which it was
+    /// trained.
+    fn get_hardware_architecture(&self) -> HardwareArchitecture;
+    // Returns data in dataset. Fails if full dataset doesn't fit in memory.
+    // Only needs to be implemented as a way to test.
+    // fn get_data(&self) -> Result<Vectors>;
 }
 
-const DIMSTANDARD: usize = 100;
-const ONE_THOUSAND: usize = 1_000;
-
-const VDIMS: usize = DIMSTANDARD;
-const VSIZE: usize = ONE_THOUSAND;
-const VLEN: usize = VDIMS * VSIZE;
-
-#[derive(Clone)]
-pub struct DataPartition {
-    data: Box<[f64]>,
+enum VectorIndex {
+    L2Flat,
 }
 
-impl DataPartition {
-    fn new(data: Box<[f64; VDIMS * VSIZE]>) -> Self {
-        Self { data }
+pub trait Searchable {
+    fn new(ds: impl Dataset, idx: VectorIndex);
+    fn search(&self, query_vectors: Vectors, topk: Option<usize>);
+}
+
+///       32bit          ⟨d⟩ * 32bits
+/// |--------------|-------/ ... /-------|
+/// ⟨d⟩ dimension
+pub struct Fvec {
+    dimensionality: u32,
+    data: Box<[f32]>,
+}
+
+/// Contiguous array of Fvecs
+pub struct Vectors {
+    raw_data: Box<[Fvec]>,
+}
+
+/// Deep1X Dataset implementation
+pub struct Deep1X {
+    mmap: Mmap,
+    hw_arch: HardwareArchitecture,
+}
+
+impl Dataset for Deep1X {
+    fn new(hw_arch: HardwareArchitecture) -> Result<Self> {
+        // TODO: ensure filename formula maps to the output of Python provisioning
+        // using `architecture`.
+        let mut fname = PathBuf::new();
+        fname.push("../data/deep1k.fvecs");
+
+        let f = File::open(fname)?;
+
+        let mmap = unsafe { Mmap::map(&f)? };
+
+        Ok(Self { mmap, hw_arch })
     }
 
-    // NOTE: not sure if this is the best way to do it
-    fn as_c_ptr(self) -> *mut c_void {
-        Box::into_raw(self.data.into_vec().into_boxed_slice()) as *mut c_void
-    }
-}
-
-/// Deep1B Dataset implementation
-pub struct StubVectorDataset {
-    pub data: DataPartition,
-    hardware_architecture: Option<HardwareArchitecture>,
-}
-
-impl StubVectorDataset {
-    pub fn new() -> Self {
-        // TODO: replace this stub data with the actual data.
-        let underlying_data = gen_random_vecs::<VDIMS, VLEN>();
-
-        Self {
-            data: DataPartition::new(underlying_data),
-            hardware_architecture: None,
-        }
-    }
-}
-
-impl Dataset for StubVectorDataset {
     fn dataset_info(&self) -> String {
-        format!("Deep1B stub with {:?} vectors", VSIZE)
+        "Section of the Deep1B dataset X vectors".to_string()
     }
 
-    fn train(&mut self, hardware_architecture: HardwareArchitecture) -> Result<Vec<DataPartition>> {
-        match hardware_architecture {
-            hw @ HardwareArchitecture::SsdStandalone => {
-                self.hardware_architecture = Some(hw);
-                Ok(vec![self.data.clone()])
-            }
-            HardwareArchitecture::DramBalancedPartitioning => unimplemented!(),
-            HardwareArchitecture::DramRandomPartitioning => unimplemented!(),
-        }
+    fn get_hardware_architecture(&self) -> HardwareArchitecture {
+        self.hw_arch
     }
 
-    fn get_hardware_architecture(&self) -> Option<HardwareArchitecture> {
-        self.hardware_architecture
+    // fn get_data(&self) -> Result<Vectors> {
+    //     unimplemented!()
+    //     // let d = 64;
+    //     let raw_slice = &self.mmap[..];
+    //     // let index = faiss::IndexL2(d);
+    //     // index.add(1000, raw_slice)
+    //     // Ok(vecs)
+    // }
+}
+
+impl Searchable for Deep1X {
+    fn new(ds: impl Dataset, idx: VectorIndex) {
+        // properly instantiate the faiss index (via FFI) according to `VectorIndex`
+        // index = faiss.IndexFlatL2(d)
+
+        // add all vectors in `ds` to the index
+        // index.add(xb)
+        // When calling `add` in the c_api, we need to pass two arguments:
+        // 1) the number of vectors to add.
+        // 2) a pointer to the array of vectors to be added
+
+        // Assumptions on the data structure of argument 2:
+        // NOTE: in IndexFlatCodes.cpp, the `add` method calls `sa_encode` with a pointer to the end
+        // of the array where the vectors should be added.
+        // In IndexFlat.cpp, there is an impl of `sa_encode` that looks like:
+        // memcpy(bytes, x, sizeof(float) * d * n);
+        // From this, we are assuming that when implementing the FFI binding for faiss' `add`
+        // method, it is sufficient to pass a slice of the fvec bytes, i.e. each vector
+        // encoded with its dimensionality first as a u32, then its vectors (see `Fvec` docs), as
+        // `add`s second argument.
     }
 
-    fn load(&mut self, partitions: Vec<DataPartition>) -> Result<()> {
-        unimplemented!()
+    fn search(&self, query_vectors: Vectors, topk: Option<usize>) {
+        // _, ids = index.search(x=xq, k=topk)
     }
 }
