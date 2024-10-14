@@ -1,0 +1,6 @@
+* TODO [Mithi] Python code to generate fvecs files for SsdStandalone and RandomPartitioning.
+* TODO [Mithi+Lachlan] Pair to ensure that files can be loaded into benchmark suite (Rust) from provisioning output (Python). 
+* TODO [Mithi+Lachlan] Python code to generate fvecs files in BalancedPartitioning.
+* TODO [Lachlan] research whether we will be able to get the benefits of balanced partitioning with a limited number of nodes.
+* TODO [all] talk to Deepti about number of nodes limitations and reconsider the scope of experimentation.
+* TODO [Lachlan+Cedric] FFI faiss bindings for benchmarking code in ~Searchable~.
