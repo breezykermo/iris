@@ -15,6 +15,7 @@ use std::marker::PhantomData;
 const FOUR_BYTES: usize = std::mem::size_of::<f32>();
 
 /// Trait for a dataset of vectors.
+/// Note that this must be `Sized` in order that the constructor can return a Result.
 pub trait Dataset: Sized {
     /// Create a new dataset, loading into memory or keeping on disk as per `hw_arch`.
     fn new(hw_arch: HardwareArchitecture) -> Result<Self>;
