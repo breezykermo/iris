@@ -52,6 +52,8 @@ def do_compute_gt(xb, xq, topk=100):
     nb, d = xb.shape
     index = faiss.IndexFlatL2(d)
     index.add(xb)
+    # import pdb; pdb.set_trace()
+
     _, ids = index.search(x=xq, k=topk)
     return ids.astype('int32')
 

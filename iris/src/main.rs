@@ -4,7 +4,7 @@ mod query;
 mod stubs;
 
 use crate::architecture::HardwareArchitecture;
-use crate::dataset::{Dataset, StubVectorDataset};
+use crate::dataset::{Dataset, Deep1X};
 use crate::query::{Load, SyncQueries};
 
 use tracing::info;
@@ -21,14 +21,9 @@ pub enum BenchmarkError {
 
 // Benchmark function, generic over different datasets and architectures.
 pub fn benchmark<D: Dataset, L: Load>(dataset: &D, load: &L) -> Result<(), BenchmarkError> {
-    let hw_arch = dataset.get_hardware_architecture();
-    if hw_arch.is_none() {
-        return Err(BenchmarkError::UntrainedDataset);
-    }
-
     info!("Benchmarking:");
     info!("Dataset: {}", dataset.dataset_info());
-    info!("Architecture: {:?}", hw_arch.unwrap());
+    info!("Architecture: {:?}", dataset.get_hardware_architecture());
     info!("Load: {}", load.load_info());
 
     unimplemented!();
@@ -40,19 +35,19 @@ fn main() -> Result<()> {
         .with_max_level(tracing::Level::DEBUG)
         .init();
 
-    let mut dataset = StubVectorDataset::new();
+    let mut dataset = Deep1X::new(HardwareArchitecture::SsdStandalone)?;
+
+    // let mut dataset = StubVectorDataset::new();
 
     let load = SyncQueries {
         num_queries: 10_000,
     }; // 10k sync queries
 
-    let partitions = dataset.train(HardwareArchitecture::SsdStandalone)?;
-
-    // TODO: put the dataset on the right hardware
-    // let _ = dataset.load(partitions);
-
     // Run the benchmark
-    benchmark(&dataset, &load);
+    let benchmark_result = benchmark(&dataset, &load);
+    if let Err(e) = benchmark_result {
+        info!("Error: {}", e);
+    }
 
     Ok(())
 }
