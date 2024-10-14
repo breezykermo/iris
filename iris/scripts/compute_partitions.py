@@ -6,6 +6,12 @@ import faiss
 import numpy as np
 import argparse
 from pathlib import Path
+from enum import Enum, auto
+
+class Partitions(Enum):
+    SSD = 1
+    Random = 2
+    Balanced = 3
 
 def process_args():
     parser = argparse.ArgumentParser()
@@ -54,6 +60,41 @@ def do_compute_gt(xb, xq, topk=100):
     index.add(xb)
     _, ids = index.search(x=xq, k=topk)
     return ids.astype('int32')
+
+
+def compute_SSD(data, num_partitions):
+    '''
+    We use this function to run experiments on
+    - Single Node baseline where num_partitions = 1
+    - Simple replication where, for n nodes, the data is simply copied
+    into each of the n nodes.
+    '''
+    # Do we do our own filesystem to store this in?
+    # Do we care if for smaller datasets this is effectively all in cache
+    nodes = []
+    for i in range(num_partitions):
+        nodes.append(np.copy(data))
+    pass
+
+def compute_random_partitions(data, num_partitions):
+    np.random.shuffle(data)
+    return np.array_split(data, num_partitions)
+
+def compute_balanced_partitions(data, num_partitions):
+
+    pass
+
+def compute_partitions(data, kind, how_many):
+    match kind:
+        case Partitions.SSD:
+            compute_SSD(data, how_many)
+        case Partitions.Random:
+            compute_random_partitions(data, how_many)
+        case Partitions.Balanced:
+            compute_balanced_partitions(data, how_many)
+        case _:
+            print("Error: No such partition")
+    pass
 
 
 if __name__ == '__main__':
