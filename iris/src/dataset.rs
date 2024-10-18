@@ -1,6 +1,7 @@
 // extern crate libc;
 use crate::architecture::HardwareArchitecture::{
-    self, DramBalancedPartitioning, DramRandomPartitioning,
+    self, DramBalancedHnswPartitioned, DramBalancedLshPartitioned, DramRandomPartitioning,
+    SsdStandalone,
 };
 use crate::stubs::gen_random_vecs;
 // use std::ffi::c_void;
@@ -18,7 +19,7 @@ const FOUR_BYTES: usize = std::mem::size_of::<f32>();
 /// Note that this must be `Sized` in order that the constructor can return a Result.
 pub trait Dataset: Sized {
     /// Create a new dataset, loading into memory or keeping on disk as per `hw_arch`.
-    fn new(hw_arch: HardwareArchitecture) -> Result<Self>;
+    fn new(hw_arch: HardwareArchitecture, cluster_size: usize, node_num: usize) -> Result<Self>;
     /// Provide basic information about the characteristics of the dataset.
     fn dataset_info(&self) -> String;
     /// Returns None if the data is not yet trained, else the HardwareArchitecture on which it was
@@ -28,7 +29,7 @@ pub trait Dataset: Sized {
     fn get_data(&self) -> Result<Vec<Fvec>>;
 }
 
-enum VectorIndex {
+pub enum VectorIndex {
     L2Flat,
 }
 
@@ -139,11 +140,13 @@ pub struct Deep1X {
 }
 
 impl Dataset for Deep1X {
-    fn new(hw_arch: HardwareArchitecture) -> Result<Self> {
+    fn new(hw_arch: HardwareArchitecture, cluster_size: usize, node_num: usize) -> Result<Self> {
         // TODO: ensure filename formula maps to the output of Python provisioning
         // using `architecture`.
         let mut fname = PathBuf::new();
-        fname.push("../data/deep1k.fvecs");
+        // {architecture}_{clustersize}nodes_node{nodenumber}.fvecs.
+        let filename = format!("{hw_arch}_{cluster_size}nodes_node{node_num}.fvecs");
+        fname.push(filename);
 
         let f = File::open(fname)?;
 
@@ -152,7 +155,9 @@ impl Dataset for Deep1X {
         // system.
         let mmap = unsafe { Mmap::map(&f)? };
 
-        if let DramBalancedPartitioning | DramRandomPartitioning = hw_arch {
+        if let DramBalancedHnswPartitioned | DramBalancedLshPartitioned | DramRandomPartitioning =
+            hw_arch
+        {
             // Calls syscall mlock on file memory, ensuring that it will be in RAM until unlocked.
             // This will through an error if RAM is not large enough.
             let _ = mmap.lock()?;
