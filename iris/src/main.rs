@@ -7,6 +7,8 @@ use crate::architecture::HardwareArchitecture;
 use crate::dataset::{Dataset, Deep1X};
 use crate::query::{Load, SyncQueries};
 
+use faiss::{index_factory, Index, MetricType};
+
 use clap::Parser;
 
 use tracing::info;
@@ -53,6 +55,8 @@ fn main() -> Result<()> {
     let args = Args::parse();
 
     let mut dataset = Deep1X::new(args.architecture, args.cluster_size, args.node_num)?;
+
+    let mut index = index_factory(64, "Flat", MetricType::L2)?;
 
     // let mut dataset = StubVectorDataset::new();
 
