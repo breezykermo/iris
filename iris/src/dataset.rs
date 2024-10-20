@@ -1,6 +1,7 @@
 // extern crate libc;
 use crate::architecture::HardwareArchitecture::{
-    self, DramBalancedPartitioning, DramRandomPartitioning,
+    self, DramBalancedHnswPartitioned, DramBalancedLshPartitioned, DramRandomPartitioning,
+    SsdStandalone,
 };
 use crate::stubs::gen_random_vecs;
 // use std::ffi::c_void;
@@ -9,8 +10,12 @@ use std::path::PathBuf;
 use std::slice;
 
 use anyhow::Result;
+use faiss::index::IndexImpl;
+use faiss::{index_factory, Index, MetricType};
 use memmap2::Mmap;
 use std::marker::PhantomData;
+
+use byteorder::{ByteOrder, LittleEndian};
 
 const FOUR_BYTES: usize = std::mem::size_of::<f32>();
 
@@ -18,9 +23,11 @@ const FOUR_BYTES: usize = std::mem::size_of::<f32>();
 /// Note that this must be `Sized` in order that the constructor can return a Result.
 pub trait Dataset: Sized {
     /// Create a new dataset, loading into memory or keeping on disk as per `hw_arch`.
-    fn new(hw_arch: HardwareArchitecture) -> Result<Self>;
+    fn new(hw_arch: HardwareArchitecture, cluster_size: usize, node_num: usize) -> Result<Self>;
     /// Provide basic information about the characteristics of the dataset.
     fn dataset_info(&self) -> String;
+    /// Provide the dimensionality of the vectors in the dataset.
+    fn get_dimensionality(&self) -> u32;
     /// Returns None if the data is not yet trained, else the HardwareArchitecture on which it was
     /// trained.
     fn get_hardware_architecture(&self) -> HardwareArchitecture;
@@ -28,13 +35,23 @@ pub trait Dataset: Sized {
     fn get_data(&self) -> Result<Vec<Fvec>>;
 }
 
-enum VectorIndex {
-    L2Flat,
+// https://github.com/facebookresearch/faiss/wiki/Faiss-indexes
+#[derive(Debug)]
+pub enum VectorIndex {
+    IndexFlatL2,
 }
 
-pub trait Searchable {
-    fn new(ds: impl Dataset, idx: VectorIndex);
-    fn search(&self, query_vectors: Vec<Fvec>, topk: Option<usize>);
+impl ToString for VectorIndex {
+    fn to_string(&self) -> String {
+        match self {
+            VectorIndex::IndexFlatL2 => "IndexFlatL2".to_string(),
+        }
+    }
+}
+
+pub trait Searchable: Dataset {
+    fn build_index(&mut self, index_type: VectorIndex) -> Result<()>;
+    fn search_with_index(&self, query_vectors: Vec<Fvec>, topk: Option<usize>);
 }
 
 /// A type that represents a view on an underlying set of fvecs. See [FVecView] for memory layout.
@@ -135,15 +152,19 @@ impl<'a> From<FvecView<'a>> for Fvec {
 /// Deep1X Dataset implementation
 pub struct Deep1X {
     mmap: Mmap,
+    dimensionality: u32,
+    index: Option<IndexImpl>,
     hw_arch: HardwareArchitecture,
 }
 
 impl Dataset for Deep1X {
-    fn new(hw_arch: HardwareArchitecture) -> Result<Self> {
+    fn new(hw_arch: HardwareArchitecture, cluster_size: usize, node_num: usize) -> Result<Self> {
         // TODO: ensure filename formula maps to the output of Python provisioning
         // using `architecture`.
         let mut fname = PathBuf::new();
-        fname.push("../data/deep1k.fvecs");
+        // {architecture}_{clustersize}nodes_node{nodenumber}.fvecs.
+        let filename = format!("{hw_arch}_{cluster_size}nodes_node{node_num}.fvecs");
+        fname.push(filename);
 
         let f = File::open(fname)?;
 
@@ -152,17 +173,37 @@ impl Dataset for Deep1X {
         // system.
         let mmap = unsafe { Mmap::map(&f)? };
 
-        if let DramBalancedPartitioning | DramRandomPartitioning = hw_arch {
+        if let DramBalancedHnswPartitioned | DramBalancedLshPartitioned | DramRandomPartitioning =
+            hw_arch
+        {
             // Calls syscall mlock on file memory, ensuring that it will be in RAM until unlocked.
             // This will through an error if RAM is not large enough.
             let _ = mmap.lock()?;
         }
 
-        Ok(Self { mmap, hw_arch })
+        // let dimensionality = LittleEndian::read_32(&mmap[..4]);
+        let dimensionality = LittleEndian::read_u32(&mmap[..4]);
+
+        // SAFETY:
+        // let dimensionality = unsafe {
+        //     let value = *(mmap as *const u32);
+        //     value
+        // };
+
+        Ok(Self {
+            index: None,
+            mmap,
+            hw_arch,
+            dimensionality,
+        })
     }
 
     fn dataset_info(&self) -> String {
         "Section of the Deep1B dataset X vectors".to_string()
+    }
+
+    fn get_dimensionality(&self) -> u32 {
+        self.dimensionality
     }
 
     fn get_hardware_architecture(&self) -> HardwareArchitecture {
@@ -177,9 +218,13 @@ impl Dataset for Deep1X {
 }
 
 impl Searchable for Deep1X {
-    fn new(ds: impl Dataset, idx: VectorIndex) {
-        // properly instantiate the faiss index (via FFI) according to `VectorIndex`
-        // index = faiss.IndexFlatL2(d)
+    fn build_index(&mut self, index_type: VectorIndex) -> Result<()> {
+        let idx = index_factory(
+            self.get_dimensionality(),
+            index_type.to_string(),
+            MetricType::L2,
+        )?;
+        self.index = Some(idx);
 
         // add all vectors in `ds` to the index
         // index.add(xb)
@@ -196,9 +241,10 @@ impl Searchable for Deep1X {
         // method, it is sufficient to pass a slice of the fvec bytes, i.e. each vector
         // encoded with its dimensionality first as a u32, then its vectors (see `Fvec` docs), as
         // `add`s second argument.
+        Ok(())
     }
 
-    fn search(&self, query_vectors: Vec<Fvec>, topk: Option<usize>) {
+    fn search_with_index(&self, query_vectors: Vec<Fvec>, topk: Option<usize>) {
         // _, ids = index.search(x=xq, k=topk)
     }
 }

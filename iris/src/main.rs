@@ -4,8 +4,10 @@ mod query;
 mod stubs;
 
 use crate::architecture::HardwareArchitecture;
-use crate::dataset::{Dataset, Deep1X};
+use crate::dataset::{Dataset, Deep1X, Searchable, VectorIndex};
 use crate::query::{Load, SyncQueries};
+
+use clap::Parser;
 
 use tracing::info;
 use tracing_subscriber;
@@ -29,13 +31,29 @@ pub fn benchmark<D: Dataset, L: Load>(dataset: &D, load: &L) -> Result<(), Bench
     unimplemented!();
 }
 
+#[derive(Parser, Debug)]
+#[command(version, about, long_about = None)]
+struct Args {
+    #[arg(short, long, required(true))]
+    architecture: HardwareArchitecture,
+
+    #[arg(short, long, required(true))]
+    cluster_size: usize,
+
+    #[arg(short, long, required(true))]
+    node_num: usize,
+}
+
 fn main() -> Result<()> {
     // Initialize logging
     tracing_subscriber::fmt()
         .with_max_level(tracing::Level::DEBUG)
         .init();
 
-    let mut dataset = Deep1X::new(HardwareArchitecture::SsdStandalone)?;
+    let args = Args::parse();
+
+    let mut dataset = Deep1X::new(args.architecture, args.cluster_size, args.node_num)?;
+    let _ = dataset.build_index(VectorIndex::IndexFlatL2)?;
 
     // let mut dataset = StubVectorDataset::new();
 
