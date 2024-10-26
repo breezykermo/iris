@@ -10,12 +10,12 @@ use std::path::PathBuf;
 use std::slice;
 
 use anyhow::Result;
+use byteorder::{ByteOrder, LittleEndian};
 use faiss::index::IndexImpl;
 use faiss::{index_factory, Index, MetricType};
 use memmap2::Mmap;
 use std::marker::PhantomData;
-
-use byteorder::{ByteOrder, LittleEndian};
+use thiserror::Error;
 
 const FOUR_BYTES: usize = std::mem::size_of::<f32>();
 
@@ -51,7 +51,13 @@ impl ToString for VectorIndex {
 
 pub trait Searchable: Dataset {
     fn build_index(&mut self, index_type: VectorIndex) -> Result<()>;
-    fn search_with_index(&self, query_vectors: Vec<Fvec>, topk: Option<usize>);
+    /// Takes a Vec<Fvec> and returns a Vec<Vec<usize>>, whereby each inner Vec<usize> is an array
+    /// of the indices for the `topk` vectors returned from the result.
+    fn search_with_index(
+        &self,
+        query_vectors: Vec<Fvec>,
+        topk: Option<usize>,
+    ) -> Result<Vec<Vec<usize>>, SearchableError>;
 }
 
 /// A type that represents a view on an underlying set of fvecs. See [FVecView] for memory layout.
@@ -217,6 +223,12 @@ impl Dataset for Deep1X {
     }
 }
 
+#[derive(Error, Debug)]
+pub enum SearchableError {
+    #[error("You must index a dataset before it can be searched")]
+    DatasetIsNotIndexed,
+}
+
 impl Searchable for Deep1X {
     fn build_index(&mut self, index_type: VectorIndex) -> Result<()> {
         let idx = index_factory(
@@ -244,7 +256,15 @@ impl Searchable for Deep1X {
         Ok(())
     }
 
-    fn search_with_index(&self, query_vectors: Vec<Fvec>, topk: Option<usize>) {
+    fn search_with_index(
+        &self,
+        query_vectors: Vec<Fvec>,
+        topk: Option<usize>,
+    ) -> Result<Vec<Vec<usize>>, SearchableError> {
         // _, ids = index.search(x=xq, k=topk)
+        if self.index.is_none() {
+            return Err(SearchableError::DatasetIsNotIndexed);
+        }
+        Ok(vec![])
     }
 }
