@@ -15,5 +15,7 @@ RUN pip install --no-cache-dir faiss-cpu numpy
 COPY compute_partitions.py /app
 COPY data /app
 
-CMD ["python", "compute_partitions.py", ""]
+# Docker command should be specified when running, i.e.
+# 
+# docker run -v ./outdir:/app/outdir compute_partitions python compute_partitions.py deep1k --out outdir 
 
