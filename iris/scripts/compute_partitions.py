@@ -5,6 +5,9 @@
 import faiss
 import numpy as np
 import argparse
+import random
+import math
+from collections import defaultdict
 from pathlib import Path
 from enum import Enum, auto
 
@@ -83,11 +86,6 @@ def partition_to_nodes(data, num_nodes=4):
     return partitions 
 
 
-def compute_random_partitions(data, num_partitions):
-    # for i in range(len(data)):
-    np.random.shuffle(data)
-    return np.array_split(data, num_partitions)
-
 def compute_balanced_partitions(data, num_partitions):
     print("Computing {} balanced partitions...", num_partitions)
     pass
@@ -100,18 +98,41 @@ def get_fname(architecture: Partitions, how_many: int, node_num: int, dataset_na
 
 def mkdir_p(directory_path):
     Path(directory_path).mkdir(parents=True, exist_ok=True)
-    print("Created {}.", directory_path)
+    print(f"Created {directory_path}.")
 
 def compute_partitions(data, how_many: int, schema: Partitions, out_dir: str, dataset_name: str):
     match schema:
-
         case Partitions.SsdReplicated:
             partition_name = get_fname(schema, how_many, 1, dataset_name)
             fvecs_write(Path(out_dir) / Path(partition_name), data)
             print("Wrote {}.", partition_name)
-            # TODO: just create a file with the main fvecs
         case Partitions.RandomPartitions: 
-            compute_random_partitions(data, how_many)
+            max_vector_count = math.ceil(data.shape[0] / how_many)
+            print(f"Max vector count: {max_vector_count}")
+
+            pnames = [Path(out_dir) / Path(get_fname(schema, how_many, x, dataset_name)) for x in range(how_many)]
+            all_files = [open(fp, 'a') for fp in pnames]
+            active_files = list(all_files)
+            fcount = defaultdict(int)
+
+            try:
+                for v in data:
+                    v_new = v[np.newaxis, :]
+
+                    fchoice = random.choice(active_files)
+
+                    fcount[fchoice] += 1
+                    
+                    # Remove from active_files if the count has reached threshold
+                    if fcount[fchoice] >= max_vector_count:
+                        print(f"Reached max of {max_vector_count}, removing node {all_files.index(fchoice)}")
+                        active_files.remove(fchoice)
+
+                    fvecs_write(fchoice, v_new)
+            finally:
+                for file in all_files:
+                    file.close()
+
         case Partitions.BalancedHnsw:
             compute_balanced_partitions(data, how_many)
         case Partitions.BalancedLsh:
@@ -136,7 +157,7 @@ if __name__ == '__main__':
         base_db = fvecs_mmap(args.db)
         base_db = np.ascontiguousarray(base_db, dtype='float32')
 
-        print("Base db shape: {}", base_db.shape)
+        print(f"Base db shape: {base_db.shape}")
 
         clustersizes = [1, 2, 5, 10]
         for how_many in clustersizes:
