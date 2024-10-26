@@ -5,17 +5,29 @@
 import faiss
 import numpy as np
 import argparse
+import random
+import math
+from collections import defaultdict
 from pathlib import Path
+from enum import Enum, auto
+
+# This represents all the architectures and balancing strategies we will test against
+class Partitions(Enum):
+    SsdReplicated = 0
+    RandomPartitions = 1
+    BalancedHnsw = 2
+    BalancedLsh = 3
 
 def process_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--out", default="./", help="The path to the output directory")
-    parser.add_argument("--szsufs", default=["1M", "10M", "100M"], nargs="*", help="The target sizes")
-    parser.add_argument("--base_filename", default="./data/deep1M/deep1M_learn.fvecs", help="The path to the base veectors")
-    parser.add_argument("--query_filename", default="./data/deep1M/deep1M_query.fvecs", help="The path to the query vectors")
+    parser.add_argument("name", type=str, help="The name for the outputted dataset")
+    parser.add_argument("--out", default="./out/", help="The path to the output directory")
+    parser.add_argument("--architecture", default=["ssd", "random", "hnsw", "lsh"], nargs="*", help="The architecture according to which to partition the vector set.")
+    parser.add_argument("--db", default="./data/deep1M/deep1M_query.fvecs", help="The path to the vector set that you want to partition")
     return parser.parse_args()
 
-
+# Note: This is in memory. Use ivecs_mmap for the same functionality but with 
+# memmap to be able to work with larger 
 def ivecs_read(fname):
     a = np.fromfile(fname, dtype='int32')
     d = a[0]
@@ -25,7 +37,8 @@ def ivecs_read(fname):
 def fvecs_read(fname):
     return ivecs_read(fname).view('float32')
 
-
+# This is what should be used for datasets that cannot be loaded into memory
+# i.e., greater than 64GBs
 def ivecs_mmap(fname):
     a = np.memmap(fname, dtype='int32', mode='r')
     d = a[0]
@@ -57,21 +70,101 @@ def do_compute_gt(xb, xq, topk=100):
     _, ids = index.search(x=xq, k=topk)
     return ids.astype('int32')
 
+def partition_to_nodes(data, num_nodes=4):
+    """
+    Partitions the data into 'num_nodes' equal parts and assigns to different nodes.
+    """
+    nb = data.shape[0]
+    block_size = nb // num_nodes  # Determine the size of each partition
+
+    partitions = []
+
+    for node_id in range(num_nodes):
+        start_idx = node_id * block_size
+        # If last node, include all remaining vectors
+        end_idx = nb if node_id == num_nodes - 1 else (node_id + 1) * block_size
+        partitions.append(data[start_idx:end_idx])  # Partitioned data block
+
+    return partitions 
+
+
+def compute_balanced_partitions(data, num_partitions):
+    print("Computing {} balanced partitions...", num_partitions)
+    pass
+
+def get_fname(architecture: Partitions, how_many: int, node_num: int, dataset_name: str):
+    if architecture is Partitions.SsdReplicated:
+        return f"{dataset_name}_{architecture.name}.fvecs"
+
+    return f"{dataset_name}_{architecture.name}_{how_many}nodes_node{node_num}.fvecs"
+
+def mkdir_p(directory_path):
+    Path(directory_path).mkdir(parents=True, exist_ok=True)
+    print(f"Created {directory_path}.")
+
+def compute_partitions(data, how_many: int, schema: Partitions, out_dir: str, dataset_name: str):
+    match schema:
+        case Partitions.SsdReplicated:
+            partition_name = get_fname(schema, how_many, 1, dataset_name)
+            fvecs_write(Path(out_dir) / Path(partition_name), data)
+            print("Wrote {}.", partition_name)
+        case Partitions.RandomPartitions: 
+            max_vector_count = math.ceil(data.shape[0] / how_many)
+            print(f"Max vector count: {max_vector_count}")
+
+            pnames = [Path(out_dir) / Path(get_fname(schema, how_many, x, dataset_name)) for x in range(how_many)]
+            all_files = [open(fp, 'a') for fp in pnames]
+            active_files = list(all_files)
+            fcount = defaultdict(int)
+
+            try:
+                for v in data:
+                    v_new = v[np.newaxis, :]
+
+                    fchoice = random.choice(active_files)
+
+                    fcount[fchoice] += 1
+                    
+                    # Remove from active_files if the count has reached threshold
+                    if fcount[fchoice] >= max_vector_count:
+                        print(f"Reached max of {max_vector_count}, removing node {all_files.index(fchoice)}")
+                        active_files.remove(fchoice)
+
+                    fvecs_write(fchoice, v_new)
+            finally:
+                for file in all_files:
+                    file.close()
+
+        case Partitions.BalancedHnsw:
+            compute_balanced_partitions(data, how_many)
+        case Partitions.BalancedLsh:
+            compute_balanced_partitions(data, how_many)
+        case _:
+            print("Error: No such partition")
 
 if __name__ == '__main__':
     args = process_args()
 
-    for szsuf in args.szsufs:
-        print("Deep{}:".format(szsuf))
-        dbsize = {"1M": 1000000, "10M": 10000000, "100M": 100000000}[szsuf]
+    mkdir_p(args.out)
 
-        xb = fvecs_mmap(args.base_filename)
-        xq = fvecs_read(args.query_filename)
+    for arch in args.architecture:
+        print("Calculating partitions for {}:".format(arch))
+        partition_schema = {
+            "ssd": Partitions.SsdReplicated,
+            "random": Partitions.RandomPartitions,
+            "lsh": Partitions.BalancedLsh,
+            "hnsw": Partitions.BalancedHnsw,
+        }[arch]
 
-        xb = np.ascontiguousarray(xb[:dbsize], dtype='float32')
+        base_db = fvecs_mmap(args.db)
+        base_db = np.ascontiguousarray(base_db, dtype='float32')
 
-        gt_fname = str(Path(args.out) / "deep{}_groundtruth.ivecs".format(szsuf))
+        print(f"Base db shape: {base_db.shape}")
 
-        gt = do_compute_gt(xb, xq, topk=100)
-        ivecs_write(gt_fname, gt)
+        clustersizes = [1, 2, 5, 10]
+        for how_many in clustersizes:
+            compute_partitions(base_db, how_many, partition_schema, args.out, args.name)
+
+        # out= str(Path(args.out) / "deep{}_groundtruth.ivecs".format(szsuf))
+        # ivecs_write(gt_fname, gt)
 

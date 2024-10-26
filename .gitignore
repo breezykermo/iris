@@ -1,1 +1,4 @@
 .DS_Store
+iris/target
+iris/src/target
+iris/scripts/out
