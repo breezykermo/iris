@@ -1,4 +1,4 @@
-* Scripts to download and partition vectors
+* Download and partition vectors
 
 ** Download the Deep1M dataset and unzip
 #+begin_src
@@ -9,3 +9,9 @@ wget -o deep1m.tar.gz "https://www.dropbox.com/scl/fo/9q8tah1kkdwqszjftrch1/AF_n
 tar -xvzf deep1M.tar.gz
 #+end_src
 
+* Run the partitioning
+#+begin_src
+export DATASET_NAME=deep1k
+export OUTDIR=outdir
+docker run -v ./data:/app/data -v ./outdir:/app/outdir compute_partitions python compute_partitions.py $DATASET_NAME --out $OUTDIR 
+#+end_src
