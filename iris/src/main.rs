@@ -15,6 +15,12 @@ use tracing_subscriber;
 use anyhow::Result;
 use thiserror::Error;
 
+// Ensure that only one of FAISS or hnsw_rs is used.
+#[cfg(all(feature = "hnsw_faiss", feature = "hnsw_rust"))]
+compile_error!(
+    "Features `hnsw_faiss` and `hnsw_rust` cannot be enabled at the same time. Please enable only one."
+);
+
 #[derive(Error, Debug)]
 pub enum BenchmarkError {
     #[error("The dataset you seek to benchmark must be trained on a target hardware architecture")]
