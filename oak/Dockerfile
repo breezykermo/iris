@@ -19,8 +19,8 @@ RUN cmake --build build
 RUN cp /faiss/build/faiss/libfaiss.so /usr/local/lib/libfaiss.so
 RUN cp /faiss/build/c_api/libfaiss_c.so /usr/local/lib/libfaiss_c.so
 
-# Build iris
-WORKDIR /iris
+# Build oak
+WORKDIR /oak
 COPY . .
 RUN cargo build --release
-# CMD ./iris
+# CMD ./oak
