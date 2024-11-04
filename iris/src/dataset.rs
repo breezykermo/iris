@@ -11,7 +11,9 @@ use std::slice;
 
 use anyhow::Result;
 use byteorder::{ByteOrder, LittleEndian};
+#[cfg(feature = "hnsw_faiss")]
 use faiss::index::IndexImpl;
+#[cfg(feature = "hnsw_faiss")]
 use faiss::{index_factory, Index, MetricType};
 use memmap2::Mmap;
 use std::marker::PhantomData;
@@ -155,11 +157,14 @@ impl<'a> From<FvecView<'a>> for Fvec {
         }
     }
 }
+
+pub trait HnswIndex {}
+
 /// Deep1X Dataset implementation
 pub struct Deep1X {
     mmap: Mmap,
     dimensionality: u32,
-    index: Option<IndexImpl>,
+    index: Option<Box<dyn HnswIndex>>,
     hw_arch: HardwareArchitecture,
 }
 
@@ -229,6 +234,7 @@ pub enum SearchableError {
     DatasetIsNotIndexed,
 }
 
+#[cfg(feature = "hnsw_faiss")]
 impl Searchable for Deep1X {
     fn build_index(&mut self, index_type: VectorIndex) -> Result<()> {
         let idx = index_factory(
@@ -265,6 +271,21 @@ impl Searchable for Deep1X {
         if self.index.is_none() {
             return Err(SearchableError::DatasetIsNotIndexed);
         }
+        Ok(vec![])
+    }
+}
+
+#[cfg(feature = "hnsw_rust")]
+impl Searchable for Deep1X {
+    fn build_index(&mut self, index_type: VectorIndex) -> Result<()> {
+        Ok(())
+    }
+
+    fn search_with_index(
+        &self,
+        query_vectors: Vec<Fvec>,
+        topk: Option<usize>,
+    ) -> Result<Vec<Vec<usize>>, SearchableError> {
         Ok(vec![])
     }
 }
