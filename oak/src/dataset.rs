@@ -42,8 +42,10 @@ pub enum VectorMetric {
 
 impl ToString for VectorIndex {
     fn to_string(&self) -> String {
+        // String is passed to FAISS, and thus should match:
+        // https://github.com/facebookresearch/faiss/wiki/Faiss-indexes
         match self {
-            VectorIndex::IndexFlatL2 => "IndexFlatL2".to_string(),
+            VectorIndex::IndexFlatL2 => "Flat".to_string(),
         }
     }
 }

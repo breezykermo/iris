@@ -1,0 +1,18 @@
+build_and_run:
+  docker build -t oak .
+  docker run \
+      -v ./:/oak \
+      oak
+  # sudo chown -R $(id -u):$(id -g) data/
+
+run:
+  docker run \
+      -v ./:/oak \
+      oak
+
+dev:
+  docker run \
+      -it \
+      -v ./:/oak \
+      oak \
+      bash

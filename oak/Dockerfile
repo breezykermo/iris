@@ -18,9 +18,10 @@ RUN cmake -B build -DFAISS_ENABLE_C_API=ON -DBUILD_SHARED_LIBS=ON -DCMAKE_BUILD_
 RUN cmake --build build
 RUN cp /faiss/build/faiss/libfaiss.so /usr/local/lib/libfaiss.so
 RUN cp /faiss/build/c_api/libfaiss_c.so /usr/local/lib/libfaiss_c.so
+ENV LD_LIBRARY_PATH=/usr/local/lib
 
 # Build oak
 WORKDIR /oak
 COPY . .
-RUN cargo build --release
+# RUN cargo build --release
 # CMD ./oak

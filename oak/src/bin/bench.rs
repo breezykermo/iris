@@ -1,6 +1,4 @@
-use crate::architecture::HardwareArchitecture;
-use crate::dataset::{Dataset, Deep1X, Searchable, VectorIndex};
-use crate::query::{Load, SyncQueries};
+use oak::query::{Load, SyncQueries};
 
 use clap::Parser;
 
@@ -10,12 +8,6 @@ use tracing_subscriber;
 use anyhow::Result;
 use thiserror::Error;
 
-// Ensure that only one of FAISS or hnsw_rs is used.
-#[cfg(all(feature = "hnsw_faiss", feature = "hnsw_rust"))]
-compile_error!(
-    "Features `hnsw_faiss` and `hnsw_rust` cannot be enabled at the same time. Please enable only one."
-);
-
 #[derive(Error, Debug)]
 pub enum BenchmarkError {
     #[error("The dataset you seek to benchmark must be trained on a target hardware architecture")]
@@ -23,10 +15,8 @@ pub enum BenchmarkError {
 }
 
 // Benchmark function, generic over different datasets and architectures.
-pub fn benchmark<D: Dataset, L: Load>(dataset: &D, load: &L) -> Result<(), BenchmarkError> {
+pub fn benchmark<L: Load>(load: &L) -> Result<(), BenchmarkError> {
     info!("Benchmarking:");
-    info!("Dataset: {}", dataset.dataset_info());
-    info!("Architecture: {:?}", dataset.get_hardware_architecture());
     info!("Load: {}", load.load_info());
 
     unimplemented!();
@@ -34,16 +24,7 @@ pub fn benchmark<D: Dataset, L: Load>(dataset: &D, load: &L) -> Result<(), Bench
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
-struct Args {
-    #[arg(short, long, required(true))]
-    architecture: HardwareArchitecture,
-
-    #[arg(short, long, required(true))]
-    cluster_size: usize,
-
-    #[arg(short, long, required(true))]
-    node_num: usize,
-}
+struct Args {}
 
 fn main() -> Result<()> {
     // Initialize logging
@@ -53,17 +34,12 @@ fn main() -> Result<()> {
 
     let args = Args::parse();
 
-    let mut dataset = Deep1X::new(args.architecture, args.cluster_size, args.node_num)?;
-    let _ = dataset.build_index(VectorIndex::IndexFlatL2)?;
-
-    // let mut dataset = StubVectorDataset::new();
-
     let load = SyncQueries {
         num_queries: 10_000,
     }; // 10k sync queries
 
     // Run the benchmark
-    let benchmark_result = benchmark(&dataset, &load);
+    let benchmark_result = benchmark(&load);
     if let Err(e) = benchmark_result {
         info!("Error: {}", e);
     }
