@@ -1,0 +1,23 @@
+build_and_run:
+  docker build -t get_sift .
+  docker run \
+      -v ./run.py:/app/run.py \
+      -v ./data:/app/outdir \
+      get_sift
+  sudo chown -R $(id -u):$(id -g) data/
+
+run:
+  docker run \
+      -v ./run.py:/app/run.py \
+      -v ./data:/app/outdir \
+      get_sift
+  sudo chown -R $(id -u):$(id -g) data/
+
+dev:
+  docker run \
+      -it \
+      -v ./run.py:/app/run.py \
+      -v ./data:/app/outdir \
+      get_sift \
+      bash
+  sudo chown -R $(id -u):$(id -g) data/
