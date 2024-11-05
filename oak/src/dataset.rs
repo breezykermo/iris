@@ -1,9 +1,4 @@
 // extern crate libc;
-use crate::architecture::HardwareArchitecture::{
-    self, DramBalancedHnswPartitioned, DramBalancedLshPartitioned, DramRandomPartitioning,
-    SsdStandalone,
-};
-use crate::stubs::gen_random_vecs;
 // use std::ffi::c_void;
 use std::fs::File;
 use std::path::PathBuf;
@@ -24,15 +19,12 @@ const FOUR_BYTES: usize = std::mem::size_of::<f32>();
 /// Trait for a dataset of vectors.
 /// Note that this must be `Sized` in order that the constructor can return a Result.
 pub trait Dataset: Sized {
-    /// Create a new dataset, loading into memory or keeping on disk as per `hw_arch`.
-    fn new(hw_arch: HardwareArchitecture, cluster_size: usize, node_num: usize) -> Result<Self>;
+    /// Create a new dataset, loading into memory.
+    fn new(fname: String) -> Result<Self>;
     /// Provide basic information about the characteristics of the dataset.
     fn dataset_info(&self) -> String;
     /// Provide the dimensionality of the vectors in the dataset.
     fn get_dimensionality(&self) -> u32;
-    /// Returns None if the data is not yet trained, else the HardwareArchitecture on which it was
-    /// trained.
-    fn get_hardware_architecture(&self) -> HardwareArchitecture;
     /// Returns data in dataset. Fails if full dataset doesn't fit in memory.
     fn get_data(&self) -> Result<Vec<Fvec>>;
 }
@@ -40,6 +32,11 @@ pub trait Dataset: Sized {
 // https://github.com/facebookresearch/faiss/wiki/Faiss-indexes
 #[derive(Debug)]
 pub enum VectorIndex {
+    IndexFlatL2,
+}
+
+#[derive(Debug)]
+pub enum VectorMetric {
     IndexFlatL2,
 }
 
@@ -64,14 +61,14 @@ pub trait Searchable: Dataset {
 
 /// A type that represents a view on an underlying set of fvecs. See [FVecView] for memory layout.
 pub struct FvecsView<'a> {
-    ptr: *const u8,
-    end: *const u8,
-    _marker: PhantomData<&'a [u8]>,
+    ptr: *const f32,
+    end: *const f32,
+    _marker: PhantomData<&'a [f32]>,
 }
 
 impl<'a> FvecsView<'a> {
     pub fn new(mmap: &Mmap) -> Self {
-        let ptr = mmap.as_ptr();
+        let ptr = mmap.as_ptr() as *const f32;
         FvecsView {
             ptr,
             // SAFETY: the pointer arithmetic is constrained by the length of the file (represented
@@ -139,7 +136,7 @@ impl<'a> Iterator for FvecsView<'a> {
 pub struct FvecView<'a> {
     dimensionality: usize,
     ptr: *const f32,
-    _marker: PhantomData<&'a [u8]>,
+    _marker: PhantomData<&'a [f32]>,
 }
 
 pub struct Fvec {
@@ -158,53 +155,74 @@ impl<'a> From<FvecView<'a>> for Fvec {
     }
 }
 
-pub trait HnswIndex {}
+pub struct FlattenedVecs {
+    dimensionality: usize,
+    // This data is the flattened representation of all vectors of size `dimensionality`.
+    data: Vec<f32>,
+}
 
-/// Deep1X Dataset implementation
-pub struct Deep1X {
+impl<'a> From<FvecsView<'a>> for FlattenedVecs {
+    fn from(value: FvecsView) -> Self {
+        // Assumptions on the data structure of argument 2:
+        // NOTE: in IndexFlatCodes.cpp, the `add` method calls `sa_encode` with a pointer to the end
+        // of the array where the vectors should be added.
+        // In IndexFlat.cpp, there is an impl of `sa_encode` that looks like:
+        // memcpy(bytes, x, sizeof(float) * d * n);
+        // From this, we are assuming that when implementing the FFI binding for faiss' `add`
+        // method, it is sufficient to pass a slice of the fvec bytes, i.e. each vector
+        // encoded with its dimensionality first as a u32, then its vectors (see `Fvec` docs), as
+        // `add`s second argument.
+
+        value.fold(
+            FlattenedVecs {
+                dimensionality: 0,
+                data: Vec::new(),
+            },
+            |mut acc, v| {
+                if acc.dimensionality == 0 {
+                    acc.dimensionality = v.dimensionality;
+                }
+                assert_eq!(acc.dimensionality, v.dimensionality);
+                let fvec = Fvec::from(v);
+                acc.data.extend(fvec.data.iter());
+                acc
+            },
+        )
+    }
+}
+
+/// Dataset sourced from a .fvecs file
+pub struct FvecsDataset {
     mmap: Mmap,
     dimensionality: u32,
     index: Option<Box<dyn HnswIndex>>,
-    hw_arch: HardwareArchitecture,
 }
 
-impl Dataset for Deep1X {
-    fn new(hw_arch: HardwareArchitecture, cluster_size: usize, node_num: usize) -> Result<Self> {
-        // TODO: ensure filename formula maps to the output of Python provisioning
-        // using `architecture`.
-        let mut fname = PathBuf::new();
-        // {architecture}_{clustersize}nodes_node{nodenumber}.fvecs.
-        let filename = format!("{hw_arch}_{cluster_size}nodes_node{node_num}.fvecs");
-        fname.push(filename);
+impl Dataset for FvecsDataset {
+    fn new(fname: String) -> Result<Self> {
+        let mut pathbuf = PathBuf::new();
+        pathbuf.push(fname);
 
-        let f = File::open(fname)?;
+        let f = File::open(pathbuf)?;
 
         // SAFETY: For the purposes of our benchmarking suite, we are assuming that the underlying
         // file will not be modified throughout the duration of the program, as we control the file
         // system.
         let mmap = unsafe { Mmap::map(&f)? };
 
-        if let DramBalancedHnswPartitioned | DramBalancedLshPartitioned | DramRandomPartitioning =
-            hw_arch
-        {
-            // Calls syscall mlock on file memory, ensuring that it will be in RAM until unlocked.
-            // This will through an error if RAM is not large enough.
-            let _ = mmap.lock()?;
-        }
+        // In OAK, we are assuming that our datasets are always in-memory for the first set of
+        // experiments.
+
+        // Calls syscall mlock on file memory, ensuring that it will be in RAM until unlocked.
+        // This will through an error if RAM is not large enough.
+        let _ = mmap.lock()?;
 
         // let dimensionality = LittleEndian::read_32(&mmap[..4]);
         let dimensionality = LittleEndian::read_u32(&mmap[..4]);
 
-        // SAFETY:
-        // let dimensionality = unsafe {
-        //     let value = *(mmap as *const u32);
-        //     value
-        // };
-
         Ok(Self {
             index: None,
             mmap,
-            hw_arch,
             dimensionality,
         })
     }
@@ -215,10 +233,6 @@ impl Dataset for Deep1X {
 
     fn get_dimensionality(&self) -> u32 {
         self.dimensionality
-    }
-
-    fn get_hardware_architecture(&self) -> HardwareArchitecture {
-        self.hw_arch
     }
 
     fn get_data(&self) -> Result<Vec<Fvec>> {
@@ -234,15 +248,52 @@ pub enum SearchableError {
     DatasetIsNotIndexed,
 }
 
-#[cfg(feature = "hnsw_faiss")]
-impl Searchable for Deep1X {
-    fn build_index(&mut self, index_type: VectorIndex) -> Result<()> {
-        let idx = index_factory(
-            self.get_dimensionality(),
+pub trait HnswIndex {
+    fn add(&mut self, vecs: FvecsView);
+}
+
+struct FaissHnswIndex {
+    index: IndexImpl,
+}
+
+impl FaissHnswIndex {
+    fn build(
+        dimensionality: u32,
+        index_type: VectorIndex,
+        metric_type: VectorMetric,
+    ) -> Result<Self> {
+        let index = index_factory(
+            dimensionality,
             index_type.to_string(),
-            MetricType::L2,
+            match metric_type {
+                VectorMetric::IndexFlatL2 => MetricType::L2,
+            },
         )?;
-        self.index = Some(idx);
+        Ok(Self { index })
+    }
+}
+
+impl HnswIndex for FaissHnswIndex {
+    fn add(&mut self, vecs: FvecsView) {
+        let flattened_vecs = FlattenedVecs::from(vecs);
+        self.index.add(&flattened_vecs.data[..]);
+    }
+}
+
+#[cfg(feature = "hnsw_faiss")]
+impl Searchable for FvecsDataset {
+    fn build_index(&mut self, index_type: VectorIndex) -> Result<()> {
+        let mut index = FaissHnswIndex::build(
+            self.get_dimensionality(),
+            index_type,
+            VectorMetric::IndexFlatL2,
+        )?;
+
+        let view = FvecsView::new(&self.mmap);
+
+        index.add(view);
+
+        self.index = Some(Box::new(index));
 
         // add all vectors in `ds` to the index
         // index.add(xb)
@@ -250,15 +301,6 @@ impl Searchable for Deep1X {
         // 1) the number of vectors to add.
         // 2) a pointer to the array of vectors to be added
 
-        // Assumptions on the data structure of argument 2:
-        // NOTE: in IndexFlatCodes.cpp, the `add` method calls `sa_encode` with a pointer to the end
-        // of the array where the vectors should be added.
-        // In IndexFlat.cpp, there is an impl of `sa_encode` that looks like:
-        // memcpy(bytes, x, sizeof(float) * d * n);
-        // From this, we are assuming that when implementing the FFI binding for faiss' `add`
-        // method, it is sufficient to pass a slice of the fvec bytes, i.e. each vector
-        // encoded with its dimensionality first as a u32, then its vectors (see `Fvec` docs), as
-        // `add`s second argument.
         Ok(())
     }
 
@@ -276,7 +318,7 @@ impl Searchable for Deep1X {
 }
 
 #[cfg(feature = "hnsw_rust")]
-impl Searchable for Deep1X {
+impl Searchable for FvecsDataset {
     fn build_index(&mut self, index_type: VectorIndex) -> Result<()> {
         Ok(())
     }

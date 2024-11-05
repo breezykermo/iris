@@ -6,7 +6,7 @@ edition = "2021"
 [features]
 hnsw_faiss = ["dep:faiss"]
 hnsw_rust = ["dep:hnsw_rs"]
-default = ["hnsw_rust"]
+default = ["hnsw_faiss"]
 
 [dependencies]
 anyhow = "1.0.89"
