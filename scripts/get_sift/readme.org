@@ -1,0 +1,18 @@
+* SIFT1M
+To make SIFT1M have predicates, we need to assign some values. As per the ACORN paper:
+
+#+begin_quote
+For both datasets [SIFT1M and Paper], we follow related works [25, 62, 63] to generate structured attributes and query predicates: for each base vector, we assign a random integer in the range 1 − 12 to represent structured attributes; and for each query vector, the associated query predicate performs an exact match with a randomly chosen integer in the attribute value domain. The resulting query predicate set has a cardinality of 12.
+#+end_quote
+
+** Run
+#+begin_src
+just
+#+end_src
+
+** Develop
+#+begin_src
+just dev
+#+end_src
+
+
