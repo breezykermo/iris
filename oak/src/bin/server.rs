@@ -36,7 +36,7 @@ fn main() -> Result<()> {
     let args = Args::parse();
 
     let mut dataset = FvecsDataset::new(args.dataset_fname)?;
-    let _ = dataset.build_index(VectorIndex::IndexFlatL2)?;
+    let _ = dataset.build_index(VectorIndex::HNSWAcornFlat)?;
 
     loop {
         todo!("Process requests")

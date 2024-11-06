@@ -33,6 +33,7 @@ pub trait Dataset: Sized {
 #[derive(Debug)]
 pub enum VectorIndex {
     IndexFlatL2,
+    HNSWAcornFlat,
 }
 
 #[derive(Debug)]
@@ -46,6 +47,7 @@ impl ToString for VectorIndex {
         // https://github.com/facebookresearch/faiss/wiki/Faiss-indexes
         match self {
             VectorIndex::IndexFlatL2 => "Flat".to_string(),
+            VectorIndex::HNSWAcornFlat => "HNSW,Acorn".to_string(),
         }
     }
 }
