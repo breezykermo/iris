@@ -1,5 +1,7 @@
 // extern crate libc;
 // use std::ffi::c_void;
+use crate::ffi;
+use std::convert::TryFrom;
 use std::fs::File;
 use std::path::PathBuf;
 use std::slice;
@@ -52,11 +54,10 @@ impl ToString for VectorIndex {
     }
 }
 
-pub trait Searchable: Dataset {
-    fn build_index(&mut self, index_type: VectorIndex) -> Result<()>;
+pub trait Searchable {
     /// Takes a Vec<Fvec> and returns a Vec<Vec<usize>>, whereby each inner Vec<usize> is an array
     /// of the indices for the `topk` vectors returned from the result.
-    fn search_with_index(
+    fn search(
         &self,
         query_vectors: Vec<Fvec>,
         topk: Option<usize>,
@@ -260,22 +261,22 @@ struct FaissHnswIndex {
     index: IndexImpl,
 }
 
-impl FaissHnswIndex {
-    fn build(
-        dimensionality: u32,
-        index_type: VectorIndex,
-        metric_type: VectorMetric,
-    ) -> Result<Self> {
-        let index = index_factory(
-            dimensionality,
-            index_type.to_string(),
-            match metric_type {
-                VectorMetric::IndexFlatL2 => MetricType::L2,
-            },
-        )?;
-        Ok(Self { index })
-    }
-}
+// impl FaissHnswIndex {
+//     fn build(
+//         dimensionality: u32,
+//         index_type: VectorIndex,
+//         metric_type: VectorMetric,
+//     ) -> Result<Self> {
+//         let index = index_factory(
+//             dimensionality,
+//             index_type.to_string(),
+//             match metric_type {
+//                 VectorMetric::IndexFlatL2 => MetricType::L2,
+//             },
+//         )?;
+//         Ok(Self { index })
+//     }
+// }
 
 impl HnswIndex for FaissHnswIndex {
     fn add(&mut self, vecs: FvecsView) {
@@ -284,40 +285,33 @@ impl HnswIndex for FaissHnswIndex {
     }
 }
 
+pub struct AcornHnswOptions {
+    pub m: i32,     // degree bound for traversed nodes during ACORN search
+    pub gamma: i32, // neighbor expansion factor for ACORN index
+    pub m_beta: i32, // compression parameter for ACORN index
+                    // TODO: metadata std::vector<int>&
+}
+
+pub struct AcornHnswIndex {
+    index: cxx::UniquePtr<ffi::IndexACORN>,
+}
+
 #[cfg(feature = "hnsw_faiss")]
-impl Searchable for FvecsDataset {
-    fn build_index(&mut self, index_type: VectorIndex) -> Result<()> {
-        let mut index = FaissHnswIndex::build(
-            self.get_dimensionality(),
-            index_type,
-            VectorMetric::IndexFlatL2,
-        )?;
+impl AcornHnswIndex {
+    pub fn new(dataset: &impl Dataset, options: &AcornHnswOptions) -> Result<Self> {
+        let dimensionality = i32::try_from(dataset.get_dimensionality())
+            .expect("dimensionality should not be greater than 2,147,483,647");
+        let metadata = cxx::CxxVector::new();
 
-        let view = FvecsView::new(&self.mmap);
+        let index = ffi::new_index_acorn(
+            dimensionality,
+            options.m,
+            options.gamma,
+            &metadata,
+            options.m_beta,
+        );
 
-        index.add(view);
-
-        self.index = Some(Box::new(index));
-
-        // add all vectors in `ds` to the index
-        // index.add(xb)
-        // When calling `add` in the c_api, we need to pass two arguments:
-        // 1) the number of vectors to add.
-        // 2) a pointer to the array of vectors to be added
-
-        Ok(())
-    }
-
-    fn search_with_index(
-        &self,
-        query_vectors: Vec<Fvec>,
-        topk: Option<usize>,
-    ) -> Result<Vec<Vec<usize>>, SearchableError> {
-        // _, ids = index.search(x=xq, k=topk)
-        if self.index.is_none() {
-            return Err(SearchableError::DatasetIsNotIndexed);
-        }
-        Ok(vec![])
+        Ok(Self { index })
     }
 }
 

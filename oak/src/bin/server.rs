@@ -1,4 +1,6 @@
-use oak::dataset::{Dataset, FvecsDataset, Searchable, VectorIndex};
+use oak::dataset::{
+    AcornHnswIndex, AcornHnswOptions, Dataset, FvecsDataset, Searchable, VectorIndex,
+};
 
 use clap::Parser;
 
@@ -36,7 +38,14 @@ fn main() -> Result<()> {
     let args = Args::parse();
 
     let mut dataset = FvecsDataset::new(args.dataset_fname)?;
-    let _ = dataset.build_index(VectorIndex::HNSWAcornFlat)?;
+
+    let opts = AcornHnswOptions {
+        m: 1,
+        gamma: 1,
+        m_beta: 1,
+    };
+
+    let main_index = AcornHnswIndex::new(&dataset, &opts);
 
     loop {
         todo!("Process requests")
