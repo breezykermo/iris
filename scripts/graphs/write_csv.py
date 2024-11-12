@@ -18,7 +18,7 @@ def make_fake_csv():
             writer.writerow([latency[i], throughput[i]])
 
 
-def plot():
+def plot(output: str):
     # Lists to store data from the CSV
     latency = []
     throughput = []
@@ -40,7 +40,8 @@ def plot():
     plt.legend()
     plt.grid(True)
 
+    plt.savefig(output)
     # Show the plot
     plt.show() 
 
-plot()
+plot("latency_throughput_plot.png")
