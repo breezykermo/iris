@@ -18,13 +18,13 @@ def make_fake_csv():
             writer.writerow([latency[i], throughput[i]])
 
 
-def plot(output: str):
+def plot(output: str, data: str):
     # Lists to store data from the CSV
     latency = []
     throughput = []
 
     # Read the CSV file
-    with open(filename, mode="r") as file:
+    with open(data, mode="r") as file:
         reader = csv.DictReader(file)
         for row in reader:
             latency.append(float(row[latency_rowname]))
@@ -44,4 +44,4 @@ def plot(output: str):
     # Show the plot
     plt.show() 
 
-plot("latency_throughput_plot.png")
+plot("latency_throughput_plot.png", filename)
