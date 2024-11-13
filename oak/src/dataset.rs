@@ -293,23 +293,20 @@ pub struct AcornHnswOptions {
 }
 
 pub struct AcornHnswIndex {
-    index: cxx::UniquePtr<ffi::IndexACORN>,
+    index: cxx::UniquePtr<ffi::IndexACORNFlat>,
 }
 
 #[cfg(feature = "hnsw_faiss")]
 impl AcornHnswIndex {
-    pub fn new(dataset: &impl Dataset, options: &AcornHnswOptions) -> Result<Self> {
+    pub fn new(dataset: &FvecsDataset, options: &AcornHnswOptions) -> Result<Self> {
         let dimensionality = i32::try_from(dataset.get_dimensionality())
             .expect("dimensionality should not be greater than 2,147,483,647");
-        let metadata = cxx::CxxVector::new();
 
-        let index = ffi::new_index_acorn(
-            dimensionality,
-            options.m,
-            options.gamma,
-            &metadata,
-            options.m_beta,
-        );
+        let index = ffi::new_index_acorn(dimensionality, options.m, options.gamma, options.m_beta);
+
+        println!("We got an opaque pointer to the thing.");
+
+        // index.add(dataset.len(), dataset.get_raw_ptr());
 
         Ok(Self { index })
     }

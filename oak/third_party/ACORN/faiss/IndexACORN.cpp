@@ -484,4 +484,14 @@ IndexACORNFlat::IndexACORNFlat(int d, int M, int gamma, std::vector<int>& metada
     is_trained = true;
 }
 
+std::unique_ptr<IndexACORNFlat> new_index_acorn(
+  int d,
+  int M,
+  int gamma,
+  int M_beta
+) {
+  std::vector<int> metadata;
+  return std::make_unique<faiss::IndexACORNFlat>(d, M, gamma, metadata, M_beta, METRIC_L2);
+}
+
 } // namespace faiss

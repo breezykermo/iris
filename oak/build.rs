@@ -1,6 +1,12 @@
 fn main() {
+    println!("cargo:rustc-link-lib=dylib=faiss");
+    println!("cargo:rustc-link-lib=dylib=gomp");
+    println!("cargo:rustc-link-search=native=/usr/local/lib");
+
     cxx_build::bridge("src/lib.rs")
-        .file("third_party/ACORN/faiss/IndexACORN.cc")
+        // .include("third_party/ACORN/faiss/impl")
+        .file("third_party/ACORN/faiss/IndexACORN.cpp")
+        .define("FINTEGER", "int")
         .std("c++14")
         .compile("cxxbridge-demo");
 

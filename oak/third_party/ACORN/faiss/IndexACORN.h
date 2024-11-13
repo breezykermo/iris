@@ -134,4 +134,11 @@ struct IndexACORNFlat : IndexACORN {
 
 };
 
+std::unique_ptr<IndexACORNFlat> new_index_acorn(
+  int d,
+  int M,
+  int gamma,
+  int M_beta
+); 
+
 } // namespace faiss

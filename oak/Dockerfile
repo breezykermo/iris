@@ -12,6 +12,8 @@ WORKDIR acorn
 RUN apt install build-essential -y
 
 RUN apt-get install libopenblas-dev -y
+RUN apt-get install libgomp1 -y
+
 
 # Disable GPU because we don't want to install CUDA
 RUN cmake -B build -DFAISS_ENABLE_C_API=ON -DBUILD_SHARED_LIBS=ON -DCMAKE_BUILD_TYPE=Release -DFAISS_ENABLE_GPU=OFF -DFAISS_ENABLE_PYTHON=OFF -DBUILD_TESTING=OFF
