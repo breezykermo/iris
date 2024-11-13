@@ -304,8 +304,6 @@ impl AcornHnswIndex {
 
         let index = ffi::new_index_acorn(dimensionality, options.m, options.gamma, options.m_beta);
 
-        println!("We got an opaque pointer to the thing.");
-
         // index.add(dataset.len(), dataset.get_raw_ptr());
 
         Ok(Self { index })
