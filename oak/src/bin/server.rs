@@ -26,7 +26,7 @@ pub enum ServerError {
 #[command(version, about, long_about = None)]
 struct Args {
     #[arg(short, long, required(true))]
-    dataset_fname: String,
+    dataset: String,
 }
 
 fn main() -> Result<()> {
@@ -37,11 +37,11 @@ fn main() -> Result<()> {
 
     let args = Args::parse();
 
-    let mut dataset = FvecsDataset::new(args.dataset_fname)?;
+    let mut dataset = FvecsDataset::new(args.dataset)?;
 
     let opts = AcornHnswOptions {
-        m: 1,
         gamma: 1,
+        m: 32, // NOTE: this should not be 1, can lead to segfaults in cpp...
         m_beta: 1,
     };
 

@@ -16,6 +16,8 @@
 #include "oak/third_party/ACORN/faiss/IndexScalarQuantizer.h"
 #include "oak/third_party/ACORN/faiss/impl/ACORN.h"
 #include "oak/third_party/ACORN/faiss/utils/utils.h"
+// #include "oak/src/lib.rs.h"
+#include "rust/cxx.h"
 
 // added
 #include <sys/time.h>
@@ -138,7 +140,14 @@ std::unique_ptr<IndexACORNFlat> new_index_acorn(
   int d,
   int M,
   int gamma,
-  int M_beta
+  int M_beta,
+  const rust::Vec<int>& metadata
 ); 
+
+void add_to_index(
+  std::unique_ptr<IndexACORNFlat>& idx,
+  idx_t n, 
+  const float* x
+);
 
 } // namespace faiss

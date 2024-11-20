@@ -24,6 +24,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
+#include "IndexACORN.h"
 #include "oak/third_party/ACORN/faiss/Index2Layer.h"
 #include "oak/third_party/ACORN/faiss/IndexFlat.h"
 #include "oak/third_party/ACORN/faiss/IndexIVFPQ.h"
@@ -229,6 +230,7 @@ void acorn_add_vertices(
                         printf("  %d / %d\r", i - i0, i1 - i0);
                         fflush(stdout);
                     }
+
                     if (counter % check_period == 0) {
                         if (InterruptCallback::is_interrupted()) {
                             interrupt = true;
@@ -240,6 +242,7 @@ void acorn_add_vertices(
             if (interrupt) {
                 FAISS_THROW_MSG("computation interrupted");
             }
+
             i1 = i0;
         }
         FAISS_ASSERT(i1 == 0);
@@ -443,7 +446,8 @@ void IndexACORN::add(idx_t n, const float* x) {
     storage->add(n, x);
     ntotal = storage->ntotal;
 
-    acorn_add_vertices(*this, n0, n, x, verbose, acorn.levels.size() == ntotal);
+    bool IS_VERBOSE = true;
+    acorn_add_vertices(*this, n0, n, x, IS_VERBOSE, acorn.levels.size() == ntotal);
 }
 
 void IndexACORN::reset() {
@@ -488,10 +492,30 @@ std::unique_ptr<IndexACORNFlat> new_index_acorn(
   int d,
   int M,
   int gamma,
-  int M_beta
+  int M_beta,
+  const rust::Vec<int>& metadata
 ) {
-  std::vector<int> metadata;
-  return std::make_unique<faiss::IndexACORNFlat>(d, M, gamma, metadata, M_beta, METRIC_L2);
+
+  std::cout << "metadata size: " << metadata.size() << std::endl;
+
+  // Copy the elements to a C++ std::vector using STL algorithm.
+  std::vector<int> metadata_cpp;
+  std::copy(metadata.begin(), metadata.end(), std::back_inserter(metadata_cpp));
+
+  auto base_index = std::make_unique<faiss::IndexACORNFlat>(d, M, gamma, metadata_cpp, M_beta, METRIC_L2);
+  base_index.get()->acorn.efSearch = 16; 
+  return base_index;
+}
+
+void add_to_index(
+  std::unique_ptr<IndexACORNFlat>& idx,
+  idx_t n, 
+  const float* x
+) {
+  IndexACORNFlat index = *idx;
+  std::cout << "Adding " << n << " vectors..." << std::endl;
+  index.add(n, x);
+  std::cout << "Added, returning to Rust" << std::endl;
 }
 
 } // namespace faiss

@@ -5,13 +5,19 @@ pub mod ffi {
 
         type IndexACORNFlat;
 
-        fn new_index_acorn(d: i32, M: i32, gamma: i32, M_beta: i32) -> UniquePtr<IndexACORNFlat>;
+        fn new_index_acorn(
+            d: i32,
+            M: i32,
+            gamma: i32,
+            M_beta: i32,
+            metadata: &Vec<i32>,
+        ) -> UniquePtr<IndexACORNFlat>;
 
-        // unsafe fn add(
-        //     &self,
-        //     n: i64,        // number of vectors to be added
-        //     x: *const f32, // raw pointer to the contiguous array of vectors
-        // );
+        unsafe fn add_to_index(
+            idx: &mut UniquePtr<IndexACORNFlat>,
+            n: i64,        // number of vectors to be added
+            x: *const f32, // raw pointer to the contiguous array of vectors
+        );
     }
 }
 
