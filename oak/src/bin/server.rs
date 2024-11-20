@@ -37,7 +37,8 @@ fn main() -> Result<()> {
 
     let args = Args::parse();
 
-    let mut dataset = FvecsDataset::new(args.dataset)?;
+    let dataset = FvecsDataset::new(args.dataset)?;
+    info!("Dataset loaded from disk.");
 
     let opts = AcornHnswOptions {
         gamma: 1,
@@ -46,9 +47,11 @@ fn main() -> Result<()> {
     };
 
     let main_index = AcornHnswIndex::new(&dataset, &opts);
+    info!("Seed index constructed.");
 
+    info!("Open for connections.");
     loop {
-        todo!("Process requests")
+        // TODO:
     }
 
     Ok(())

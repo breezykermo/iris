@@ -355,6 +355,8 @@ impl AcornHnswIndex {
             &dataset.metadata,
         );
 
+        // SAFETY: this is unsafe because we pass a raw ptr to the fvecs data; but we are SURE that
+        // we have constructed it appropriately.
         unsafe {
             ffi::add_to_index(&mut index, num_fvecs as i64, fvecs.data.as_ptr());
         }

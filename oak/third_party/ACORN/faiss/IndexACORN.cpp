@@ -446,8 +446,7 @@ void IndexACORN::add(idx_t n, const float* x) {
     storage->add(n, x);
     ntotal = storage->ntotal;
 
-    bool IS_VERBOSE = true;
-    acorn_add_vertices(*this, n0, n, x, IS_VERBOSE, acorn.levels.size() == ntotal);
+    acorn_add_vertices(*this, n0, n, x, verbose, acorn.levels.size() == ntotal);
 }
 
 void IndexACORN::reset() {
@@ -496,7 +495,7 @@ std::unique_ptr<IndexACORNFlat> new_index_acorn(
   const rust::Vec<int>& metadata
 ) {
 
-  std::cout << "metadata size: " << metadata.size() << std::endl;
+  // std::cout << "metadata size: " << metadata.size() << std::endl;
 
   // Copy the elements to a C++ std::vector using STL algorithm.
   std::vector<int> metadata_cpp;
@@ -513,9 +512,9 @@ void add_to_index(
   const float* x
 ) {
   IndexACORNFlat index = *idx;
-  std::cout << "Adding " << n << " vectors..." << std::endl;
+  // std::cout << "Adding " << n << " vectors..." << std::endl;
   index.add(n, x);
-  std::cout << "Added, returning to Rust" << std::endl;
+  // std::cout << "Added, returning to Rust" << std::endl;
 }
 
 } // namespace faiss
