@@ -136,6 +136,7 @@ struct IndexACORNFlat : IndexACORN {
 
 };
 
+// OAK: standalone function to construct a new index from Rust over FFI.
 std::unique_ptr<IndexACORNFlat> new_index_acorn(
   int d,
   int M,
@@ -144,6 +145,7 @@ std::unique_ptr<IndexACORNFlat> new_index_acorn(
   const rust::Vec<int>& metadata
 ); 
 
+// OAK: standalone function to add vectors to an index from Rust over FFI.
 void add_to_index(
   std::unique_ptr<IndexACORNFlat>& idx,
   idx_t n, 

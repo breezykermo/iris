@@ -487,6 +487,7 @@ IndexACORNFlat::IndexACORNFlat(int d, int M, int gamma, std::vector<int>& metada
     is_trained = true;
 }
 
+// OAK: standalone function to construct a new index from Rust over FFI.
 std::unique_ptr<IndexACORNFlat> new_index_acorn(
   int d,
   int M,
@@ -506,6 +507,7 @@ std::unique_ptr<IndexACORNFlat> new_index_acorn(
   return base_index;
 }
 
+// OAK: standalone function to add vectors to an index from Rust over FFI.
 void add_to_index(
   std::unique_ptr<IndexACORNFlat>& idx,
   idx_t n, 

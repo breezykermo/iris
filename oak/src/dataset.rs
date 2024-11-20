@@ -20,10 +20,11 @@ const FOUR_BYTES: usize = std::mem::size_of::<f32>();
 /// Trait for a dataset of vectors.
 /// Note that this must be `Sized` in order that the constructor can return a Result.
 pub trait Dataset: Sized {
-    /// Create a new dataset, loading into memory. The `fname` string here is assumed as the stem,
-    /// where there exists both a "{fname}.fvecs" and a "{fname}.csv" at the stem. The CSV file
-    /// should contain one row for each corresponding vector, where each column represents an
-    /// attribute on the vector that can be used in a predicate for hybrid search.
+    /// Create a new dataset, loading all fvecs into memory. The `fname` should represent a
+    /// filename that corresponds to both a "{fname}.fvecs" that contains the vectors, and a
+    /// "{fname}.csv" that contains the attributes (over which predicates can be constructed) for
+    /// those vectors. Each row in the CSV corresponds to the vector at the same index in the fvecs
+    /// file, and each column represents an attribute on that vector.
     fn new(fname: String) -> Result<Self>;
     /// Provide basic information about the characteristics of the dataset.
     fn dataset_info(&self) -> String;
