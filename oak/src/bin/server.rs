@@ -1,4 +1,6 @@
-use oak::dataset::{Dataset, FvecsDataset, Searchable, VectorIndex};
+use oak::dataset::{
+    AcornHnswIndex, AcornHnswOptions, Dataset, FvecsDataset, Searchable, VectorIndex,
+};
 
 use clap::Parser;
 
@@ -24,7 +26,7 @@ pub enum ServerError {
 #[command(version, about, long_about = None)]
 struct Args {
     #[arg(short, long, required(true))]
-    dataset_fname: String,
+    dataset: String,
 }
 
 fn main() -> Result<()> {
@@ -35,11 +37,21 @@ fn main() -> Result<()> {
 
     let args = Args::parse();
 
-    let mut dataset = FvecsDataset::new(args.dataset_fname)?;
-    let _ = dataset.build_index(VectorIndex::IndexFlatL2)?;
+    let dataset = FvecsDataset::new(args.dataset)?;
+    info!("Dataset loaded from disk.");
 
+    let opts = AcornHnswOptions {
+        gamma: 1,
+        m: 32, // NOTE: this should not be 1, can lead to segfaults in cpp...
+        m_beta: 1,
+    };
+
+    let main_index = AcornHnswIndex::new(&dataset, &opts);
+    info!("Seed index constructed.");
+
+    info!("Open for connections.");
     loop {
-        todo!("Process requests")
+        // TODO:
     }
 
     Ok(())

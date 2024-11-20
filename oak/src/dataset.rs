@@ -1,5 +1,6 @@
-// extern crate libc;
-// use std::ffi::c_void;
+use crate::ffi;
+use csv::ReaderBuilder;
+use std::convert::TryFrom;
 use std::fs::File;
 use std::path::PathBuf;
 use std::slice;
@@ -19,7 +20,11 @@ const FOUR_BYTES: usize = std::mem::size_of::<f32>();
 /// Trait for a dataset of vectors.
 /// Note that this must be `Sized` in order that the constructor can return a Result.
 pub trait Dataset: Sized {
-    /// Create a new dataset, loading into memory.
+    /// Create a new dataset, loading all fvecs into memory. The `fname` should represent a
+    /// filename that corresponds to both a "{fname}.fvecs" that contains the vectors, and a
+    /// "{fname}.csv" that contains the attributes (over which predicates can be constructed) for
+    /// those vectors. Each row in the CSV corresponds to the vector at the same index in the fvecs
+    /// file, and each column represents an attribute on that vector.
     fn new(fname: String) -> Result<Self>;
     /// Provide basic information about the characteristics of the dataset.
     fn dataset_info(&self) -> String;
@@ -33,6 +38,7 @@ pub trait Dataset: Sized {
 #[derive(Debug)]
 pub enum VectorIndex {
     IndexFlatL2,
+    HNSWAcornFlat,
 }
 
 #[derive(Debug)]
@@ -46,15 +52,15 @@ impl ToString for VectorIndex {
         // https://github.com/facebookresearch/faiss/wiki/Faiss-indexes
         match self {
             VectorIndex::IndexFlatL2 => "Flat".to_string(),
+            VectorIndex::HNSWAcornFlat => "HNSW,Acorn".to_string(),
         }
     }
 }
 
-pub trait Searchable: Dataset {
-    fn build_index(&mut self, index_type: VectorIndex) -> Result<()>;
+pub trait Searchable {
     /// Takes a Vec<Fvec> and returns a Vec<Vec<usize>>, whereby each inner Vec<usize> is an array
     /// of the indices for the `topk` vectors returned from the result.
-    fn search_with_index(
+    fn search(
         &self,
         query_vectors: Vec<Fvec>,
         topk: Option<usize>,
@@ -71,11 +77,16 @@ pub struct FvecsView<'a> {
 impl<'a> FvecsView<'a> {
     pub fn new(mmap: &Mmap) -> Self {
         let ptr = mmap.as_ptr() as *const f32;
+
+        assert_eq!(mmap.len() % size_of::<f32>(), 0);
+
+        let len = mmap.len() / size_of::<f32>();
+
         FvecsView {
             ptr,
             // SAFETY: the pointer arithmetic is constrained by the length of the file (represented
             // by `mmap`)
-            end: unsafe { ptr.add(mmap.len()) },
+            end: unsafe { ptr.add(len) },
             _marker: PhantomData,
         }
     }
@@ -198,14 +209,37 @@ pub struct FvecsDataset {
     mmap: Mmap,
     dimensionality: u32,
     index: Option<Box<dyn HnswIndex>>,
+    metadata: Vec<i32>,
+}
+
+fn read_csv_to_vec(file_path: &PathBuf) -> Result<Vec<i32>> {
+    // Open the file
+    let file = File::open(file_path)?;
+
+    // Create a CSV reader
+    let mut reader = ReaderBuilder::new()
+        .has_headers(false) // No headers in this example
+        .from_reader(file);
+
+    // Collect integers from the CSV
+    let mut numbers = Vec::new();
+    for result in reader.records() {
+        let record = result?;
+        if let Some(field) = record.get(0) {
+            // Assuming a single column
+            numbers.push(field.parse::<i32>()?);
+        }
+    }
+
+    Ok(numbers)
 }
 
 impl Dataset for FvecsDataset {
     fn new(fname: String) -> Result<Self> {
-        let mut pathbuf = PathBuf::new();
-        pathbuf.push(fname);
+        let mut fvecs_fname = PathBuf::new();
+        fvecs_fname.push(&format!("{}.fvecs", fname));
 
-        let f = File::open(pathbuf)?;
+        let f = File::open(fvecs_fname)?;
 
         // SAFETY: For the purposes of our benchmarking suite, we are assuming that the underlying
         // file will not be modified throughout the duration of the program, as we control the file
@@ -222,10 +256,16 @@ impl Dataset for FvecsDataset {
         // let dimensionality = LittleEndian::read_32(&mmap[..4]);
         let dimensionality = LittleEndian::read_u32(&mmap[..4]);
 
+        let mut metadata_fname = PathBuf::new();
+        metadata_fname.push(&format!("{}.csv", fname));
+
+        let metadata = read_csv_to_vec(&metadata_fname)?;
+
         Ok(Self {
             index: None,
             mmap,
             dimensionality,
+            metadata,
         })
     }
 
@@ -258,22 +298,22 @@ struct FaissHnswIndex {
     index: IndexImpl,
 }
 
-impl FaissHnswIndex {
-    fn build(
-        dimensionality: u32,
-        index_type: VectorIndex,
-        metric_type: VectorMetric,
-    ) -> Result<Self> {
-        let index = index_factory(
-            dimensionality,
-            index_type.to_string(),
-            match metric_type {
-                VectorMetric::IndexFlatL2 => MetricType::L2,
-            },
-        )?;
-        Ok(Self { index })
-    }
-}
+// impl FaissHnswIndex {
+//     fn build(
+//         dimensionality: u32,
+//         index_type: VectorIndex,
+//         metric_type: VectorMetric,
+//     ) -> Result<Self> {
+//         let index = index_factory(
+//             dimensionality,
+//             index_type.to_string(),
+//             match metric_type {
+//                 VectorMetric::IndexFlatL2 => MetricType::L2,
+//             },
+//         )?;
+//         Ok(Self { index })
+//     }
+// }
 
 impl HnswIndex for FaissHnswIndex {
     fn add(&mut self, vecs: FvecsView) {
@@ -282,40 +322,47 @@ impl HnswIndex for FaissHnswIndex {
     }
 }
 
+pub struct AcornHnswOptions {
+    pub m: i32,      // degree bound for traversed nodes during ACORN search
+    pub gamma: i32,  // neighbor expansion factor for ACORN index
+    pub m_beta: i32, // compression parameter for ACORN index
+}
+
+pub struct AcornHnswIndex {
+    index: cxx::UniquePtr<ffi::IndexACORNFlat>,
+}
+
+fn load_fvecs_metadata(fname: &str) -> cxx::UniquePtr<cxx::CxxVector<i32>> {
+    let mut metadata: cxx::UniquePtr<cxx::CxxVector<i32>> = cxx::CxxVector::new();
+
+    metadata
+}
+
 #[cfg(feature = "hnsw_faiss")]
-impl Searchable for FvecsDataset {
-    fn build_index(&mut self, index_type: VectorIndex) -> Result<()> {
-        let mut index = FaissHnswIndex::build(
-            self.get_dimensionality(),
-            index_type,
-            VectorMetric::IndexFlatL2,
-        )?;
+impl AcornHnswIndex {
+    pub fn new(dataset: &FvecsDataset, options: &AcornHnswOptions) -> Result<Self> {
+        let dimensionality = i32::try_from(dataset.get_dimensionality())
+            .expect("dimensionality should not be greater than 2,147,483,647");
 
-        let view = FvecsView::new(&self.mmap);
+        let dataset_view = FvecsView::new(&dataset.mmap);
+        let fvecs = FlattenedVecs::from(dataset_view);
+        let num_fvecs = (fvecs.data.len() as i32) / dimensionality;
 
-        index.add(view);
+        let mut index = ffi::new_index_acorn(
+            dimensionality,
+            options.m,
+            options.gamma,
+            options.m_beta,
+            &dataset.metadata,
+        );
 
-        self.index = Some(Box::new(index));
-
-        // add all vectors in `ds` to the index
-        // index.add(xb)
-        // When calling `add` in the c_api, we need to pass two arguments:
-        // 1) the number of vectors to add.
-        // 2) a pointer to the array of vectors to be added
-
-        Ok(())
-    }
-
-    fn search_with_index(
-        &self,
-        query_vectors: Vec<Fvec>,
-        topk: Option<usize>,
-    ) -> Result<Vec<Vec<usize>>, SearchableError> {
-        // _, ids = index.search(x=xq, k=topk)
-        if self.index.is_none() {
-            return Err(SearchableError::DatasetIsNotIndexed);
+        // SAFETY: this is unsafe because we pass a raw ptr to the fvecs data; but we are SURE that
+        // we have constructed it appropriately.
+        unsafe {
+            ffi::add_to_index(&mut index, num_fvecs as i64, fvecs.data.as_ptr());
         }
-        Ok(vec![])
+
+        Ok(Self { index })
     }
 }
 
