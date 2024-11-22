@@ -2,6 +2,7 @@ use crate::acorn::AcornHnswIndex;
 use crate::dataset::{
     ConstructionError, Dataset, OakIndexOptions, SearchableError, TopKSearchResult,
 };
+use crate::predicate::PredicateQuery;
 
 use anyhow::Result;
 use byteorder::{ByteOrder, LittleEndian};
@@ -11,6 +12,7 @@ use std::fs::File;
 use std::marker::PhantomData;
 use std::path::PathBuf;
 use std::slice;
+use tracing::{debug, info};
 
 const FOUR_BYTES: usize = std::mem::size_of::<f32>();
 
@@ -32,6 +34,8 @@ fn read_csv_to_vec(file_path: &PathBuf) -> Result<Vec<i32>> {
             numbers.push(field.parse::<i32>()?);
         }
     }
+
+    debug!("{} attributes loaded from CSV.", numbers.len());
 
     Ok(numbers)
 }
@@ -109,10 +113,11 @@ impl<'a> Iterator for FvecsView<'a> {
 ///
 /// The layout of an fvec on disk is as follows:
 ///
-///       32bit          ⟨d⟩ * 32bits
-/// |--------------|-------/ ... /-------|
+/// NOTE: the below are not in doc comments, as it does something strange to tests...
+//       32bit          d * 32bits
+// |--------------|-------/ ... /-------|
 ///
-/// where ⟨d⟩ is the dimensionality of the vector.
+/// where d is the dimensionality of the vector.
 ///
 /// The `dimensionality` has already been parsed: so the `ptr` begins where the f32 data begins.
 pub struct FvecView<'a> {
@@ -182,7 +187,7 @@ impl<'a> From<FvecsView<'a>> for FlattenedVecs {
 /// Dataset sourced from a .fvecs file
 pub struct FvecsDataset {
     pub mmap: Mmap,
-    dimensionality: u32,
+    dimensionality: usize,
     index: Option<Box<AcornHnswIndex>>,
     pub metadata: Vec<i32>,
 }
@@ -207,7 +212,7 @@ impl Dataset for FvecsDataset {
         let _ = mmap.lock()?;
 
         // let dimensionality = LittleEndian::read_32(&mmap[..4]);
-        let dimensionality = LittleEndian::read_u32(&mmap[..4]);
+        let dimensionality = LittleEndian::read_u32(&mmap[..4]) as usize;
 
         let mut metadata_fname = PathBuf::new();
         metadata_fname.push(&format!("{}.csv", fname));
@@ -229,15 +234,19 @@ impl Dataset for FvecsDataset {
     }
 
     fn len(&self) -> usize {
-        self.metadata.len()
+        debug!(
+            "Inferring length from metadata, which is {}",
+            self.metadata.len()
+        );
+        self.mmap.len() / self.dimensionality
     }
 
     fn attribute_equals_map(&self, attribute: u8) -> Result<bool> {
         unimplemented!()
     }
 
-    fn get_dimensionality(&self) -> u32 {
-        self.dimensionality
+    fn get_dimensionality(&self) -> usize {
+        self.dimensionality as usize
     }
 
     fn get_data(&self) -> Result<Vec<Fvec>> {
@@ -249,12 +258,40 @@ impl Dataset for FvecsDataset {
     fn search(
         &mut self,
         query_vectors: FlattenedVecs,
+        predicate_query: Option<PredicateQuery>,
         topk: usize,
     ) -> Result<Vec<TopKSearchResult>, SearchableError> {
         if self.index.is_none() {
             return Err(SearchableError::DatasetIsNotIndexed);
         }
 
-        self.index.as_mut().unwrap().search(query_vectors, topk)
+        debug!("query_vectors len: {}", query_vectors.len());
+        debug!("fvecs dataset len: {}", self.len());
+
+        let mut filter_id_map = match predicate_query {
+            None => vec![1; self.len() * query_vectors.len()],
+            Some(pq) => unimplemented!(),
+        };
+
+        self.index
+            .as_mut()
+            .unwrap()
+            .search(&query_vectors, &mut filter_id_map, topk)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // TODO: something is going wrong with the fvecs parsing, we need to test this more
+    // comprehensively.
+    #[test]
+    fn test_fvecs_to_flattened_vec() {
+        let dataset = FvecsDataset::new("data/sift_query".to_string()).unwrap();
+        let ds_view = FvecsView::new(&dataset.mmap);
+        let vecs = FlattenedVecs::from(ds_view);
+
+        assert_eq!(vecs.len(), dataset.len());
     }
 }

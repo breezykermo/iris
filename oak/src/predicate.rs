@@ -1,5 +1,5 @@
 use anyhow::Result;
-use std::ffi::c_char;
+use core::ffi::c_char;
 use thiserror::Error;
 
 /// The errors that can be returned from serializing a query over a dataest.
@@ -32,21 +32,21 @@ pub enum PredicateSerializationError {
 /// a PredicateQuery), and whose values are _also_ all u8s (the `rhs`).
 ///
 /// If necessary, we can expand this later.
-struct PredicateQuery {
+pub struct PredicateQuery {
     lhs: PredicateLhs,
     op: PredicateOp,
     rhs: PredicateRhs,
 }
 
-enum PredicateLhs {
+pub enum PredicateLhs {
     Number(u8),
 }
 
-enum PredicateOp {
+pub enum PredicateOp {
     Equals,
 }
 
-enum PredicateRhs {
+pub enum PredicateRhs {
     Number(u8),
 }
 
@@ -59,7 +59,7 @@ impl PredicateQuery {
     ///
     /// If an attribute matching the `lhs` of the query does not exist in the dataset, then an
     /// error will be raised.
-    fn serialize_as_filter_map(
+    pub fn serialize_as_filter_map(
         &self,
         // dataset: &Box<dyn Dataset>,
     ) -> Result<Vec<c_char>, PredicateSerializationError> {

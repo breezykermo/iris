@@ -1,5 +1,3 @@
-use oak::query::{Load, SyncQueries};
-
 use clap::Parser;
 
 use tracing::info;
@@ -14,14 +12,6 @@ pub enum BenchmarkError {
     UntrainedDataset,
 }
 
-// Benchmark function, generic over different datasets and architectures.
-pub fn benchmark<L: Load>(load: &L) -> Result<(), BenchmarkError> {
-    info!("Benchmarking:");
-    info!("Load: {}", load.load_info());
-
-    unimplemented!();
-}
-
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct Args {}
@@ -34,15 +24,7 @@ fn main() -> Result<()> {
 
     let args = Args::parse();
 
-    let load = SyncQueries {
-        num_queries: 10_000,
-    }; // 10k sync queries
-
-    // Run the benchmark
-    let benchmark_result = benchmark(&load);
-    if let Err(e) = benchmark_result {
-        info!("Error: {}", e);
-    }
+    // TODO: run the benchmark
 
     Ok(())
 }

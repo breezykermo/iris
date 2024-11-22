@@ -3,8 +3,9 @@ use crate::dataset::{
 };
 use crate::ffi;
 use crate::fvecs::{FlattenedVecs, FvecsDataset, FvecsView};
+use crate::predicate::PredicateQuery;
 
-use std::ffi::c_char;
+use core::ffi::c_char;
 use tracing::{debug, info};
 
 pub struct AcornHnswIndex {
@@ -21,11 +22,6 @@ impl AcornHnswIndex {
         let dimensionality = i32::try_from(dataset.get_dimensionality())
             .expect("dimensionality should not be greater than 2,147,483,647");
 
-        let dataset_view = FvecsView::new(&dataset.mmap);
-        let fvecs = FlattenedVecs::from(dataset_view);
-        let num_fvecs = (fvecs.data.len() as i32) / dimensionality;
-
-        // TODO: is there a way to 'catch' segmentation faults in these unsafe functions?
         let mut index = ffi::new_index_acorn(
             dimensionality,
             options.m,
@@ -33,12 +29,23 @@ impl AcornHnswIndex {
             options.m_beta,
             &dataset.metadata,
         );
+        debug!(
+            "Constructed index with dimensionality: {dimensionality}, m: {}, gamma: {}, m_beta: {}",
+            options.m, options.gamma, options.m_beta
+        );
+
+        let dataset_view = FvecsView::new(&dataset.mmap);
+        let fvecs = FlattenedVecs::from(dataset_view);
+        let num_fvecs = dataset.len();
+        debug!("Adding {num_fvecs} vectors to the index...");
 
         // SAFETY: this is unsafe because we pass a raw ptr to the fvecs data; but we are SURE that
         // we have constructed it appropriately.
+        // TODO: is there a way to 'catch' segmentation faults in these unsafe functions?
         unsafe {
             ffi::add_to_index(&mut index, num_fvecs as i64, fvecs.data.as_ptr());
         }
+        debug!("Added {num_fvecs} vectors to the index.");
 
         Ok(Self {
             index,
@@ -48,7 +55,8 @@ impl AcornHnswIndex {
 
     pub fn search(
         &mut self,
-        query_vectors: FlattenedVecs,
+        query_vectors: &FlattenedVecs,
+        filter_id_map: &mut Vec<c_char>,
         k: usize,
     ) -> Result<Vec<TopKSearchResult>, SearchableError> {
         let number_of_query_vectors: usize = query_vectors.len();
@@ -60,11 +68,7 @@ impl AcornHnswIndex {
         let mut distances: Vec<f32> = Vec::with_capacity(length_of_results);
         let mut labels: Vec<i64> = Vec::with_capacity(length_of_results);
 
-        // TODO: at present there is essentially no filtering, we are just checking that the format
-        // is right. A meaningful use of this will require a change to the `search` function
-        // signature.
-        let filter_id_map_length = number_of_query_vectors * self.count;
-        let mut filter_id_map: Vec<c_char> = Vec::with_capacity(filter_id_map_length);
+        let filter_id_map_length = filter_id_map.len();
         debug!("Length of bitmap representing predicate: {filter_id_map_length}.");
 
         unsafe {

@@ -1,4 +1,5 @@
 use crate::fvecs::{FlattenedVecs, Fvec};
+use crate::predicate::PredicateQuery;
 // use tracing::info;
 
 use anyhow::Result;
@@ -50,7 +51,7 @@ pub trait Dataset: Sized {
     /// appropriate error is returned. The vec will be of length `self.len()`.
     fn attribute_equals_map(&self, attribute: u8) -> Result<bool>;
     /// Provide the dimensionality of the vectors in the dataset.
-    fn get_dimensionality(&self) -> u32;
+    fn get_dimensionality(&self) -> usize;
     /// Returns data in dataset. Fails if full dataset doesn't fit in memory.
     fn get_data(&self) -> Result<Vec<Fvec>>;
     /// Takes a Vec<Fvec> and returns a Vec<Vec<(usize, f32)>>, whereby each inner Vec<(usize, f32)> is an array
@@ -58,6 +59,7 @@ pub trait Dataset: Sized {
     fn search(
         &mut self,
         query_vectors: FlattenedVecs,
+        predicate_query: Option<PredicateQuery>,
         topk: usize,
     ) -> Result<Vec<TopKSearchResult>, SearchableError>;
 }

@@ -1,5 +1,6 @@
 use oak::dataset::{Dataset, OakIndexOptions};
 use oak::fvecs::{FlattenedVecs, FvecsDataset};
+use oak::predicate::PredicateQuery;
 use oak::stubs::generate_random_vector;
 
 use clap::Parser;
@@ -58,7 +59,9 @@ fn main() -> Result<()> {
     let num_queries = query_vector.len();
     info!("Searching {topk} similar vectors for {num_queries} queries...");
 
-    let result = dataset.search(query_vector, topk);
+    let query: Option<PredicateQuery> = None;
+
+    let result = dataset.search(query_vector, query, topk);
 
     // let results = dataset.search(xq, 10);
     // info!("Open for connections.");
