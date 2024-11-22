@@ -1,6 +1,4 @@
-use oak::dataset::{
-    AcornHnswIndex, AcornHnswOptions, Dataset, FvecsDataset, Searchable, VectorIndex,
-};
+use oak::dataset::{AcornHnswIndex, AcornHnswOptions, Dataset, FvecsDataset, VectorIndex};
 
 use clap::Parser;
 

@@ -77,8 +77,6 @@ impl ToString for VectorIndex {
     }
 }
 
-pub trait Searchable {}
-
 /// A type that represents a view on an underlying set of fvecs. See [FVecView] for memory layout.
 pub struct FvecsView<'a> {
     ptr: *const f32,
@@ -377,20 +375,5 @@ impl AcornHnswIndex {
         }
 
         Ok(Self { index })
-    }
-}
-
-#[cfg(feature = "hnsw_rust")]
-impl Searchable for FvecsDataset {
-    fn build_index(&mut self, index_type: VectorIndex) -> Result<()> {
-        Ok(())
-    }
-
-    fn search_with_index(
-        &self,
-        query_vectors: Vec<Fvec>,
-        topk: Option<usize>,
-    ) -> Result<Vec<Vec<usize>>, SearchableError> {
-        Ok(vec![])
     }
 }
