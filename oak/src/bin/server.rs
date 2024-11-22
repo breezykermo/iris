@@ -1,4 +1,5 @@
-use oak::dataset::{AcornHnswOptions, Dataset, FlattenedVecs, FvecsDataset};
+use oak::dataset::{Dataset, OakIndexOptions};
+use oak::fvecs::{FlattenedVecs, FvecsDataset};
 use oak::stubs::generate_random_vector;
 
 use clap::Parser;
@@ -39,8 +40,7 @@ fn main() -> Result<()> {
     let mut dataset = FvecsDataset::new(args.dataset)?;
     info!("Dataset loaded from disk.");
 
-    // NOTE: These parameters are taken from https://github.com/csirianni/ACORN/blob/main/README.md
-    let opts = AcornHnswOptions {
+    let opts = OakIndexOptions {
         gamma: 12,
         m: 32,
         m_beta: 32,
@@ -56,7 +56,7 @@ fn main() -> Result<()> {
     };
     info!("Searching for similar vectors to a random vector...");
 
-    let result = dataset.search(vec![query_vector], 3);
+    let result = dataset.search(query_vector, 3);
 
     // let results = dataset.search(xq, 10);
     // info!("Open for connections.");

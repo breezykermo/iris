@@ -1,7 +1,5 @@
-use std::f64;
-
 use rand::Rng;
-use tracing::info;
+// use tracing::info;
 
 pub fn generate_random_vector(dim: usize) -> Vec<f32> {
     let mut rng = rand::thread_rng(); // Initialize the thread-local random number generator

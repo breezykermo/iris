@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [features]
-hnsw_faiss = ["dep:faiss"]
+hnsw_faiss = []
 hnsw_rust = ["dep:hnsw_rs"]
 default = ["hnsw_faiss"]
 
@@ -17,7 +17,6 @@ thiserror = "1.0.64"
 tracing = "0.1.40"
 tracing-subscriber = "0.3.18"
 byteorder = "1.5.0"
-faiss = { version = "0.12.1", optional = true }
 hnsw_rs = { version = "0.3.0", optional = true }
 
 cxx = "1.0"
