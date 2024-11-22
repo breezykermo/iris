@@ -17,6 +17,19 @@ use thiserror::Error;
 
 const FOUR_BYTES: usize = std::mem::size_of::<f32>();
 
+/// The errors that can be returned from searching an OAK dataset.
+#[derive(Error, Debug)]
+pub enum SearchableError {
+    #[error("You must index a dataset before it can be searched")]
+    DatasetIsNotIndexed,
+}
+
+/// t[0] is the index of the vector that is similar in the dataset, t[1] is a f32 representing the
+/// distance of the found vector from the original query.
+type SimilaritySearchResult = (usize, f32);
+// A vec of length `k` with tuples representing the similarity search results.
+type TopKSearchResult = Vec<SimilaritySearchResult>;
+
 /// Trait for a dataset of vectors.
 /// Note that this must be `Sized` in order that the constructor can return a Result.
 pub trait Dataset: Sized {
@@ -32,6 +45,13 @@ pub trait Dataset: Sized {
     fn get_dimensionality(&self) -> u32;
     /// Returns data in dataset. Fails if full dataset doesn't fit in memory.
     fn get_data(&self) -> Result<Vec<Fvec>>;
+    /// Takes a Vec<Fvec> and returns a Vec<Vec<(usize, f32)>>, whereby each inner Vec<(usize, f32)> is an array
+    /// of tuples in which t[0] is the index of the resthe `topk` vectors returned from the result.
+    fn search(
+        &self,
+        query_vectors: Vec<FlattenedVecs>,
+        topk: usize,
+    ) -> Result<Vec<TopKSearchResult>, SearchableError>;
 }
 
 // https://github.com/facebookresearch/faiss/wiki/Faiss-indexes
@@ -57,15 +77,7 @@ impl ToString for VectorIndex {
     }
 }
 
-pub trait Searchable {
-    /// Takes a Vec<Fvec> and returns a Vec<Vec<usize>>, whereby each inner Vec<usize> is an array
-    /// of the indices for the `topk` vectors returned from the result.
-    fn search(
-        &self,
-        query_vectors: Vec<Fvec>,
-        topk: Option<usize>,
-    ) -> Result<Vec<Vec<usize>>, SearchableError>;
-}
+pub trait Searchable {}
 
 /// A type that represents a view on an underlying set of fvecs. See [FVecView] for memory layout.
 pub struct FvecsView<'a> {
@@ -282,12 +294,14 @@ impl Dataset for FvecsDataset {
         let vecs = view.map(|v| Fvec::from(v)).collect();
         Ok(vecs)
     }
-}
 
-#[derive(Error, Debug)]
-pub enum SearchableError {
-    #[error("You must index a dataset before it can be searched")]
-    DatasetIsNotIndexed,
+    fn search(
+        &self,
+        query_vectors: Vec<FlattenedVecs>,
+        topk: usize,
+    ) -> Result<Vec<TopKSearchResult>, SearchableError> {
+        Ok(vec![vec![]])
+    }
 }
 
 pub trait HnswIndex {
