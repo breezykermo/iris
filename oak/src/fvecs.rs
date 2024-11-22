@@ -204,7 +204,7 @@ impl Dataset for FvecsDataset {
         debug!("fvecs dataset len: {}", self.len());
 
         let mut filter_id_map = match predicate_query {
-            None => vec![1; self.len() * query_vectors.len()],
+            None => vec![true as i8; self.len() * query_vectors.len()],
             Some(pq) => unimplemented!(),
         };
 

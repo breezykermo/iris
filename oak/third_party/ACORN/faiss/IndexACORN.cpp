@@ -495,9 +495,6 @@ std::unique_ptr<IndexACORNFlat> new_index_acorn(
   int M_beta,
   const rust::Vec<int>& metadata
 ) {
-
-  // std::cout << "metadata size: " << metadata.size() << std::endl;
-
   // Copy the elements to a C++ std::vector using STL algorithm.
   std::vector<int> metadata_cpp;
   std::copy(metadata.begin(), metadata.end(), std::back_inserter(metadata_cpp));
@@ -538,9 +535,6 @@ void search_index(
 
 
   IndexACORNFlat index = *idx;
-  auto metadata = index.acorn.metadata;
-
-  std::cout << "searching " << n << " queries.." << std::endl;
   index.search(n, x, k, distances, labels, filter_id_map);
   std::cout << n << " queries searched." << std::endl;
 }
