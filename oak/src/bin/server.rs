@@ -1,4 +1,5 @@
-use oak::dataset::{AcornHnswIndex, AcornHnswOptions, Dataset, FvecsDataset, VectorIndex};
+use oak::dataset::{AcornHnswOptions, Dataset, FlattenedVecs, FvecsDataset};
+use oak::stubs::generate_random_vector;
 
 use clap::Parser;
 
@@ -45,13 +46,23 @@ fn main() -> Result<()> {
         m_beta: 32,
     };
 
-    dataset.initialize(&opts);
+    let _ = dataset.initialize(&opts);
     info!("Seed index constructed.");
 
-    info!("Open for connections.");
-    loop {
-        // TODO:
-    }
+    let dimensionality = dataset.get_dimensionality() as usize;
+    let query_vector = FlattenedVecs {
+        dimensionality,
+        data: generate_random_vector(dimensionality),
+    };
+    info!("Searching for similar vectors to a random vector...");
+
+    let result = dataset.search(vec![query_vector], 3);
+
+    // let results = dataset.search(xq, 10);
+    // info!("Open for connections.");
+    // loop {
+    //     // TODO:
+    // }
 
     Ok(())
 }

@@ -54,8 +54,8 @@ pub trait Dataset: Sized {
     /// Takes a Vec<Fvec> and returns a Vec<Vec<(usize, f32)>>, whereby each inner Vec<(usize, f32)> is an array
     /// of tuples in which t[0] is the index of the resthe `topk` vectors returned from the result.
     fn search(
-        &self,
-        query_vectors: Vec<FlattenedVecs>,
+        &mut self,
+        query_vectors: FlattenedVecs,
         topk: usize,
     ) -> Result<Vec<TopKSearchResult>, SearchableError>;
 }
@@ -187,9 +187,9 @@ impl<'a> From<FvecView<'a>> for Fvec {
 }
 
 pub struct FlattenedVecs {
-    dimensionality: usize,
+    pub dimensionality: usize,
     // This data is the flattened representation of all vectors of size `dimensionality`.
-    data: Vec<f32>,
+    pub data: Vec<f32>,
 }
 
 impl<'a> From<FvecsView<'a>> for FlattenedVecs {
@@ -308,11 +308,15 @@ impl Dataset for FvecsDataset {
     }
 
     fn search(
-        &self,
-        query_vectors: Vec<FlattenedVecs>,
+        &mut self,
+        query_vectors: FlattenedVecs,
         topk: usize,
     ) -> Result<Vec<TopKSearchResult>, SearchableError> {
-        unimplemented!();
+        if self.index.is_none() {
+            return Err(SearchableError::DatasetIsNotIndexed);
+        }
+
+        self.index.as_mut().unwrap().search(query_vectors, topk)
     }
 }
 
@@ -324,6 +328,7 @@ pub struct AcornHnswOptions {
 
 pub struct AcornHnswIndex {
     index: cxx::UniquePtr<ffi::IndexACORNFlat>,
+    count: usize,
 }
 
 #[cfg(feature = "hnsw_faiss")]
@@ -354,6 +359,36 @@ impl AcornHnswIndex {
             ffi::add_to_index(&mut index, num_fvecs as i64, fvecs.data.as_ptr());
         }
 
-        Ok(Self { index })
+        Ok(Self {
+            index,
+            count: num_fvecs as usize,
+        })
+    }
+
+    pub fn search(
+        &mut self,
+        query_vectors: FlattenedVecs,
+        k: usize,
+    ) -> Result<Vec<TopKSearchResult>, SearchableError> {
+        let number_of_query_vectors: usize = 1; // TODO: fix this to infer length from FlattenedVecs method
+        let length_of_results = k * number_of_query_vectors;
+        // These two arrays are where the outputs from the cpp methods will be stored
+        let mut distances: Vec<f32> = Vec::with_capacity(length_of_results);
+        let mut labels: Vec<i64> = Vec::with_capacity(length_of_results);
+        let filter_id_map: Vec<cxx::c_char> =
+            Vec::with_capacity(number_of_query_vectors * self.count);
+        unsafe {
+            ffi::search_index(
+                &mut self.index,
+                number_of_query_vectors as i64,
+                query_vectors.data.as_ptr(),
+                k as i64,
+                distances.as_mut_ptr(),
+                labels.as_mut_ptr(),
+                filter_id_map.as_ptr(),
+            )
+        }
+
+        unimplemented!();
     }
 }
