@@ -40,10 +40,11 @@ fn main() -> Result<()> {
     let dataset = FvecsDataset::new(args.dataset)?;
     info!("Dataset loaded from disk.");
 
+    // NOTE: These parameters are taken from https://github.com/csirianni/ACORN/blob/main/README.md
     let opts = AcornHnswOptions {
-        gamma: 1,
-        m: 32, // NOTE: this should not be 1, can lead to segfaults in cpp...
-        m_beta: 1,
+        gamma: 12,
+        m: 32,
+        m_beta: 32,
     };
 
     let main_index = AcornHnswIndex::new(&dataset, &opts);
