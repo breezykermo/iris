@@ -143,6 +143,12 @@ pub struct FlattenedVecs {
     pub data: Vec<f32>,
 }
 
+impl FlattenedVecs {
+    pub fn len(&self) -> usize {
+        self.data.len() / self.dimensionality
+    }
+}
+
 impl<'a> From<FvecsView<'a>> for FlattenedVecs {
     fn from(value: FvecsView) -> Self {
         // Assumptions on the data structure of argument 2:

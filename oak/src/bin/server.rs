@@ -54,9 +54,11 @@ fn main() -> Result<()> {
         dimensionality,
         data: generate_random_vector(dimensionality),
     };
-    info!("Searching for similar vectors to a random vector...");
+    let topk = 10;
+    let num_queries = query_vector.len();
+    info!("Searching {topk} similar vectors for {num_queries} queries...");
 
-    let result = dataset.search(query_vector, 3);
+    let result = dataset.search(query_vector, topk);
 
     // let results = dataset.search(xq, 10);
     // info!("Open for connections.");

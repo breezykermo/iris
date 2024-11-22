@@ -5,7 +5,7 @@ use crate::ffi;
 use crate::fvecs::{FlattenedVecs, FvecsDataset, FvecsView};
 
 use std::ffi::c_char;
-use tracing::info;
+use tracing::{debug, info};
 
 pub struct AcornHnswIndex {
     index: cxx::UniquePtr<ffi::IndexACORNFlat>,
@@ -51,20 +51,21 @@ impl AcornHnswIndex {
         query_vectors: FlattenedVecs,
         k: usize,
     ) -> Result<Vec<TopKSearchResult>, SearchableError> {
-        let number_of_query_vectors: usize = 1; // TODO: fix this to infer length from FlattenedVecs method
+        let number_of_query_vectors: usize = query_vectors.len();
+        debug!("Searching queries: {number_of_query_vectors} in batch.");
         let length_of_results = k * number_of_query_vectors;
-        // TODO: at present there is essentially no filtering, we are just checking that the format
-        // is right. A meaningful use of this will require a change to the `search` function
-        // signature.
-        // let mut filter_id_map: Vec<c_char> = vec![1; number_of_query_vectors * self.count];
+        debug!("Length of results arrays: {length_of_results}.");
 
         // These two arrays are where the outputs from the cpp methods will be stored
         let mut distances: Vec<f32> = Vec::with_capacity(length_of_results);
         let mut labels: Vec<i64> = Vec::with_capacity(length_of_results);
 
-        let mut filter_id_map: Vec<c_char> =
-            Vec::with_capacity(number_of_query_vectors * self.count); // TODO:
-                                                                      // create_filter_id_map(metadata, aq, number_of_query_vectors, length_of_results);
+        // TODO: at present there is essentially no filtering, we are just checking that the format
+        // is right. A meaningful use of this will require a change to the `search` function
+        // signature.
+        let filter_id_map_length = number_of_query_vectors * self.count;
+        let mut filter_id_map: Vec<c_char> = Vec::with_capacity(filter_id_map_length);
+        debug!("Length of bitmap representing predicate: {filter_id_map_length}.");
 
         unsafe {
             ffi::search_index(
