@@ -487,7 +487,6 @@ IndexACORNFlat::IndexACORNFlat(int d, int M, int gamma, std::vector<int>& metada
     is_trained = true;
 }
 
-// OAK: standalone function to construct a new index from Rust over FFI.
 std::unique_ptr<IndexACORNFlat> new_index_acorn(
   int d,
   int M,
@@ -518,5 +517,21 @@ void add_to_index(
   index.add(n, x);
   // std::cout << "Added, returning to Rust" << std::endl;
 }
+
+// OAK: standalone function to search vectors from an index from Rust over FFI.
+void search_index(
+  std::unique_ptr<IndexACORNFlat>& idx,
+  idx_t n,            // number of query vectors
+  const float* x,     // pointer to an array of the query vectors 
+  idx_t k,            // number of vectors to return for each query vector
+  float* distances,   // pointer to an array of (k*n) floats, each representing a distance of the result from the query vector 
+  idx_t* labels,      // pointer to an array of (k*n) indices, each representing the ID of the query vector in idx 
+  char* filter_id_map // a bitmap of the IDs in the filter, an array of (n * N) bools, where N is the total number of vectors in the index, and a '1' represents that the vector at that index passes the predicate for that query.
+) {
+  std::cout << "searching " << n << " queries.." << std::endl;
+
+}
+
+
 
 } // namespace faiss
