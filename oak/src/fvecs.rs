@@ -40,106 +40,35 @@ fn read_csv_to_vec(file_path: &PathBuf) -> Result<Vec<i32>> {
     Ok(numbers)
 }
 
-/// A type that represents a view on an underlying set of fvecs. See [FVecView] for memory layout.
-pub struct FvecsView<'a> {
-    ptr: *const f32,
-    end: *const f32,
-    _marker: PhantomData<&'a [f32]>,
-}
+/// Converts a slice of `u8` into a `Vec<f32>` assuming little-endian format.
+///
+/// # Panics
+/// - Panics if the length of the input slice is not a multiple of 4.
+///
+/// # Parameters
+/// - `data`: A byte slice containing the raw `f32` data.
+///
+/// # Returns
+/// A vector of `f32` values parsed from the byte slice.
+pub fn parse_u8_to_f32(data: &[u8]) -> Vec<f32> {
+    assert!(
+        data.len() % 4 == 0,
+        "Input data length must be a multiple of 4"
+    );
 
-impl<'a> FvecsView<'a> {
-    pub fn new(mmap: &Mmap) -> Self {
-        let ptr = mmap.as_ptr() as *const f32;
+    let mut result = Vec::with_capacity(data.len() / FOUR_BYTES);
 
-        assert_eq!(mmap.len() % size_of::<f32>(), 0);
-
-        let len = mmap.len() / size_of::<f32>();
-
-        FvecsView {
-            ptr,
-            // SAFETY: the pointer arithmetic is constrained by the length of the file (represented
-            // by `mmap`)
-            end: unsafe { ptr.add(len) },
-            _marker: PhantomData,
-        }
+    for chunk in data.chunks_exact(FOUR_BYTES) {
+        let value = LittleEndian::read_f32(chunk);
+        result.push(value);
     }
-}
 
-impl<'a> Iterator for FvecsView<'a> {
-    type Item = FvecView<'a>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.ptr == self.end {
-            return None;
-        }
-
-        // Ensure that there is at least a `dimensionality` value left in the file.
-        if (self.end as usize) - (self.ptr as usize) < FOUR_BYTES {
-            return None;
-        }
-
-        // Read the next 4 bytes as an u32.
-        // SAFETY: We know that there are at least four bytes left in the file from the check
-        // directly above.
-        let dimensionality = unsafe {
-            let value = *(self.ptr as *const u32);
-            self.ptr = self.ptr.add(FOUR_BYTES);
-            value
-        };
-
-        if dimensionality <= 0 {
-            // A vector with dimensionality of 0 is impossible, I think?
-            return None;
-        }
-
-        let dimensionality = dimensionality as usize;
-        let span = dimensionality * FOUR_BYTES;
-
-        let ptr = self.ptr as *const f32;
-
-        // SAFETY: We assume from the dimensionality vector that there are `span` bytes to read.
-        self.ptr = unsafe { self.ptr.add(span) };
-
-        Some(FvecView {
-            dimensionality,
-            ptr,
-            _marker: PhantomData,
-        })
-    }
-}
-
-/// A type that represents a view on an underlying fvec that 'lazily' determines values (i.e. does
-/// not copy bytes up front).
-///
-/// The layout of an fvec on disk is as follows:
-///
-/// NOTE: the below are not in doc comments, as it does something strange to tests...
-//       32bit          d * 32bits
-// |--------------|-------/ ... /-------|
-///
-/// where d is the dimensionality of the vector.
-///
-/// The `dimensionality` has already been parsed: so the `ptr` begins where the f32 data begins.
-pub struct FvecView<'a> {
-    dimensionality: usize,
-    ptr: *const f32,
-    _marker: PhantomData<&'a [f32]>,
+    result
 }
 
 pub struct Fvec {
     dimensionality: usize,
     data: Vec<f32>,
-}
-
-impl<'a> From<FvecView<'a>> for Fvec {
-    fn from(value: FvecView) -> Self {
-        // SAFETY: We assume that the view has been well constructed.
-        let data: &[f32] = unsafe { slice::from_raw_parts(value.ptr, value.dimensionality) };
-        Self {
-            dimensionality: value.dimensionality,
-            data: data.to_vec(),
-        }
-    }
 }
 
 pub struct FlattenedVecs {
@@ -154,39 +83,30 @@ impl FlattenedVecs {
     }
 }
 
-impl<'a> From<FvecsView<'a>> for FlattenedVecs {
-    fn from(value: FvecsView) -> Self {
-        // Assumptions on the data structure of argument 2:
-        // NOTE: in IndexFlatCodes.cpp, the `add` method calls `sa_encode` with a pointer to the end
-        // of the array where the vectors should be added.
-        // In IndexFlat.cpp, there is an impl of `sa_encode` that looks like:
-        // memcpy(bytes, x, sizeof(float) * d * n);
-        // From this, we are assuming that when implementing the FFI binding for faiss' `add`
-        // method, it is sufficient to pass a slice of the fvec bytes, i.e. each vector
-        // encoded with its dimensionality first as a u32, then its vectors (see `Fvec` docs), as
-        // `add`s second argument.
+impl From<&FvecsDataset> for FlattenedVecs {
+    fn from(dataset: &FvecsDataset) -> Self {
+        let mut all_fvecs = Vec::with_capacity(dataset.count * dataset.dimensionality);
 
-        value.fold(
-            FlattenedVecs {
-                dimensionality: 0,
-                data: Vec::new(),
-            },
-            |mut acc, v| {
-                if acc.dimensionality == 0 {
-                    acc.dimensionality = v.dimensionality;
-                }
-                assert_eq!(acc.dimensionality, v.dimensionality);
-                let fvec = Fvec::from(v);
-                acc.data.extend(fvec.data.iter());
-                acc
-            },
-        )
+        let fvec_len_in_bytes = (dataset.dimensionality + 1) * FOUR_BYTES;
+        let mut current_index = 0;
+        for i in dataset.mmap.chunks_exact(fvec_len_in_bytes) {
+            let mut fvecs = parse_u8_to_f32(&i);
+            // skip the dimensionality, we don't need it in the flattened.
+            fvecs.drain(0..1);
+            all_fvecs.splice(current_index..current_index, fvecs);
+            current_index += dataset.dimensionality;
+        }
+
+        FlattenedVecs {
+            dimensionality: dataset.dimensionality,
+            data: all_fvecs,
+        }
     }
 }
-
 /// Dataset sourced from a .fvecs file
 pub struct FvecsDataset {
     pub mmap: Mmap,
+    count: usize,
     dimensionality: usize,
     index: Option<Box<AcornHnswIndex>>,
     pub metadata: Vec<i32>,
@@ -211,8 +131,19 @@ impl Dataset for FvecsDataset {
         // This will through an error if RAM is not large enough.
         let _ = mmap.lock()?;
 
-        // let dimensionality = LittleEndian::read_32(&mmap[..4]);
-        let dimensionality = LittleEndian::read_u32(&mmap[..4]) as usize;
+        let dimensionality = LittleEndian::read_u32(&mmap[..FOUR_BYTES]) as usize;
+        assert_eq!(
+            dimensionality,
+            LittleEndian::read_u32(&mmap[0..FOUR_BYTES]) as usize
+        );
+
+        // Each fvec is a dimensionality (4 bytes) followed by `dimensionality` number of f32
+        // values. Fvecs are contiguous in the file.
+        let count = &mmap[..].len() / ((1 + dimensionality) * FOUR_BYTES);
+        debug!(
+            "Firest dimensionality read from file is {dimensionality}; assuming the same for all remaining."
+        );
+        debug!("The file read has {count} vectors.");
 
         let mut metadata_fname = PathBuf::new();
         metadata_fname.push(&format!("{}.csv", fname));
@@ -221,6 +152,7 @@ impl Dataset for FvecsDataset {
 
         Ok(Self {
             index: None,
+            count,
             mmap,
             dimensionality,
             metadata,
@@ -234,11 +166,7 @@ impl Dataset for FvecsDataset {
     }
 
     fn len(&self) -> usize {
-        debug!(
-            "Inferring length from metadata, which is {}",
-            self.metadata.len()
-        );
-        self.mmap.len() / self.dimensionality
+        self.count
     }
 
     fn attribute_equals_map(&self, attribute: u8) -> Result<bool> {
@@ -250,8 +178,15 @@ impl Dataset for FvecsDataset {
     }
 
     fn get_data(&self) -> Result<Vec<Fvec>> {
-        let view = FvecsView::new(&self.mmap);
-        let vecs = view.map(|v| Fvec::from(v)).collect();
+        let flattened = FlattenedVecs::from(self);
+        let vecs = flattened
+            .data
+            .chunks_exact(self.dimensionality)
+            .map(|x| Fvec {
+                dimensionality: self.dimensionality,
+                data: x.to_vec(),
+            })
+            .collect();
         Ok(vecs)
     }
 
@@ -283,15 +218,30 @@ impl Dataset for FvecsDataset {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::Once;
+    use tracing::Level;
+    use tracing_subscriber;
+
+    static INIT: Once = Once::new();
+
+    pub fn trace() {
+        INIT.call_once(|| {
+            tracing_subscriber::fmt()
+                .with_max_level(tracing::Level::DEBUG)
+                .init();
+        });
+    }
 
     // TODO: something is going wrong with the fvecs parsing, we need to test this more
     // comprehensively.
     #[test]
     fn test_fvecs_to_flattened_vec() {
-        let dataset = FvecsDataset::new("data/sift_query".to_string()).unwrap();
-        let ds_view = FvecsView::new(&dataset.mmap);
-        let vecs = FlattenedVecs::from(ds_view);
+        trace();
 
-        assert_eq!(vecs.len(), dataset.len());
+        let dataset = FvecsDataset::new("data/sift_query".to_string()).unwrap();
+        let dataset_len = dataset.len();
+        let vecs = FlattenedVecs::from(&dataset);
+
+        assert_eq!(vecs.len(), dataset_len);
     }
 }

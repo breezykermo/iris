@@ -2,7 +2,7 @@ use crate::dataset::{
     ConstructionError, Dataset, OakIndexOptions, SearchableError, TopKSearchResult,
 };
 use crate::ffi;
-use crate::fvecs::{FlattenedVecs, FvecsDataset, FvecsView};
+use crate::fvecs::{FlattenedVecs, FvecsDataset};
 use crate::predicate::PredicateQuery;
 
 use core::ffi::c_char;
@@ -34,8 +34,7 @@ impl AcornHnswIndex {
             options.m, options.gamma, options.m_beta
         );
 
-        let dataset_view = FvecsView::new(&dataset.mmap);
-        let fvecs = FlattenedVecs::from(dataset_view);
+        let fvecs = FlattenedVecs::from(dataset);
         let num_fvecs = dataset.len();
         debug!("Adding {num_fvecs} vectors to the index...");
 
