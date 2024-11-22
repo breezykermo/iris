@@ -24,6 +24,10 @@ pub enum SearchableError {
     DatasetIsNotIndexed,
 }
 
+/// The errors that can be returned from constructing an OAK dataset.
+#[derive(Error, Debug)]
+pub enum ConstructionError {}
+
 /// t[0] is the index of the vector that is similar in the dataset, t[1] is a f32 representing the
 /// distance of the found vector from the original query.
 type SimilaritySearchResult = (usize, f32);
@@ -39,6 +43,8 @@ pub trait Dataset: Sized {
     /// those vectors. Each row in the CSV corresponds to the vector at the same index in the fvecs
     /// file, and each column represents an attribute on that vector.
     fn new(fname: String) -> Result<Self>;
+    /// Initialize the index with the vectors from the dataset.
+    fn initialize(&mut self, opts: &AcornHnswOptions) -> Result<(), ConstructionError>;
     /// Provide basic information about the characteristics of the dataset.
     fn dataset_info(&self) -> String;
     /// Provide the dimensionality of the vectors in the dataset.
@@ -76,6 +82,8 @@ impl ToString for VectorIndex {
         }
     }
 }
+
+pub trait Searchable {}
 
 /// A type that represents a view on an underlying set of fvecs. See [FVecView] for memory layout.
 pub struct FvecsView<'a> {
@@ -218,7 +226,7 @@ impl<'a> From<FvecsView<'a>> for FlattenedVecs {
 pub struct FvecsDataset {
     mmap: Mmap,
     dimensionality: u32,
-    index: Option<Box<dyn HnswIndex>>,
+    index: Option<Box<AcornHnswIndex>>,
     metadata: Vec<i32>,
 }
 
@@ -279,6 +287,12 @@ impl Dataset for FvecsDataset {
         })
     }
 
+    fn initialize(&mut self, opts: &AcornHnswOptions) -> Result<(), ConstructionError> {
+        let main_index = AcornHnswIndex::new(&self, opts)?;
+        self.index = Some(Box::new(main_index));
+        Ok(())
+    }
+
     fn dataset_info(&self) -> String {
         "Section of the Deep1B dataset X vectors".to_string()
     }
@@ -298,39 +312,7 @@ impl Dataset for FvecsDataset {
         query_vectors: Vec<FlattenedVecs>,
         topk: usize,
     ) -> Result<Vec<TopKSearchResult>, SearchableError> {
-        Ok(vec![vec![]])
-    }
-}
-
-pub trait HnswIndex {
-    fn add(&mut self, vecs: FvecsView);
-}
-
-struct FaissHnswIndex {
-    index: IndexImpl,
-}
-
-// impl FaissHnswIndex {
-//     fn build(
-//         dimensionality: u32,
-//         index_type: VectorIndex,
-//         metric_type: VectorMetric,
-//     ) -> Result<Self> {
-//         let index = index_factory(
-//             dimensionality,
-//             index_type.to_string(),
-//             match metric_type {
-//                 VectorMetric::IndexFlatL2 => MetricType::L2,
-//             },
-//         )?;
-//         Ok(Self { index })
-//     }
-// }
-
-impl HnswIndex for FaissHnswIndex {
-    fn add(&mut self, vecs: FvecsView) {
-        let flattened_vecs = FlattenedVecs::from(vecs);
-        self.index.add(&flattened_vecs.data[..]);
+        unimplemented!();
     }
 }
 
@@ -344,15 +326,12 @@ pub struct AcornHnswIndex {
     index: cxx::UniquePtr<ffi::IndexACORNFlat>,
 }
 
-fn load_fvecs_metadata(fname: &str) -> cxx::UniquePtr<cxx::CxxVector<i32>> {
-    let mut metadata: cxx::UniquePtr<cxx::CxxVector<i32>> = cxx::CxxVector::new();
-
-    metadata
-}
-
 #[cfg(feature = "hnsw_faiss")]
 impl AcornHnswIndex {
-    pub fn new(dataset: &FvecsDataset, options: &AcornHnswOptions) -> Result<Self> {
+    pub fn new(
+        dataset: &FvecsDataset,
+        options: &AcornHnswOptions,
+    ) -> Result<Self, ConstructionError> {
         let dimensionality = i32::try_from(dataset.get_dimensionality())
             .expect("dimensionality should not be greater than 2,147,483,647");
 
@@ -360,6 +339,7 @@ impl AcornHnswIndex {
         let fvecs = FlattenedVecs::from(dataset_view);
         let num_fvecs = (fvecs.data.len() as i32) / dimensionality;
 
+        // TODO: is there a way to 'catch' segmentation faults in these unsafe functions?
         let mut index = ffi::new_index_acorn(
             dimensionality,
             options.m,

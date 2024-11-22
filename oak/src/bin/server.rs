@@ -35,7 +35,7 @@ fn main() -> Result<()> {
 
     let args = Args::parse();
 
-    let dataset = FvecsDataset::new(args.dataset)?;
+    let mut dataset = FvecsDataset::new(args.dataset)?;
     info!("Dataset loaded from disk.");
 
     // NOTE: These parameters are taken from https://github.com/csirianni/ACORN/blob/main/README.md
@@ -45,7 +45,7 @@ fn main() -> Result<()> {
         m_beta: 32,
     };
 
-    let main_index = AcornHnswIndex::new(&dataset, &opts);
+    dataset.initialize(&opts);
     info!("Seed index constructed.");
 
     info!("Open for connections.");
