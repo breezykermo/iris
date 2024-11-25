@@ -325,12 +325,13 @@ void IndexACORN::search(
 #pragma omp parallel
         {
             VisitedTable vt(ntotal);
-
             DistanceComputer* dis = storage_distance_computer(storage);
             ScopeDeleter1<DistanceComputer> del(dis);
 
+
 #pragma omp for reduction(+ : n1, n2, n3, ndis, nreorder, candidates_loop)
             for (idx_t i = i0; i < i1; i++) {
+
                 idx_t* idxi = labels + i * k;
                 float* simi = distances + i * k;
                 char* filters = filter_id_map + i * ntotal;
@@ -357,6 +358,7 @@ void IndexACORN::search(
                 
             }
         }
+
         InterruptCallback::check();
     }
 
@@ -433,7 +435,6 @@ void IndexACORN::search(
         }
     }
 
-    std::cout << "we here." << std::endl;
     acorn_stats.combine({n1, n2, n3, ndis, nreorder});
 }
 
@@ -499,7 +500,10 @@ std::unique_ptr<IndexACORNFlat> new_index_acorn(
   std::vector<int> metadata_cpp;
   std::copy(metadata.begin(), metadata.end(), std::back_inserter(metadata_cpp));
 
-  auto base_index = std::make_unique<faiss::IndexACORNFlat>(d, M, gamma, metadata_cpp, M_beta, METRIC_L2);
+  std::unique_ptr<faiss::IndexACORNFlat> base_index(
+    new faiss::IndexACORNFlat(d, M, gamma, metadata_cpp, M_beta, METRIC_L2)
+  );
+
   base_index.get()->acorn.efSearch = 16; 
   return base_index;
 }
@@ -511,9 +515,7 @@ void add_to_index(
   const float* x
 ) {
   IndexACORNFlat index = *idx;
-  // std::cout << "Adding " << n << " vectors..." << std::endl;
   index.add(n, x);
-  // std::cout << "Added, returning to Rust" << std::endl;
 }
 
 // OAK: standalone function to search vectors from an index from Rust over FFI.
@@ -533,9 +535,9 @@ void search_index(
   FAISS_THROW_IF_NOT(filter_id_map != nullptr);
   FAISS_THROW_IF_NOT(n > 0 && k > 0);
 
-
   IndexACORNFlat index = *idx;
   index.search(n, x, k, distances, labels, filter_id_map);
+
   std::cout << n << " queries searched." << std::endl;
 }
 

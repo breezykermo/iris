@@ -42,15 +42,16 @@ fn main() -> Result<()> {
     info!("Dataset loaded from disk.");
 
     let opts = OakIndexOptions {
-        gamma: 12,
+        gamma: 1,
         m: 32,
-        m_beta: 32,
+        m_beta: 64,
     };
 
     let _ = dataset.initialize(&opts);
     info!("Seed index constructed.");
 
     let dimensionality = dataset.get_dimensionality() as usize;
+    info!("Constructing random vector to query with {dimensionality} dimensions");
     let query_vector = FlattenedVecs {
         dimensionality,
         data: generate_random_vector(dimensionality),

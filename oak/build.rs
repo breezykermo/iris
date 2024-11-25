@@ -4,10 +4,10 @@ fn main() {
     println!("cargo:rustc-link-search=native=/usr/local/lib");
 
     cxx_build::bridge("src/lib.rs")
-        // .include("third_party/ACORN/faiss/impl")
+        .include("third_party/ACORN/faiss/impl")
         .file("third_party/ACORN/faiss/IndexACORN.cpp")
         .define("FINTEGER", "int")
-        .std("c++14")
+        .std("c++11")
         .compile("cxxbridge-demo");
 
     println!("cargo:rerun-if-changed=src/main.rs");
