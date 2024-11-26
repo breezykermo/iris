@@ -179,19 +179,17 @@ struct ExpResult {
 /// Terminate once the first client finishes, since the load characteristics would change
 /// otherwise.
 ///
-/// Have to measure from the time the request leaves the queue.fn do_requests<S, MC, Fut>(
-    accesses: Vec<Op>, //HashMap<usize, (KvClient<S>, Vec<Op>)>,
+/// Have to measure from the time the request leaves the queue.fn 
+do_requests<S, MC, Fut>(
+    query_vecs: Vec<FlattenedVecs>, //HashMap<usize, (KvClient<S>, Vec<Op>)>,
     num_threads: usize,
     interarrival_micros: u64,
-    poisson_arrivals: bool,
-    make_client: MC,
 ) -> Result<ExpResult, Report>
-where
-    S: bertha::ChunnelConnection<Data = kvstore::Msg> + Send + Sync + 'static,
-    MC: Fn(usize) -> Fut + Send + Sync + 'static,
-    Fut: Future<Output = Result<KvClient<S>, Report>>,
 {
-    let access_by_client = group_by_client(accesses);
+    let access_by_client = query_vecs;
+    // let access_by_client = group_by_client(accesses);
+    // Divide up workloads for each thread in the pool
+    // Maybe I start unithreaded??
     let num_clients = access_by_client.len();
     let mut access_by_thread = {
         let mut threads = vec![vec![]; num_threads];
@@ -202,21 +200,24 @@ where
         threads
     };
 
+    /// time_req measures time taken for the vectorDB call
     async fn time_req(
         cl: &KvClient<impl bertha::ChunnelConnection<Data = kvstore::Msg> + Send + Sync + 'static>,
         op: Op,
-    ) -> Result<Duration, Report> {
+    ) -> Result<(Duration, Vec<FlattenedVecs>), Report> {
         let now = tokio::time::Instant::now();
-        let _ycsb_result = op.exec(&cl).await?;
-        Ok::<_, Report>(now.elapsed())
+        let result = op.exec(&cl).await?; // TODO: this is where we plug in the call to search
+        /// Need to pull latest changes here.
+        Ok(now.elapsed(), result)
+        // TODO: change the output type once we know the result type - Flattened Vecs?
+        // This will allow us to measure accuracy results later on
     }
 
     #[instrument(level = "info", skip(cl, ops, done), err)]
     async fn req_loop(
-        cl: KvClient<impl bertha::ChunnelConnection<Data = kvstore::Msg> + Send + Sync + 'static>,
+        // cl: QueryClient,
         mut ops: impl Stream<Item = (usize, Op)> + Unpin + Send + 'static,
-        done: tokio::sync::watch::Receiver<bool>,
-        client_id: usize,
+        done: tokio::sync::watch::Receiver<bool>
     ) -> Result<(Vec<Duration>, usize), Report> {
         let mut durs = vec![];
         let mut inflight = FuturesUnordered::new();
@@ -305,13 +306,8 @@ where
                             .wrap_err("could not make client")?;
                         debug!(?thread_id, ?client_id, "wait for start barrier");
                         start.wait().await;
-                        if poisson_arrivals {
-                            let ops = poisson_paced_ops_stream(ops, interarrival_micros, client_id);
-                            req_loop(cl, ops, done_rx.clone(), client_id).await
-                        } else {
-                            let ops = const_paced_ops_stream(ops, interarrival_micros, client_id);
-                            req_loop(cl, ops, done_rx.clone(), client_id).await
-                        }
+                        let ops = const_paced_ops_stream(ops, interarrival_micros, client_id);
+                        req_loop(cl, ops, done_rx.clone(), client_id).await
                     }
                 })
                 .collect();
