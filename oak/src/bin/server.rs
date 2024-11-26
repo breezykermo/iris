@@ -8,7 +8,9 @@ use dropshot::RequestContext;
 use dropshot::ServerBuilder;
 use http::Method;
 use schemars::JsonSchema;
+use semver;
 use serde::Serialize;
+use std::fs::OpenOptions;
 
 use oak::dataset::{Dataset, OakIndexOptions};
 use oak::fvecs::{FlattenedVecs, FvecsDataset};
@@ -17,8 +19,7 @@ use oak::stubs::generate_random_vector;
 
 use clap::Parser;
 
-use tracing::info;
-use tracing_subscriber;
+use slog_scope::{debug, info};
 
 use anyhow::Result;
 use thiserror::Error;
@@ -67,12 +68,7 @@ trait OakApi {
     ) -> Result<HttpResponseOk<OakInfo>, HttpError>;
 }
 
-/// An empty type to hold the project server context.
-///
-/// This type is never constructed, and is purely a way to name
-/// the specific server impl.
 enum ServerImpl {}
-
 impl OakApi for ServerImpl {
     type Context = OakInfo;
 
@@ -94,12 +90,7 @@ async fn main() -> Result<()> {
     }
     .to_logger("oak-logger")
     .map_err(|e| ServerError::ServerStartError(e.to_string()))?;
-
-    // TODO: there should only be one logger. I should rewrite the `info!` and `debug!` macros for
-    // slog or find the equivalent.
-    tracing_subscriber::fmt()
-        .with_max_level(tracing::Level::DEBUG)
-        .init();
+    let _guard = slog_scope::set_global_logger(log.clone());
 
     let args = Args::parse();
 
@@ -130,7 +121,18 @@ async fn main() -> Result<()> {
 
     // let result = dataset.search(query_vector, query, topk);
 
+    // Open the file with the options to create if it doesn't exist and write
+    let mut f = OpenOptions::new()
+        .create(true) // Create the file if it doesn't exist
+        .write(true) // Open the file for writing
+        .truncate(true) // Truncate the file to overwrite its contents
+        .open("openapi.json")?;
+
     let api = oak_api_mod::api_description::<ServerImpl>().unwrap();
+    api.openapi("OAK", semver::Version::new(1, 0, 0))
+        .write(&mut f)
+        .map_err(|e| ServerError::ServerStartError(e.to_string()))?;
+
     let info = OakInfo { dimensionality };
 
     // Start the server.

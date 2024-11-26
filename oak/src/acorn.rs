@@ -6,7 +6,8 @@ use crate::fvecs::{FlattenedVecs, FvecsDataset};
 use crate::predicate::PredicateQuery;
 
 use core::ffi::c_char;
-use tracing::{debug, info};
+// use tracing::{debug, info};
+use slog_scope::{debug, info};
 
 pub struct AcornHnswIndex {
     index: cxx::UniquePtr<ffi::IndexACORNFlat>,

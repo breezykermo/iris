@@ -8,11 +8,11 @@ use anyhow::Result;
 use byteorder::{ByteOrder, LittleEndian};
 use csv::ReaderBuilder;
 use memmap2::Mmap;
+use slog_scope::{debug, info};
 use std::fs::File;
 use std::marker::PhantomData;
 use std::path::PathBuf;
 use std::slice;
-use tracing::{debug, info};
 
 const FOUR_BYTES: usize = std::mem::size_of::<f32>();
 
