@@ -62,13 +62,13 @@ fn main() -> Result<()> {
 
     let query: Option<PredicateQuery> = None;
 
-    let result = dataset.search(query_vector, query, topk);
+    // let result = dataset.search(query_vector, query, topk);
 
     // let results = dataset.search(xq, 10);
-    // info!("Open for connections.");
-    // loop {
-    //     // TODO:
-    // }
+    info!("Open for connections.");
+    loop {
+        // TODO:
+    }
 
     Ok(())
 }
