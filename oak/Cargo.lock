@@ -360,21 +360,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5443807d6dff69373d433ab9ef5378ad8df50ca6298caf15de6e52e24aaf54d5"
 
 [[package]]
-name = "faiss"
-version = "0.12.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b3ffe048432786028b0a30aa1d13e10e08ced380439ba4a83fe5c227d2dd9733"
-dependencies = [
- "faiss-sys",
-]
-
-[[package]]
-name = "faiss-sys"
-version = "0.6.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4b9c008fc56422bf34357f17226d9c5a5c2ef6245b4774759c5f67112e46915e"
-
-[[package]]
 name = "getrandom"
 version = "0.2.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -622,7 +607,6 @@ dependencies = [
  "csv",
  "cxx",
  "cxx-build",
- "faiss",
  "hnsw_rs",
  "memmap2",
  "rand",

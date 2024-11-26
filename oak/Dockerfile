@@ -14,8 +14,12 @@ RUN apt install build-essential -y
 RUN apt-get install libopenblas-dev -y
 RUN apt-get install libgomp1 -y
 
+# DEBUGGING
+RUN apt-get install tmux -y
+RUN apt-get install gdb -y
 
-# Disable GPU because we don't want to install CUDA
+
+# Not totally clear why we still need these....
 RUN cmake -B build -DFAISS_ENABLE_C_API=ON -DBUILD_SHARED_LIBS=ON -DCMAKE_BUILD_TYPE=Release -DFAISS_ENABLE_GPU=OFF -DFAISS_ENABLE_PYTHON=OFF -DBUILD_TESTING=OFF
 RUN cmake --build build
 RUN cp /acorn/build/faiss/libfaiss.so /usr/local/lib/libfaiss.so

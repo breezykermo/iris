@@ -1,6 +1,7 @@
-use oak::dataset::{
-    AcornHnswIndex, AcornHnswOptions, Dataset, FvecsDataset, Searchable, VectorIndex,
-};
+use oak::dataset::{Dataset, OakIndexOptions};
+use oak::fvecs::{FlattenedVecs, FvecsDataset};
+use oak::predicate::PredicateQuery;
+use oak::stubs::generate_random_vector;
 
 use clap::Parser;
 
@@ -37,18 +38,33 @@ fn main() -> Result<()> {
 
     let args = Args::parse();
 
-    let dataset = FvecsDataset::new(args.dataset)?;
+    let mut dataset = FvecsDataset::new(args.dataset)?;
     info!("Dataset loaded from disk.");
 
-    let opts = AcornHnswOptions {
+    let opts = OakIndexOptions {
         gamma: 1,
-        m: 32, // NOTE: this should not be 1, can lead to segfaults in cpp...
-        m_beta: 1,
+        m: 32,
+        m_beta: 64,
     };
 
-    let main_index = AcornHnswIndex::new(&dataset, &opts);
+    let _ = dataset.initialize(&opts);
     info!("Seed index constructed.");
 
+    let dimensionality = dataset.get_dimensionality() as usize;
+    info!("Constructing random vector to query with {dimensionality} dimensions");
+    let query_vector = FlattenedVecs {
+        dimensionality,
+        data: generate_random_vector(dimensionality),
+    };
+    let topk = 10;
+    let num_queries = query_vector.len();
+    info!("Searching {topk} similar vectors for {num_queries} queries...");
+
+    let query: Option<PredicateQuery> = None;
+
+    // let result = dataset.search(query_vector, query, topk);
+
+    // let results = dataset.search(xq, 10);
     info!("Open for connections.");
     loop {
         // TODO:
