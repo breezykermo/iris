@@ -1,3 +1,5 @@
+use anyhow::Result;
+use clap::Parser;
 use dropshot::endpoint;
 use dropshot::ApiDescription;
 use dropshot::ConfigLogging;
@@ -10,19 +12,14 @@ use http::Method;
 use schemars::JsonSchema;
 use semver;
 use serde::Serialize;
+use slog_scope::{debug, info};
 use std::fs::OpenOptions;
+use thiserror::Error;
 
 use oak::dataset::{Dataset, OakIndexOptions};
 use oak::fvecs::{FlattenedVecs, FvecsDataset};
 use oak::predicate::PredicateQuery;
 use oak::stubs::generate_random_vector;
-
-use clap::Parser;
-
-use slog_scope::{debug, info};
-
-use anyhow::Result;
-use thiserror::Error;
 
 // Ensure that only one of FAISS or hnsw_rs is used.
 #[cfg(all(feature = "hnsw_faiss", feature = "hnsw_rust"))]
@@ -46,10 +43,14 @@ struct Args {
 }
 
 /// Information about the database.
-#[derive(Serialize, JsonSchema, Clone)]
+#[derive(Serialize, JsonSchema)]
 struct OakInfo {
     /// Dimensionality of the vectors that are searchable.
     dimensionality: usize,
+}
+
+struct OakAnnsResult {
+    // TODO:
 }
 
 /// Defines the trait that captures all the methods.
@@ -58,7 +59,7 @@ trait OakApi {
     /// The context type used within endpoints.
     type Context;
 
-    /// Fetch a project.
+    /// Fetch general information about the database.
     #[endpoint {
         method = GET,
         path = "/info",
@@ -66,6 +67,15 @@ trait OakApi {
     async fn oak_get_info(
         rqctx: RequestContext<Self::Context>,
     ) -> Result<HttpResponseOk<OakInfo>, HttpError>;
+
+    /// Request an ANNS top-k search for a query vector
+    #[endpoint {
+        method = POST,
+        path = "/query",
+    }]
+    async fn oak_anns_query(
+        rqctx: RequestContext<Self::Context>,
+    ) -> Result<HttpResponseOk<OakAnnsResult>, HttpError>;
 }
 
 enum ServerImpl {}
@@ -79,6 +89,24 @@ impl OakApi for ServerImpl {
         Ok(HttpResponseOk(OakInfo {
             dimensionality: info.dimensionality,
         }))
+    }
+
+    async fn oak_anns_query(
+        rqctx: RequestContext<Self::Context>,
+    ) -> Result<HttpResponseOk<OakAnnsResult>, HttpError> {
+        unimplemented!();
+        // info!("Constructing random vector to query with {dimensionality} dimensions");
+        // let query_vector = FlattenedVecs {
+        //     dimensionality,
+        //     data: generate_random_vector(dimensionality),
+        // };
+        // let topk = 10;
+        // let num_queries = query_vector.len();
+        // info!("Searching {topk} similar vectors for {num_queries} queries...");
+
+        // let query: Option<PredicateQuery> = None;
+
+        // let result = dataset.search(query_vector, query, topk);
     }
 }
 
@@ -108,30 +136,18 @@ async fn main() -> Result<()> {
 
     let dimensionality = dataset.get_dimensionality() as usize;
 
-    // info!("Constructing random vector to query with {dimensionality} dimensions");
-    // let query_vector = FlattenedVecs {
-    //     dimensionality,
-    //     data: generate_random_vector(dimensionality),
-    // };
-    // let topk = 10;
-    // let num_queries = query_vector.len();
-    // info!("Searching {topk} similar vectors for {num_queries} queries...");
-
-    // let query: Option<PredicateQuery> = None;
-
-    // let result = dataset.search(query_vector, query, topk);
-
-    // Open the file with the options to create if it doesn't exist and write
     let mut f = OpenOptions::new()
-        .create(true) // Create the file if it doesn't exist
-        .write(true) // Open the file for writing
-        .truncate(true) // Truncate the file to overwrite its contents
+        .create(true)
+        .write(true)
+        .truncate(true)
         .open("openapi.json")?;
 
     let api = oak_api_mod::api_description::<ServerImpl>().unwrap();
     api.openapi("OAK", semver::Version::new(1, 0, 0))
         .write(&mut f)
         .map_err(|e| ServerError::ServerStartError(e.to_string()))?;
+
+    info!("OpenAPI spec written to file.");
 
     let info = OakInfo { dimensionality };
 
