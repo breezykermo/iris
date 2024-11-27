@@ -8,7 +8,7 @@ use thiserror::Error;
 
 use oak::dataset::{Dataset, OakIndexOptions};
 use oak::fvecs::{FlattenedVecs, FvecsDataset};
-use oak::predicate::PredicateQuery;
+use oak::predicate::{PredicateOp, PredicateQuery, PredicateRhs};
 use oak::stubs::generate_random_vector;
 
 #[derive(Error, Debug)]
@@ -58,7 +58,12 @@ fn main() -> Result<()> {
     let topk = 10;
     let num_queries = query_vector.len();
     info!("Searching {topk} similar vectors for {num_queries} queries...");
-    let query: Option<PredicateQuery> = None;
+    // let query: Option<PredicateQuery> = Some(PredicateQuery {
+    //     op: PredicateOp::Equals,
+    //     rhs: PredicateRhs::Number(10),
+    // });
+    let query = None;
+
     let result = dataset.search(query_vector, query, topk);
 
     info!("Got results.");

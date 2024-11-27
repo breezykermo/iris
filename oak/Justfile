@@ -16,3 +16,12 @@ dev:
       -v ./:/oak \
       oak \
       bash
+
+test:
+  docker run \
+      -it \
+      -v ./:/oak \
+      oak \
+      cargo test -- --test-threads=1 
+
+

@@ -128,7 +128,7 @@ impl Dataset for FvecsDataset {
         // experiments.
 
         // Calls syscall mlock on file memory, ensuring that it will be in RAM until unlocked.
-        // This will through an error if RAM is not large enough.
+        // This will throw an error if RAM is not large enough.
         let _ = mmap.lock()?;
 
         let dimensionality = LittleEndian::read_u32(&mmap[..FOUR_BYTES]) as usize;
@@ -205,7 +205,7 @@ impl Dataset for FvecsDataset {
 
         let mut filter_id_map = match predicate_query {
             None => vec![true as i8; self.len() * query_vectors.len()],
-            Some(pq) => unimplemented!(),
+            Some(pq) => pq.serialize_as_filter_map(self)?,
         };
 
         self.index

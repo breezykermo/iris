@@ -1,13 +1,8 @@
+use crate::dataset::{Dataset, SearchableError};
+use crate::fvecs::FvecsDataset;
 use anyhow::Result;
 use core::ffi::c_char;
 use thiserror::Error;
-
-/// The errors that can be returned from serializing a query over a dataest.
-#[derive(Error, Debug)]
-pub enum PredicateSerializationError {
-    #[error("The attribute specified in the `lhs` of this PredicateQuery does not exist in the dataset.")]
-    NoSuchAttributeExists,
-}
 
 /// ACORN specifies the predicates for queries as one bitmap per query, where the bitmap is an
 /// array of length N (the number of total entries in the database). This is presumably so that
@@ -16,13 +11,12 @@ pub enum PredicateSerializationError {
 ///
 /// Thus here we allow a more concise representation of predicates with a basic query language that
 /// we can develop as needed. For the POC, the query language _only_ accepts equality for a
-/// singular match. At a first order of approximation, this language accepts constructs with three
-/// tokens, PredicateLhs, PredicateOp, and PredicateRhs. A basic example: to express the idea that
-/// we only want to retrieve queries "where attribute with the name '1' matches '10'", we would
-/// construct a query as follows:
+/// singular match. The assumption is also that each vector has one and only one attribute (a u8).
+/// At a first order of approximation, this language accepts constructs with two tokens,
+/// PredicateOp, and PredicateRhs. A basic example: to express the idea that we only want to
+/// retrieve queries "where the attribute matches '10'", we would construct a query as follows:
 ///
 /// query = PredicateQuery {
-///     lhs: PredicateLhs::Number(1),
 ///     op: PredicateOp::Equals,
 ///     rhs: PredicateRhs::Number(10),
 /// }
@@ -33,13 +27,8 @@ pub enum PredicateSerializationError {
 ///
 /// If necessary, we can expand this later.
 pub struct PredicateQuery {
-    lhs: PredicateLhs,
-    op: PredicateOp,
-    rhs: PredicateRhs,
-}
-
-pub enum PredicateLhs {
-    Number(u8),
+    pub op: PredicateOp,
+    pub rhs: PredicateRhs,
 }
 
 pub enum PredicateOp {
@@ -48,6 +37,14 @@ pub enum PredicateOp {
 
 pub enum PredicateRhs {
     Number(u8),
+}
+
+impl From<&PredicateRhs> for i32 {
+    fn from(value: &PredicateRhs) -> Self {
+        match value {
+            PredicateRhs::Number(num) => *num as i32,
+        }
+    }
 }
 
 impl PredicateQuery {
@@ -61,19 +58,39 @@ impl PredicateQuery {
     /// error will be raised.
     pub fn serialize_as_filter_map(
         &self,
-        // dataset: &Box<dyn Dataset>,
-    ) -> Result<Vec<c_char>, PredicateSerializationError> {
-        unimplemented!();
-        // let mut filter_id_map: Vec<c_char> = vec![0; number_of_query_vectors * count];
-        //
-        // for xq in 0..number_of_query_vectors {
-        //     for xb in 0..count {
-        //         if metadata[xb] == aq[xq] {
-        //             filter_id_map[xq * count + xb] = 1;
-        //         }
-        //     }
-        // }
-        //
-        // filter_id_map
+        dataset: &FvecsDataset,
+    ) -> Result<Vec<c_char>, SearchableError> {
+        let ds_len = dataset.len();
+        let mut filter_id_map: Vec<c_char> = vec![0; ds_len];
+
+        assert_eq!(dataset.metadata.len(), filter_id_map.len());
+
+        let rhs: i32 = i32::from(&self.rhs);
+
+        for (i, xq) in dataset.metadata.iter().enumerate() {
+            match self.op {
+                PredicateOp::Equals => filter_id_map[i] = (xq == &rhs) as c_char,
+            }
+        }
+
+        Ok(filter_id_map)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_serialize() {
+        let dataset = FvecsDataset::new("data/sift_query".to_string()).unwrap();
+        let pq = PredicateQuery {
+            op: PredicateOp::Equals,
+            rhs: PredicateRhs::Number(10),
+        };
+
+        let bitmap = pq.serialize_as_filter_map(&dataset).unwrap();
+        let one = 1 as c_char;
+        assert!(bitmap.contains(&one));
     }
 }

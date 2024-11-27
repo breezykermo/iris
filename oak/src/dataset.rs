@@ -10,6 +10,8 @@ use thiserror::Error;
 pub enum SearchableError {
     #[error("You must index a dataset before it can be searched")]
     DatasetIsNotIndexed,
+    #[error("Could not serialize the predicate")]
+    PredicateSerializationError,
 }
 
 /// The errors that can be returned from constructing an OAK dataset.
