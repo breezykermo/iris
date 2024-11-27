@@ -219,25 +219,9 @@ impl Dataset for FvecsDataset {
 mod tests {
     use super::*;
     use std::sync::Once;
-    use tracing::Level;
-    use tracing_subscriber;
 
-    static INIT: Once = Once::new();
-
-    pub fn trace() {
-        INIT.call_once(|| {
-            tracing_subscriber::fmt()
-                .with_max_level(tracing::Level::DEBUG)
-                .init();
-        });
-    }
-
-    // TODO: something is going wrong with the fvecs parsing, we need to test this more
-    // comprehensively.
     #[test]
     fn test_fvecs_to_flattened_vec() {
-        trace();
-
         let dataset = FvecsDataset::new("data/sift_query".to_string()).unwrap();
         let dataset_len = dataset.len();
         let vecs = FlattenedVecs::from(&dataset);

@@ -49,6 +49,7 @@ struct OakInfo {
     dimensionality: usize,
 }
 
+#[derive(Serialize, JsonSchema)]
 struct OakAnnsResult {
     // TODO:
 }
