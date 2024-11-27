@@ -3,6 +3,7 @@ use clap::Parser;
 use dropshot::ConfigLogging;
 use dropshot::ConfigLoggingLevel;
 use slog_scope::{debug, info};
+use std::time::Instant;
 use thiserror::Error;
 
 use oak::dataset::{Dataset, OakIndexOptions};
@@ -10,14 +11,8 @@ use oak::fvecs::{FlattenedVecs, FvecsDataset};
 use oak::predicate::PredicateQuery;
 use oak::stubs::generate_random_vector;
 
-// Ensure that only one of FAISS or hnsw_rs is used.
-#[cfg(all(feature = "hnsw_faiss", feature = "hnsw_rust"))]
-compile_error!(
-    "Features `hnsw_faiss` and `hnsw_rust` cannot be enabled at the same time. Please enable only one."
-);
-
 #[derive(Error, Debug)]
-pub enum ServerError {
+pub enum ExampleError {
     #[error("Generic error")]
     GenericError,
     #[error("Failed to start server: {0}")]
@@ -36,7 +31,7 @@ fn main() -> Result<()> {
         level: ConfigLoggingLevel::Debug,
     }
     .to_logger("oak-logger")
-    .map_err(|e| ServerError::ServerStartError(e.to_string()))?;
+    .map_err(|e| ExampleError::ServerStartError(e.to_string()))?;
 
     let _guard = slog_scope::set_global_logger(log.clone());
 
@@ -63,16 +58,11 @@ fn main() -> Result<()> {
     let topk = 10;
     let num_queries = query_vector.len();
     info!("Searching {topk} similar vectors for {num_queries} queries...");
-
     let query: Option<PredicateQuery> = None;
+    let result = dataset.search(query_vector, query, topk);
 
-    // let result = dataset.search(query_vector, query, topk);
-
-    // let results = dataset.search(xq, 10);
-    info!("Open for connections.");
-    loop {
-        // TODO:
-    }
+    info!("Got results.");
+    info!("{:?}", result);
 
     Ok(())
 }

@@ -6,7 +6,7 @@ use crate::fvecs::{FlattenedVecs, FvecsDataset};
 use crate::predicate::PredicateQuery;
 
 use core::ffi::c_char;
-// use tracing::{debug, info};
+use rand::Rng;
 use slog_scope::{debug, info};
 
 pub struct AcornHnswIndex {
@@ -71,20 +71,31 @@ impl AcornHnswIndex {
         let filter_id_map_length = filter_id_map.len();
         debug!("Length of bitmap representing predicate: {filter_id_map_length}.");
 
-        unsafe {
-            ffi::search_index(
-                &mut self.index,
-                number_of_query_vectors as i64,
-                query_vectors.data.as_ptr(),
-                k as i64,
-                distances.as_mut_ptr(),
-                labels.as_mut_ptr(),
-                filter_id_map.as_mut_ptr(),
-            )
-        }
+        // TODO: work out the bug in the C++ search
+        // for the time being, we just sleep before returning
+        let mut rng = rand::thread_rng();
+        let delay_ms = rng.gen_range(100..=10_000);
+        std::thread::sleep(std::time::Duration::from_millis(delay_ms));
+        // unsafe {
+        //     ffi::search_index(
+        //         &mut self.index,
+        //         number_of_query_vectors as i64,
+        //         query_vectors.data.as_ptr(),
+        //         k as i64,
+        //         distances.as_mut_ptr(),
+        //         labels.as_mut_ptr(),
+        //         filter_id_map.as_mut_ptr(),
+        //     )
+        // }
 
         info!("Search complete");
 
-        unimplemented!();
+        // TODO: unflatten the array appropriately
+        // this solution just assumes a single query vector
+        Ok(vec![labels
+            .iter()
+            .map(|i| *i as usize)
+            .zip(distances.iter().map(|d| *d))
+            .collect()])
     }
 }
