@@ -514,12 +514,10 @@ void add_to_index(
   idx_t n, 
   const float* x
 ) {
-  IndexACORNFlat index = *idx;
-  index.add(n, x);
+  idx->add(n, x);
 }
 
 // OAK: standalone function to search vectors from an index from Rust over FFI.
-// TODO: look at https://cxx.rs/binding/result.html for better signature
 void search_index(
   std::unique_ptr<IndexACORNFlat>& idx,
   idx_t n,            // number of query vectors
@@ -535,10 +533,7 @@ void search_index(
   FAISS_THROW_IF_NOT(filter_id_map != nullptr);
   FAISS_THROW_IF_NOT(n > 0 && k > 0);
 
-  IndexACORNFlat index = *idx;
-  index.search(n, x, k, distances, labels, filter_id_map);
-
-  std::cout << n << " queries searched." << std::endl;
+  idx->search(n, x, k, distances, labels, filter_id_map);
 }
 
 

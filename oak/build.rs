@@ -7,7 +7,7 @@ fn main() {
         .include("third_party/ACORN/faiss/impl")
         .file("third_party/ACORN/faiss/IndexACORN.cpp")
         .define("FINTEGER", "int")
-        .std("c++11")
+        .std("c++14")
         .compile("cxxbridge-demo");
 
     println!("cargo:rerun-if-changed=src/main.rs");

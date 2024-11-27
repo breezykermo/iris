@@ -65,37 +65,31 @@ impl AcornHnswIndex {
         debug!("Length of results arrays: {length_of_results}.");
 
         // These two arrays are where the outputs from the cpp methods will be stored
-        let mut distances: Vec<f32> = Vec::with_capacity(length_of_results);
-        let mut labels: Vec<i64> = Vec::with_capacity(length_of_results);
+        let mut distances: Vec<f32> = vec![0 as f32; length_of_results];
+        let mut labels: Vec<i64> = vec![0; length_of_results];
 
         let filter_id_map_length = filter_id_map.len();
         debug!("Length of bitmap representing predicate: {filter_id_map_length}.");
 
-        // TODO: work out the bug in the C++ search
-        // for the time being, we just sleep before returning
-        let mut rng = rand::thread_rng();
-        let delay_ms = rng.gen_range(100..=10_000);
-        std::thread::sleep(std::time::Duration::from_millis(delay_ms));
-        // unsafe {
-        //     ffi::search_index(
-        //         &mut self.index,
-        //         number_of_query_vectors as i64,
-        //         query_vectors.data.as_ptr(),
-        //         k as i64,
-        //         distances.as_mut_ptr(),
-        //         labels.as_mut_ptr(),
-        //         filter_id_map.as_mut_ptr(),
-        //     )
-        // }
+        unsafe {
+            ffi::search_index(
+                &mut self.index,
+                number_of_query_vectors as i64,
+                query_vectors.data.as_ptr(),
+                k as i64,
+                distances.as_mut_ptr(),
+                labels.as_mut_ptr(),
+                filter_id_map.as_mut_ptr(),
+            )
+        }
 
         info!("Search complete");
 
-        // TODO: unflatten the array appropriately
-        // this solution just assumes a single query vector
-        Ok(vec![labels
-            .iter()
-            .map(|i| *i as usize)
-            .zip(distances.iter().map(|d| *d))
-            .collect()])
+        let combined: Vec<(usize, f32)> = labels
+            .into_iter()
+            .map(|i| i as usize)
+            .zip(distances)
+            .collect();
+        Ok(combined.chunks(k).map(|chunk| chunk.to_vec()).collect())
     }
 }
