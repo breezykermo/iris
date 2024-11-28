@@ -24,4 +24,11 @@ test:
       oak \
       cargo test -- --test-threads=1 
 
+bench:
+  docker run \
+      -it \
+      -v ./:/oak \
+      oak \
+      cargo bench --bench oak_benchmark
+
 
