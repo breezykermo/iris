@@ -57,12 +57,9 @@ fn main() -> Result<()> {
     };
     let topk = 10;
     let num_queries = query_vector.len();
-    info!("Searching {topk} similar vectors for {num_queries} queries...");
-    // let query: Option<PredicateQuery> = Some(PredicateQuery {
-    //     op: PredicateOp::Equals,
-    //     rhs: PredicateRhs::Number(10),
-    // });
-    let query = None;
+    let query = Some(PredicateQuery::new(5));
+
+    info!("Searching for {topk} similar vectors for {num_queries} random query, where attr is equal to 5...");
 
     let result = dataset.search(&query_vector, &query, topk);
 
