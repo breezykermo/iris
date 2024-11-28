@@ -64,7 +64,7 @@ fn main() -> Result<()> {
     // });
     let query = None;
 
-    let result = dataset.search(query_vector, query, topk);
+    let result = dataset.search(&query_vector, &query, topk);
 
     info!("Got results.");
     info!("{:?}", result);

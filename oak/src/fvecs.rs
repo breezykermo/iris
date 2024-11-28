@@ -192,8 +192,8 @@ impl Dataset for FvecsDataset {
 
     fn search(
         &self,
-        query_vectors: FlattenedVecs,
-        predicate_query: Option<PredicateQuery>,
+        query_vectors: &FlattenedVecs,
+        predicate_query: &Option<PredicateQuery>,
         topk: usize,
     ) -> Result<Vec<TopKSearchResult>, SearchableError> {
         if self.index.is_none() {
@@ -211,7 +211,7 @@ impl Dataset for FvecsDataset {
         self.index
             .as_ref()
             .unwrap()
-            .search(&query_vectors, &mut filter_id_map, topk)
+            .search(query_vectors, &mut filter_id_map, topk)
     }
 }
 

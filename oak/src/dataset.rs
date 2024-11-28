@@ -44,6 +44,17 @@ pub struct OakIndexOptions {
     pub m_beta: i32,
 }
 
+/// The default options for OAK are the options suggested in the ACORN readme: https://github.com/csirianni/ACORN/blob/main/README.md
+impl Default for OakIndexOptions {
+    fn default() -> Self {
+        Self {
+            gamma: 1,
+            m: 32,
+            m_beta: 64,
+        }
+    }
+}
+
 /// Trait for a dataset of vectors.
 /// Note that this must be `Sized` in order that the constructor can return a Result.
 pub trait Dataset: Sized {
@@ -69,8 +80,8 @@ pub trait Dataset: Sized {
     /// of tuples in which t[0] is the index of the resthe `topk` vectors returned from the result.
     fn search(
         &self,
-        query_vectors: FlattenedVecs,
-        predicate_query: Option<PredicateQuery>,
+        query_vectors: &FlattenedVecs,
+        predicate_query: &Option<PredicateQuery>,
         topk: usize,
     ) -> Result<Vec<TopKSearchResult>, SearchableError>;
 }
