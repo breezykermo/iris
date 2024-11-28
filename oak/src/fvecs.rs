@@ -218,14 +218,22 @@ impl Dataset for FvecsDataset {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::stubs::generate_random_vector;
     use std::sync::Once;
 
     #[test]
     fn test_not_initialized_error() {
-        // let dataset = FvecsDataset::new("data/sift_query".to_string()).unwrap();
-        // let predicate = None;
-        // let vecs = FlattenedVecs::from(&dataset);
-        // let result = dataset.search(vecs, predicate, 1);
+        let dataset = FvecsDataset::new("data/sift_query".to_string()).unwrap();
+        let predicate = None;
+        let dimensionality = dataset.dimensionality;
+        let query_vector = FlattenedVecs {
+            dimensionality,
+            data: generate_random_vector(dimensionality),
+        };
+
+        assert!(dataset.index.is_none());
+        let result = dataset.search(query_vector, predicate, 1);
+        assert_eq!(result, Err(SearchableError::DatasetIsNotIndexed));
     }
 
     #[test]

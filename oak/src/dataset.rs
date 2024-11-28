@@ -6,12 +6,21 @@ use anyhow::Result;
 use thiserror::Error;
 
 /// The errors that can be returned from searching an OAK dataset.
-#[derive(Error, Debug)]
+#[derive(Error, Debug, PartialEq)]
 pub enum SearchableError {
     #[error("You must index a dataset before it can be searched")]
     DatasetIsNotIndexed,
     #[error("Could not serialize the predicate")]
     PredicateSerializationError,
+    #[error("Underlying C++ error: {0}")]
+    CppError(String),
+}
+
+impl From<cxx::Exception> for SearchableError {
+    fn from(err: cxx::Exception) -> Self {
+        // Customize the conversion logic as needed
+        SearchableError::CppError(err.to_string())
+    }
 }
 
 /// The errors that can be returned from constructing an OAK dataset.

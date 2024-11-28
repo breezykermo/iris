@@ -80,7 +80,7 @@ impl AcornHnswIndex {
                 distances.as_mut_ptr(),
                 labels.as_mut_ptr(),
                 filter_id_map.as_mut_ptr(),
-            )
+            )?
         }
 
         info!("Search complete");
