@@ -8,11 +8,9 @@ use anyhow::Result;
 use byteorder::{ByteOrder, LittleEndian};
 use csv::ReaderBuilder;
 use memmap2::Mmap;
-use slog_scope::{debug, info};
+use slog_scope::debug;
 use std::fs::File;
-use std::marker::PhantomData;
 use std::path::PathBuf;
-use std::slice;
 
 const FOUR_BYTES: usize = std::mem::size_of::<f32>();
 
@@ -66,6 +64,7 @@ pub fn parse_u8_to_f32(data: &[u8]) -> Vec<f32> {
     result
 }
 
+#[allow(dead_code)]
 pub struct Fvec {
     dimensionality: usize,
     data: Vec<f32>,
@@ -167,10 +166,6 @@ impl Dataset for FvecsDataset {
 
     fn len(&self) -> usize {
         self.count
-    }
-
-    fn attribute_equals_map(&self, attribute: u8) -> Result<bool> {
-        unimplemented!()
     }
 
     fn get_dimensionality(&self) -> usize {

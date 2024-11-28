@@ -68,10 +68,6 @@ pub trait Dataset: Sized {
     fn initialize(&mut self, opts: &OakIndexOptions) -> Result<(), ConstructionError>;
     /// Provide the number of vectors that have been added to the dataset.
     fn len(&self) -> usize;
-    /// Returns a vec of u8s where a 1 represents that the specified attribute exists on the vector
-    /// at the given index in the database. If the attribute doesn't exist in the database, an
-    /// appropriate error is returned. The vec will be of length `self.len()`.
-    fn attribute_equals_map(&self, attribute: u8) -> Result<bool>;
     /// Provide the dimensionality of the vectors in the dataset.
     fn get_dimensionality(&self) -> usize;
     /// Returns data in dataset. Fails if full dataset doesn't fit in memory.

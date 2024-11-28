@@ -57,8 +57,8 @@ fn single_query_equals_predicate(c: &mut Criterion) {
 }
 
 criterion_group!(
-    benches,
-    single_query_no_predicate,
-    single_query_equals_predicate
+    name = benches;
+    config = Criterion::default();
+    targets = single_query_no_predicate, single_query_equals_predicate
 );
 criterion_main!(benches);

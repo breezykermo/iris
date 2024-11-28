@@ -3,12 +3,11 @@ use crate::dataset::{
 };
 use crate::ffi;
 use crate::fvecs::{FlattenedVecs, FvecsDataset};
-use crate::predicate::PredicateQuery;
 
 use core::ffi::c_char;
-use rand::Rng;
 use slog_scope::{debug, info};
 
+#[allow(dead_code)]
 pub struct AcornHnswIndex {
     index: cxx::UniquePtr<ffi::IndexACORNFlat>,
     count: usize,

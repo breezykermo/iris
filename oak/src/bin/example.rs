@@ -2,13 +2,12 @@ use anyhow::Result;
 use clap::Parser;
 use dropshot::ConfigLogging;
 use dropshot::ConfigLoggingLevel;
-use slog_scope::{debug, info};
-use std::time::Instant;
+use slog_scope::info;
 use thiserror::Error;
 
 use oak::dataset::{Dataset, OakIndexOptions};
 use oak::fvecs::{FlattenedVecs, FvecsDataset};
-use oak::predicate::{PredicateOp, PredicateQuery, PredicateRhs};
+use oak::predicate::PredicateQuery;
 use oak::stubs::generate_random_vector;
 
 #[derive(Error, Debug)]
