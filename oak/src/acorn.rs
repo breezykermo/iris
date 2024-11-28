@@ -34,6 +34,7 @@ impl AcornHnswIndex {
             options.m, options.gamma, options.m_beta
         );
 
+        // NOTE: this brings the data into memory.
         let fvecs = FlattenedVecs::from(dataset);
         let num_fvecs = dataset.len();
         debug!("Adding {num_fvecs} vectors to the index...");

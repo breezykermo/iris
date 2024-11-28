@@ -128,7 +128,7 @@ impl Dataset for FvecsDataset {
 
         // Calls syscall mlock on file memory, ensuring that it will be in RAM until unlocked.
         // This will throw an error if RAM is not large enough.
-        let _ = mmap.lock()?;
+        // let _ = mmap.lock()?;
 
         let dimensionality = LittleEndian::read_u32(&mmap[..FOUR_BYTES]) as usize;
         assert_eq!(
