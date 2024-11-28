@@ -48,6 +48,13 @@ impl From<&PredicateRhs> for i32 {
 }
 
 impl PredicateQuery {
+    /// Creates a new PredicateQuery where the attribute is equal to the provided argument `num`.
+    pub fn new(num: u8) -> Self {
+        Self {
+            op: PredicateOp::Equals,
+            rhs: PredicateRhs::Number(num),
+        }
+    }
     /// 'Serializes' a query as a filter map, which will allow it to be passed across FFI to the
     /// `search` function. A filter map is specific to a dataset, as it is of length (nq * N),
     /// where nq is the number of queries in the map, and N is the number of vectors in the
