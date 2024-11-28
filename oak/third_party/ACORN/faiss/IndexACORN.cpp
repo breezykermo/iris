@@ -519,7 +519,7 @@ void add_to_index(
 
 // OAK: standalone function to search vectors from an index from Rust over FFI.
 void search_index(
-  std::unique_ptr<IndexACORNFlat>& idx,
+  const std::unique_ptr<IndexACORNFlat>& idx,
   idx_t n,            // number of query vectors
   const float* x,     // pointer to an array of the query vectors 
   idx_t k,            // number of vectors to return for each query vector

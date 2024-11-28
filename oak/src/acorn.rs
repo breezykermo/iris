@@ -54,7 +54,7 @@ impl AcornHnswIndex {
     }
 
     pub fn search(
-        &mut self,
+        &self,
         query_vectors: &FlattenedVecs,
         filter_id_map: &mut Vec<c_char>,
         k: usize,
@@ -73,7 +73,7 @@ impl AcornHnswIndex {
 
         unsafe {
             ffi::search_index(
-                &mut self.index,
+                &self.index,
                 number_of_query_vectors as i64,
                 query_vectors.data.as_ptr(),
                 k as i64,

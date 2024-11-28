@@ -191,7 +191,7 @@ impl Dataset for FvecsDataset {
     }
 
     fn search(
-        &mut self,
+        &self,
         query_vectors: FlattenedVecs,
         predicate_query: Option<PredicateQuery>,
         topk: usize,
@@ -209,7 +209,7 @@ impl Dataset for FvecsDataset {
         };
 
         self.index
-            .as_mut()
+            .as_ref()
             .unwrap()
             .search(&query_vectors, &mut filter_id_map, topk)
     }
@@ -219,6 +219,14 @@ impl Dataset for FvecsDataset {
 mod tests {
     use super::*;
     use std::sync::Once;
+
+    #[test]
+    fn test_not_initialized_error() {
+        // let dataset = FvecsDataset::new("data/sift_query".to_string()).unwrap();
+        // let predicate = None;
+        // let vecs = FlattenedVecs::from(&dataset);
+        // let result = dataset.search(vecs, predicate, 1);
+    }
 
     #[test]
     fn test_fvecs_to_flattened_vec() {

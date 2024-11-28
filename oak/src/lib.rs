@@ -26,7 +26,7 @@ pub mod ffi {
         );
 
         unsafe fn search_index(
-            idx: &mut UniquePtr<IndexACORNFlat>,
+            idx: &UniquePtr<IndexACORNFlat>,
             n: i64,                     // number of query vectors
             x: *const f32,              // pointer to an array of the query vectors
             k: i64,                     // number of vectors to return for each query vector
