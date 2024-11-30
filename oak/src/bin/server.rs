@@ -19,7 +19,7 @@ use thiserror::Error;
 use oak::dataset::{Dataset, OakIndexOptions};
 use oak::fvecs::{FlattenedVecs, FvecsDataset};
 use oak::predicate::PredicateQuery;
-use oak::stubs::generate_random_vector;
+// use oak::stubs::generate_random_vector;
 
 // Ensure that only one of FAISS or hnsw_rs is used.
 #[cfg(all(feature = "hnsw_faiss", feature = "hnsw_rust"))]

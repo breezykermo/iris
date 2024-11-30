@@ -25,15 +25,18 @@ use core::ffi::c_char;
 /// a PredicateQuery), and whose values are _also_ all u8s (the `rhs`).
 ///
 /// If necessary, we can expand this later.
+#[derive(Clone)]
 pub struct PredicateQuery {
     pub op: PredicateOp,
     pub rhs: PredicateRhs,
 }
 
+#[derive(Clone)]
 pub enum PredicateOp {
     Equals,
 }
 
+#[derive(Clone)]
 pub enum PredicateRhs {
     Number(u8),
 }

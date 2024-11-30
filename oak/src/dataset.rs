@@ -34,6 +34,9 @@ pub type SimilaritySearchResult = (usize, f32);
 // A vec of length `k` with tuples representing the similarity search results.
 pub type TopKSearchResult = Vec<SimilaritySearchResult>;
 
+// A batch of items with type `TopKSearchResult`.
+pub type TopKSearchResultBatch = Vec<TopKSearchResult>;
+
 /// These parameters are currently essentially ACORN parameters, taken from https://github.com/csirianni/ACORN/blob/main/README.md
 pub struct OakIndexOptions {
     /// Degree bound for traversed nodes during ACORN search

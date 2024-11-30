@@ -82,6 +82,10 @@ impl FlattenedVecs {
     }
 }
 
+/// Create a 'flattened' representation of fvecs (meaning that the vectors are simply contiguous to
+/// each other in memory, rather than prepended by their dimensionality explicitly as in the .fvecs
+/// representation). This is necessary reformatting for calling ACORN methods via FFI, and the
+/// transformation also ensures that the vectors are in memory (rather than on disk).
 impl From<&FvecsDataset> for FlattenedVecs {
     fn from(dataset: &FvecsDataset) -> Self {
         let mut all_fvecs = Vec::with_capacity(dataset.count * dataset.dimensionality);
@@ -102,6 +106,24 @@ impl From<&FvecsDataset> for FlattenedVecs {
         }
     }
 }
+
+/// Create a Vec<PredicateQuery> representing queries that match the specified attribute in the
+/// query vectors. The 0th element in the returned Vec, for example, will be a PredicateQuery for
+/// all vectors that match attribute X, where X is the attribute on the 0th query vector.
+impl From<&FvecsDataset> for Vec<PredicateQuery> {
+    fn from(dataset: &FvecsDataset) -> Self {
+        dataset
+            .metadata
+            .iter()
+            // NOTE: we assume here that the attribute loaded is safe to cast to a u8, as we have
+            // generated the attributes as such. The reason that `dataset.metadata` is a u32 is
+            // because this is what the ACORN code expects (and as such should probably be changed
+            // to a u8 so that implementation details aren't leaky to higher-level abstractions).
+            .map(|x| PredicateQuery::new((*x).try_into().unwrap()))
+            .collect()
+    }
+}
+
 /// Dataset sourced from a .fvecs file
 pub struct FvecsDataset {
     pub mmap: Mmap,
@@ -140,7 +162,7 @@ impl Dataset for FvecsDataset {
         // values. Fvecs are contiguous in the file.
         let count = &mmap[..].len() / ((1 + dimensionality) * FOUR_BYTES);
         debug!(
-            "Firest dimensionality read from file is {dimensionality}; assuming the same for all remaining."
+            "First dimensionality read from file is {dimensionality}; assuming the same for all remaining."
         );
         debug!("The file read has {count} vectors.");
 
