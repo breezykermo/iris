@@ -24,7 +24,6 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
-#include "IndexACORN.h"
 #include "oak/third_party/ACORN/faiss/Index2Layer.h"
 #include "oak/third_party/ACORN/faiss/IndexFlat.h"
 #include "oak/third_party/ACORN/faiss/IndexIVFPQ.h"
