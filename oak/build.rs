@@ -134,11 +134,11 @@ fn main() {
 
     build.compile("oak");
 
-    println!("cargo:rerun-if-changed=src/lib.rs");
+    // println!("cargo:rerun-if-changed=src/lib.rs");
     println!("cargo:rerun-if-changed=build.rs");
-    for src in sources {
-        println!("cargo:rerun-if-changed={}", src);
-    }
-    println!("cargo:rerun-if-changed=third_party/ACORN/faiss/IndexACORN.cc");
-    println!("cargo:rerun-if-changed=third_party/ACORN/faiss/IndexACORN.h");
+    // for src in sources {
+    //     println!("cargo:rerun-if-changed={}", src);
+    // }
+    // println!("cargo:rerun-if-changed=third_party/ACORN/faiss/IndexACORN.cc");
+    // println!("cargo:rerun-if-changed=third_party/ACORN/faiss/IndexACORN.h");
 }
