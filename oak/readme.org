@@ -1,0 +1,10 @@
+* OAK
+
+This is the Rust codebase for running experiments.
+It consists of two binaries.
+
+- ~server~: exposes HTTP endpoints through which search queries can be made.
+- ~example~: basic script indicating how to use the API.
+
+
+

@@ -8,11 +8,9 @@ use anyhow::Result;
 use byteorder::{ByteOrder, LittleEndian};
 use csv::ReaderBuilder;
 use memmap2::Mmap;
+use slog_scope::debug;
 use std::fs::File;
-use std::marker::PhantomData;
 use std::path::PathBuf;
-use std::slice;
-use tracing::{debug, info};
 
 const FOUR_BYTES: usize = std::mem::size_of::<f32>();
 
@@ -66,6 +64,7 @@ pub fn parse_u8_to_f32(data: &[u8]) -> Vec<f32> {
     result
 }
 
+#[allow(dead_code)]
 pub struct Fvec {
     dimensionality: usize,
     data: Vec<f32>,
@@ -83,6 +82,10 @@ impl FlattenedVecs {
     }
 }
 
+/// Create a 'flattened' representation of fvecs (meaning that the vectors are simply contiguous to
+/// each other in memory, rather than prepended by their dimensionality explicitly as in the .fvecs
+/// representation). This is necessary reformatting for calling ACORN methods via FFI, and the
+/// transformation also ensures that the vectors are in memory (rather than on disk).
 impl From<&FvecsDataset> for FlattenedVecs {
     fn from(dataset: &FvecsDataset) -> Self {
         let mut all_fvecs = Vec::with_capacity(dataset.count * dataset.dimensionality);
@@ -103,6 +106,24 @@ impl From<&FvecsDataset> for FlattenedVecs {
         }
     }
 }
+
+/// Create a Vec<PredicateQuery> representing queries that match the specified attribute in the
+/// query vectors. The 0th element in the returned Vec, for example, will be a PredicateQuery for
+/// all vectors that match attribute X, where X is the attribute on the 0th query vector.
+impl From<&FvecsDataset> for Vec<PredicateQuery> {
+    fn from(dataset: &FvecsDataset) -> Self {
+        dataset
+            .metadata
+            .iter()
+            // NOTE: we assume here that the attribute loaded is safe to cast to a u8, as we have
+            // generated the attributes as such. The reason that `dataset.metadata` is a u32 is
+            // because this is what the ACORN code expects (and as such should probably be changed
+            // to a u8 so that implementation details aren't leaky to higher-level abstractions).
+            .map(|x| PredicateQuery::new((*x).try_into().unwrap()))
+            .collect()
+    }
+}
+
 /// Dataset sourced from a .fvecs file
 pub struct FvecsDataset {
     pub mmap: Mmap,
@@ -128,8 +149,8 @@ impl Dataset for FvecsDataset {
         // experiments.
 
         // Calls syscall mlock on file memory, ensuring that it will be in RAM until unlocked.
-        // This will through an error if RAM is not large enough.
-        let _ = mmap.lock()?;
+        // This will throw an error if RAM is not large enough.
+        // let _ = mmap.lock()?;
 
         let dimensionality = LittleEndian::read_u32(&mmap[..FOUR_BYTES]) as usize;
         assert_eq!(
@@ -141,7 +162,7 @@ impl Dataset for FvecsDataset {
         // values. Fvecs are contiguous in the file.
         let count = &mmap[..].len() / ((1 + dimensionality) * FOUR_BYTES);
         debug!(
-            "Firest dimensionality read from file is {dimensionality}; assuming the same for all remaining."
+            "First dimensionality read from file is {dimensionality}; assuming the same for all remaining."
         );
         debug!("The file read has {count} vectors.");
 
@@ -169,10 +190,6 @@ impl Dataset for FvecsDataset {
         self.count
     }
 
-    fn attribute_equals_map(&self, attribute: u8) -> Result<bool> {
-        unimplemented!()
-    }
-
     fn get_dimensionality(&self) -> usize {
         self.dimensionality as usize
     }
@@ -191,9 +208,9 @@ impl Dataset for FvecsDataset {
     }
 
     fn search(
-        &mut self,
-        query_vectors: FlattenedVecs,
-        predicate_query: Option<PredicateQuery>,
+        &self,
+        query_vectors: &FlattenedVecs,
+        predicate_query: &Option<PredicateQuery>,
         topk: usize,
     ) -> Result<Vec<TopKSearchResult>, SearchableError> {
         if self.index.is_none() {
@@ -205,39 +222,42 @@ impl Dataset for FvecsDataset {
 
         let mut filter_id_map = match predicate_query {
             None => vec![true as i8; self.len() * query_vectors.len()],
-            Some(pq) => unimplemented!(),
+            Some(pq) => pq.serialize_as_filter_map(self)?,
         };
 
         self.index
-            .as_mut()
+            .as_ref()
             .unwrap()
-            .search(&query_vectors, &mut filter_id_map, topk)
+            .search(query_vectors, &mut filter_id_map, topk)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::stubs::generate_random_vector;
     use std::sync::Once;
-    use tracing::Level;
-    use tracing_subscriber;
 
-    static INIT: Once = Once::new();
+    #[test]
+    fn test_not_initialized_error() {
+        let dataset = FvecsDataset::new("data/sift_query".to_string()).unwrap();
+        let predicate: Option<PredicateQuery> = None;
+        let dimensionality = dataset.dimensionality;
+        let query_vector = FlattenedVecs {
+            dimensionality,
+            data: generate_random_vector(dimensionality),
+        };
 
-    pub fn trace() {
-        INIT.call_once(|| {
-            tracing_subscriber::fmt()
-                .with_max_level(tracing::Level::DEBUG)
-                .init();
-        });
+        assert!(dataset.index.is_none());
+        // TODO: the following gives a build error; something to do with
+        // undefined reference to `typeinfo for faiss::FaissException'
+        // i.e. the handling of errors across the FFI boundary.
+        // let result = dataset.search(query_vector, predicate, 1);
+        // assert_eq!(result, Err(SearchableError::DatasetIsNotIndexed));
     }
 
-    // TODO: something is going wrong with the fvecs parsing, we need to test this more
-    // comprehensively.
     #[test]
     fn test_fvecs_to_flattened_vec() {
-        trace();
-
         let dataset = FvecsDataset::new("data/sift_query".to_string()).unwrap();
         let dataset_len = dataset.len();
         let vecs = FlattenedVecs::from(&dataset);

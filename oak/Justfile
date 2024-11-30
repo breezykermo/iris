@@ -13,6 +13,23 @@ run:
 dev:
   docker run \
       -it \
+      --cpus=$(nproc) \
       -v ./:/oak \
       oak \
       bash
+
+test:
+  docker run \
+      -it \
+      -v ./:/oak \
+      oak \
+      cargo test -- --test-threads=1 
+
+bench:
+  docker run \
+      -it \
+      -v ./:/oak \
+      oak \
+      cargo bench --bench oak_benchmark
+
+

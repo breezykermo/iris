@@ -3,11 +3,11 @@ use crate::dataset::{
 };
 use crate::ffi;
 use crate::fvecs::{FlattenedVecs, FvecsDataset};
-use crate::predicate::PredicateQuery;
 
 use core::ffi::c_char;
-use tracing::{debug, info};
+use slog_scope::{debug, info};
 
+#[allow(dead_code)]
 pub struct AcornHnswIndex {
     index: cxx::UniquePtr<ffi::IndexACORNFlat>,
     count: usize,
@@ -34,6 +34,7 @@ impl AcornHnswIndex {
             options.m, options.gamma, options.m_beta
         );
 
+        // NOTE: this brings the data into memory.
         let fvecs = FlattenedVecs::from(dataset);
         let num_fvecs = dataset.len();
         debug!("Adding {num_fvecs} vectors to the index...");
@@ -53,7 +54,7 @@ impl AcornHnswIndex {
     }
 
     pub fn search(
-        &mut self,
+        &self,
         query_vectors: &FlattenedVecs,
         filter_id_map: &mut Vec<c_char>,
         k: usize,
@@ -64,26 +65,31 @@ impl AcornHnswIndex {
         debug!("Length of results arrays: {length_of_results}.");
 
         // These two arrays are where the outputs from the cpp methods will be stored
-        let mut distances: Vec<f32> = Vec::with_capacity(length_of_results);
-        let mut labels: Vec<i64> = Vec::with_capacity(length_of_results);
+        let mut distances: Vec<f32> = vec![0 as f32; length_of_results];
+        let mut labels: Vec<i64> = vec![0; length_of_results];
 
         let filter_id_map_length = filter_id_map.len();
         debug!("Length of bitmap representing predicate: {filter_id_map_length}.");
 
         unsafe {
             ffi::search_index(
-                &mut self.index,
+                &self.index,
                 number_of_query_vectors as i64,
                 query_vectors.data.as_ptr(),
                 k as i64,
                 distances.as_mut_ptr(),
                 labels.as_mut_ptr(),
                 filter_id_map.as_mut_ptr(),
-            )
+            )?
         }
 
         info!("Search complete");
 
-        unimplemented!();
+        let combined: Vec<(usize, f32)> = labels
+            .into_iter()
+            .map(|i| i as usize)
+            .zip(distances)
+            .collect();
+        Ok(combined.chunks(k).map(|chunk| chunk.to_vec()).collect())
     }
 }
