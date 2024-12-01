@@ -56,7 +56,7 @@ impl AcornHnswIndex {
     pub fn search(
         &self,
         query_vectors: &FlattenedVecs,
-        filter_id_map: &mut Vec<c_char>,
+        filter_id_map: &Vec<c_char>,
         k: usize,
     ) -> Result<Vec<TopKSearchResult>, SearchableError> {
         let number_of_query_vectors: usize = query_vectors.len();
