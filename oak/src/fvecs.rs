@@ -129,7 +129,7 @@ pub struct FvecsDataset {
     pub mmap: Mmap,
     count: usize,
     dimensionality: usize,
-    index: Option<Box<AcornHnswIndex>>,
+    pub index: Option<Box<AcornHnswIndex>>,
     pub metadata: Vec<i32>,
 }
 
@@ -220,7 +220,7 @@ impl Dataset for FvecsDataset {
         debug!("query_vectors len: {}", query_vectors.len());
         debug!("fvecs dataset len: {}", self.len());
 
-        let mut filter_id_map = match predicate_query {
+        let filter_id_map = match predicate_query {
             None => vec![true as i8; self.len() * query_vectors.len()],
             Some(pq) => pq.serialize_as_filter_map(self)?,
         };
@@ -228,7 +228,7 @@ impl Dataset for FvecsDataset {
         self.index
             .as_ref()
             .unwrap()
-            .search(query_vectors, &mut filter_id_map, topk)
+            .search(query_vectors, &filter_id_map, topk)
     }
 }
 

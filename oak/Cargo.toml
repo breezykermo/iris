@@ -26,6 +26,10 @@ tokio = { version = "1.0", features = ["full"] }
 semver = "1.0.23"
 slog = "2.7.0"
 slog-scope = "4.4.0"
+futures-util = "0.3.31"
+poisson-ticker = "0.1.0"
+rand_distr = "0.4.3"
+tracing = "0.1.41"
 
 [build-dependencies]
 cxx-build = "1.0"
