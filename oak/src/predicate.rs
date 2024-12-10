@@ -1,7 +1,6 @@
 use crate::dataset::{Dataset, SearchableError};
 use crate::fvecs::FvecsDataset;
 use anyhow::Result;
-use core::ffi::c_char;
 
 /// ACORN specifies the predicates for queries as one bitmap per query, where the bitmap is an
 /// array of length N (the number of total entries in the database). This is presumably so that
@@ -56,50 +55,5 @@ impl PredicateQuery {
             op: PredicateOp::Equals,
             rhs: PredicateRhs::Number(num),
         }
-    }
-    /// 'Serializes' a query as a filter map, which will allow it to be passed across FFI to the
-    /// `search` function. A filter map is specific to a dataset, as it is of length (nq * N),
-    /// where nq is the number of queries in the map, and N is the number of vectors in the
-    /// dataset. A value of 1 in the bitmap represents that the search query matches with the
-    /// vector at that index in the dataset, and a value of 0 that it doesn't.
-    ///
-    /// If an attribute matching the `lhs` of the query does not exist in the dataset, then an
-    /// error will be raised.
-    pub fn serialize_as_filter_map(
-        &self,
-        dataset: &FvecsDataset,
-    ) -> Result<Vec<c_char>, SearchableError> {
-        let ds_len = dataset.len();
-        let mut filter_id_map: Vec<c_char> = vec![0; ds_len];
-
-        assert_eq!(dataset.metadata.len(), filter_id_map.len());
-
-        let rhs: i32 = i32::from(&self.rhs);
-
-        for (i, xq) in dataset.metadata.iter().enumerate() {
-            match self.op {
-                PredicateOp::Equals => filter_id_map[i] = (xq == &rhs) as c_char,
-            }
-        }
-
-        Ok(filter_id_map)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_serialize() {
-        let dataset = FvecsDataset::new("data/sift_query".to_string()).unwrap();
-        let pq = PredicateQuery {
-            op: PredicateOp::Equals,
-            rhs: PredicateRhs::Number(10),
-        };
-
-        let bitmap = pq.serialize_as_filter_map(&dataset).unwrap();
-        let one = 1 as c_char;
-        assert!(bitmap.contains(&one));
     }
 }

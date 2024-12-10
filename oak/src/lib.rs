@@ -1,7 +1,9 @@
 pub mod acorn;
+pub mod bitmask;
 pub mod dataset;
 pub mod fvecs;
 pub mod predicate;
+// pub mod router;
 pub mod stubs;
 
 #[cxx::bridge(namespace = "faiss")]
