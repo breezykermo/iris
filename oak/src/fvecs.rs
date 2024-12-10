@@ -73,6 +73,7 @@ pub struct Fvec {
 }
 
 pub struct FlattenedVecs {
+    // The length of each vector in the flattened representation.
     pub dimensionality: usize,
     // This data is the flattened representation of all vectors of size `dimensionality`.
     pub data: Vec<f32>,
@@ -82,30 +83,57 @@ impl FlattenedVecs {
     pub fn len(&self) -> usize {
         self.data.len() / self.dimensionality
     }
-}
 
-/// Create a 'flattened' representation of fvecs (meaning that the vectors are simply contiguous to
-/// each other in memory, rather than prepended by their dimensionality explicitly as in the .fvecs
-/// representation). This is necessary reformatting for calling ACORN methods via FFI, and the
-/// transformation also ensures that the vectors are in memory (rather than on disk).
-impl From<&FvecsDataset> for FlattenedVecs {
-    fn from(dataset: &FvecsDataset) -> Self {
-        let mut all_fvecs = Vec::with_capacity(dataset.count * dataset.dimensionality);
+    /// Creates a new FlattenedVecs based on a bitmask and an original one.
+    /// Only the necessary items (items that match the bitmask) are copied.
+    pub fn clone_via_bitmask(&self, bitmask: &Bitmask) -> Self {
+        let new_data: Vec<f32> = self
+            .data
+            .chunks_exact(self.dimensionality)
+            .zip(bitmask.map.iter())
+            .filter_map(|(vector, &keep)| {
+                if keep == 1 {
+                    Some(vector) // Keep the vector if bitmask says so
+                } else {
+                    None
+                }
+            })
+            .flat_map(|vector| vector.iter().copied())
+            .collect();
 
-        let fvec_len_in_bytes = (dataset.dimensionality + 1) * FOUR_BYTES;
+        Self {
+            dimensionality: self.dimensionality,
+            data: new_data,
+        }
+    }
+
+    /// Create a 'flattened' representation of fvecs (meaning that the vectors are simply contiguous to
+    /// each other in memory, rather than prepended by their dimensionality explicitly as in the .fvecs
+    /// representation). This is necessary reformatting for calling ACORN methods via FFI, and the
+    /// transformation also ensures that the vectors are in memory (rather than on disk).
+    pub fn read_from_mmap(mmap: &Mmap, count: usize, dimensionality: usize) -> Self {
+        let mut all_fvecs = Vec::with_capacity(count * dimensionality);
+
+        let fvec_len_in_bytes = (dimensionality + 1) * FOUR_BYTES;
         let mut current_index = 0;
-        for i in dataset.mmap.chunks_exact(fvec_len_in_bytes) {
+        for i in mmap.chunks_exact(fvec_len_in_bytes) {
             let mut fvecs = parse_u8_to_f32(&i);
             // skip the dimensionality, we don't need it in the flattened.
             fvecs.drain(0..1);
             all_fvecs.splice(current_index..current_index, fvecs);
-            current_index += dataset.dimensionality;
+            current_index += dimensionality;
         }
 
-        FlattenedVecs {
-            dimensionality: dataset.dimensionality,
+        Self {
+            dimensionality,
             data: all_fvecs,
         }
+    }
+}
+
+impl From<&FvecsDataset> for FlattenedVecs {
+    fn from(dataset: &FvecsDataset) -> Self {
+        FlattenedVecs::read_from_mmap(&dataset.mmap, dataset.count, dataset.dimensionality)
     }
 }
 
@@ -133,6 +161,7 @@ pub struct FvecsDataset {
     dimensionality: usize,
     index: Option<AcornHnswIndex>,
     pub metadata: Vec<i32>,
+    pub flat: FlattenedVecs,
 }
 
 impl FvecsDataset {
@@ -177,6 +206,7 @@ impl FvecsDataset {
         metadata_fname.push(&format!("{}.csv", fname));
 
         let metadata = read_csv_to_vec(&metadata_fname)?;
+        let flat = FlattenedVecs::read_from_mmap(&mmap, count, dimensionality);
 
         Ok(Self {
             index: None,
@@ -184,6 +214,7 @@ impl FvecsDataset {
             mmap,
             dimensionality,
             metadata,
+            flat,
         })
     }
 
@@ -191,6 +222,8 @@ impl FvecsDataset {
         FvecsDatasetPartition {
             base: self,
             mask: Bitmask::new(pq, self),
+            flat: None,
+            index: None,
         }
     }
 }
@@ -209,8 +242,8 @@ impl Dataset for FvecsDataset {
     }
 
     fn get_data(&self) -> Result<Vec<Fvec>> {
-        let flattened = FlattenedVecs::from(self);
-        let vecs = flattened
+        let vecs = self
+            .flat
             .data
             .chunks_exact(self.dimensionality)
             .map(|x| Fvec {
@@ -222,7 +255,7 @@ impl Dataset for FvecsDataset {
     }
 
     fn build_index(&mut self, opts: &OakIndexOptions) -> Result<(), ConstructionError> {
-        let index = AcornHnswIndex::new(&self, opts)?;
+        let index = AcornHnswIndex::new(self, &self.flat, opts)?;
         self.index = Some(index);
         Ok(())
     }
@@ -267,10 +300,16 @@ impl Dataset for FvecsDataset {
     }
 }
 
-/// A partition of the FvecsDataset, established through a predicate.
+/// A 'partition' of the FvecsDataset, originally represented just by a base dataset and a Bitmask.
 pub struct FvecsDatasetPartition<'a> {
     base: &'a FvecsDataset,
     mask: Bitmask,
+    index: Option<AcornHnswIndex>,
+    /// We have an Option here so that the copying of the base vectors can be deferred to the point
+    /// at which we decide to build the index. This is an implementation detail, as one could
+    /// imagine a pure Rust implementation of the search methods that does not require this
+    /// original copy.
+    flat: Option<FlattenedVecs>,
 }
 
 impl<'a> Dataset for FvecsDatasetPartition<'a> {
@@ -291,9 +330,14 @@ impl<'a> Dataset for FvecsDatasetPartition<'a> {
     }
 
     fn build_index(&mut self, opts: &OakIndexOptions) -> Result<(), ConstructionError> {
-        // need to get the FlattenedVecs of the view to pass to ACORN
-        FlattenedVecs::from
-        unimplemented!();
+        let og = &self.base.flat;
+        let flat = og.clone_via_bitmask(&self.mask);
+
+        let index = AcornHnswIndex::new(self, &flat, opts)?;
+
+        self.index = Some(index);
+        self.flat = Some(flat);
+
         Ok(())
     }
 

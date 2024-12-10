@@ -15,8 +15,9 @@ pub struct AcornHnswIndex {
 
 #[cfg(feature = "hnsw_faiss")]
 impl AcornHnswIndex {
-    pub fn new(
-        dataset: &FvecsDataset,
+    pub fn new<D: Dataset>(
+        dataset: &D,
+        flattened: &FlattenedVecs,
         options: &OakIndexOptions,
     ) -> Result<Self, ConstructionError> {
         let dimensionality = i32::try_from(dataset.get_dimensionality())
@@ -27,7 +28,7 @@ impl AcornHnswIndex {
             options.m,
             options.gamma,
             options.m_beta,
-            &dataset.metadata,
+            &dataset.get_metadata(),
         );
         debug!(
             "Constructed index with dimensionality: {dimensionality}, m: {}, gamma: {}, m_beta: {}",
@@ -35,7 +36,6 @@ impl AcornHnswIndex {
         );
 
         // NOTE: this brings the data into memory.
-        let fvecs = FlattenedVecs::from(dataset);
         let num_fvecs = dataset.len();
         debug!("Adding {num_fvecs} vectors to the index...");
 
@@ -43,7 +43,7 @@ impl AcornHnswIndex {
         // we have constructed it appropriately.
         // TODO: is there a way to 'catch' segmentation faults in these unsafe functions?
         unsafe {
-            ffi::add_to_index(&mut index, num_fvecs as i64, fvecs.data.as_ptr());
+            ffi::add_to_index(&mut index, num_fvecs as i64, flattened.data.as_ptr());
         }
         debug!("Added {num_fvecs} vectors to the index.");
 
