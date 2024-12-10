@@ -1,6 +1,8 @@
 use crate::acorn::AcornHnswIndex;
+use crate::bitmask::Bitmask;
 use crate::dataset::{
-    ConstructionError, Dataset, OakIndexOptions, SearchableError, TopKSearchResult,
+    ConstructionError, Dataset, HybridSearchMetadata, OakIndexOptions, SearchableError,
+    TopKSearchResult,
 };
 use crate::predicate::PredicateQuery;
 
@@ -129,12 +131,17 @@ pub struct FvecsDataset {
     pub mmap: Mmap,
     count: usize,
     dimensionality: usize,
-    index: Option<Box<AcornHnswIndex>>,
+    index: Option<AcornHnswIndex>,
     pub metadata: Vec<i32>,
 }
 
-impl Dataset for FvecsDataset {
-    fn new(fname: String) -> Result<Self> {
+impl FvecsDataset {
+    /// Create a new dataset, loading all fvecs into memory. The `fname` should represent a
+    /// filename that corresponds to both a "{fname}.fvecs" that contains the vectors, and a
+    /// "{fname}.csv" that contains the attributes (over which predicates can be constructed) for
+    /// those vectors. Each row in the CSV corresponds to the vector at the same index in the fvecs
+    /// file, and each column represents an attribute on that vector.
+    pub fn new(fname: String) -> Result<Self> {
         let mut fvecs_fname = PathBuf::new();
         fvecs_fname.push(&format!("{}.fvecs", fname));
 
@@ -180,18 +187,25 @@ impl Dataset for FvecsDataset {
         })
     }
 
-    fn initialize(&mut self, opts: &OakIndexOptions) -> Result<(), ConstructionError> {
-        let main_index = AcornHnswIndex::new(&self, opts)?;
-        self.index = Some(Box::new(main_index));
-        Ok(())
+    pub fn view(&self, pq: &PredicateQuery) -> FvecsDatasetPartition {
+        FvecsDatasetPartition {
+            base: self,
+            mask: Bitmask::new(pq, self),
+        }
     }
+}
 
+impl Dataset for FvecsDataset {
     fn len(&self) -> usize {
         self.count
     }
 
     fn get_dimensionality(&self) -> usize {
         self.dimensionality as usize
+    }
+
+    fn get_metadata(&self) -> &HybridSearchMetadata {
+        &self.metadata
     }
 
     fn get_data(&self) -> Result<Vec<Fvec>> {
@@ -207,6 +221,12 @@ impl Dataset for FvecsDataset {
         Ok(vecs)
     }
 
+    fn build_index(&mut self, opts: &OakIndexOptions) -> Result<(), ConstructionError> {
+        let index = AcornHnswIndex::new(&self, opts)?;
+        self.index = Some(index);
+        Ok(())
+    }
+
     fn search(
         &self,
         query_vectors: &FlattenedVecs,
@@ -220,15 +240,79 @@ impl Dataset for FvecsDataset {
         debug!("query_vectors len: {}", query_vectors.len());
         debug!("fvecs dataset len: {}", self.len());
 
-        let mut filter_id_map = match predicate_query {
-            None => vec![true as i8; self.len() * query_vectors.len()],
-            Some(pq) => pq.serialize_as_filter_map(self)?,
+        let mut mask = match predicate_query {
+            None => Bitmask::new_empty(self),
+            Some(pq) => Bitmask::new(pq, self),
         };
 
         self.index
             .as_ref()
             .unwrap()
+            .search(query_vectors, &mut mask.map, topk)
+    }
+
+    fn search_with_bitmask(
+        &self,
+        query_vectors: &FlattenedVecs,
+        bitmask: Bitmask,
+        topk: usize,
+    ) -> Result<Vec<TopKSearchResult>, SearchableError> {
+        let mut filter_id_map = Vec::<i8>::from(bitmask);
+
+        // TODO: this & to filter_id_map should not have to be mutable
+        self.index
+            .as_ref()
+            .unwrap()
             .search(query_vectors, &mut filter_id_map, topk)
+    }
+}
+
+/// A partition of the FvecsDataset, established through a predicate.
+pub struct FvecsDatasetPartition<'a> {
+    base: &'a FvecsDataset,
+    mask: Bitmask,
+}
+
+impl<'a> Dataset for FvecsDatasetPartition<'a> {
+    fn len(&self) -> usize {
+        self.mask.bitcount()
+    }
+
+    fn get_data(&self) -> Result<Vec<Fvec>> {
+        unimplemented!();
+    }
+
+    fn get_metadata(&self) -> &HybridSearchMetadata {
+        todo!();
+    }
+
+    fn get_dimensionality(&self) -> usize {
+        self.base.dimensionality
+    }
+
+    fn build_index(&mut self, opts: &OakIndexOptions) -> Result<(), ConstructionError> {
+        // need to get the FlattenedVecs of the view to pass to ACORN
+        FlattenedVecs::from
+        unimplemented!();
+        Ok(())
+    }
+
+    fn search(
+        &self,
+        query_vectors: &FlattenedVecs,
+        predicate_query: &Option<PredicateQuery>,
+        topk: usize,
+    ) -> Result<Vec<TopKSearchResult>, SearchableError> {
+        todo!();
+    }
+
+    fn search_with_bitmask(
+        &self,
+        query_vectors: &FlattenedVecs,
+        bitmask: Bitmask,
+        topk: usize,
+    ) -> Result<Vec<TopKSearchResult>, SearchableError> {
+        todo!();
     }
 }
 
