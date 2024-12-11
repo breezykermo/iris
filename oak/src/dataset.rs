@@ -80,33 +80,6 @@ impl AsRef<Vec<i32>> for HybridSearchMetadata {
     }
 }
 
-// impl IntoIterator for HybridSearchMetadata {
-//     type Item = &i32;
-//     type IntoIter = HybridSearchMetadataIntoIterator;
-//
-//     fn into_iter(self) -> Self::IntoIter {
-//         HybridSearchMetadataIntoIterator {
-//             data: self,
-//             index: 0,
-//         }
-//     }
-// }
-//
-// struct HybridSearchMetadataIntoIterator {
-//     data: HybridSearchMetadata,
-//     index: usize,
-// }
-//
-// impl Iterator for HybridSearchMetadataIntoIterator {
-//     type Item = &i32;
-//
-//     fn next(&mut self) -> Option<Self::Item> {
-//         let result = self.data.attrs.get(self.index);
-//         self.index += 1;
-//         result
-//     }
-// }
-
 /// These parameters are currently essentially ACORN parameters, taken from
 /// https://github.com/csirianni/ACORN/blob/main/README.md
 pub struct OakIndexOptions {
