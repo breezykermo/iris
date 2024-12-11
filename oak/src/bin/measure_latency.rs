@@ -6,6 +6,8 @@ use futures_util::{
     future::{select, Either},
     stream::{FuturesUnordered, Stream, StreamExt, TryStreamExt},
 };
+use oak::dataset::TopKSearchResult;
+use oak::predicate::PredicateOp;
 use slog_scope::{debug, info};
 use core::time;
 use std::time::Duration;
@@ -16,6 +18,7 @@ use oak::fvecs::{FlattenedVecs, FvecsDataset};
 use oak::poisson::SpinTicker;
 use oak::predicate::PredicateQuery;
 use oak::stubs::generate_random_vector;
+use csv::Writer;
 
 #[derive(Error, Debug)]
 pub enum ExampleError {
@@ -39,21 +42,21 @@ struct ExpResult {
     num_clients: usize,
 }
 
-struct Op {
-    dataset: &FvecsDataset,
-    query_vector: &FlattenedVecs,
-    filter_id_map: &Vec<c_char>,
-    k: usize,
-}
-impl Op {
-    fn exec(&self) -> Result<TopKSearchResultBatch, SearchableError> {
-        self.dataset
-            .index
-            .as_ref()
-            .unwrap()
-            .search(self.query_vector, self.filter_id_map, self.k)
-    }
-}
+// struct Op {
+//     dataset: &FvecsDataset,
+//     query_vector: &FlattenedVecs,
+//     filter_id_map: &Vec<c_char>,
+//     k: usize,
+// }
+// impl Op {
+//     fn exec(&self) -> Result<TopKSearchResultBatch, SearchableError> {
+//         self.dataset
+//             .index
+//             .as_ref()
+//             .unwrap()
+//             .search(self.query_vector, self.filter_id_map, self.k)
+//     }
+// }
 
 struct QueryStats {
     query_op: Op,
@@ -61,9 +64,17 @@ struct QueryStats {
     latency: Duration
 }
 /// time_req measures time taken for the vectorDB call
-fn time_req(op: Op) -> Result<(Duration, Result<TopKSearchResultBatch, SearchableError>), Report> {
+fn time_req(
+    dataset: &FvecsDataset,
+    query_vector: &FlattenedVecs,
+    filter_id_map: &Vec<c_char>,
+    k: usize) -> Result<(Duration, Result<TopKSearchResultBatch, SearchableError>), Report> {
     let now = tokio::time::Instant::now();
-    let result = op.exec();
+    let result = dataset
+        .index
+        .as_ref()
+        .unwrap()
+        .search(self.query_vector, self.filter_id_map, self.k);
     Ok((now.elapsed(), result))
 }
 ///Alt: compute gt for each query and log it into a CSV and then separately 
@@ -96,29 +107,17 @@ fn time_req(op: Op) -> Result<(Duration, Result<TopKSearchResultBatch, Searchabl
 // }
 
 
-async fn calculate_recall(gt: Vec<FlattenedVecs>, acorn_index: Vec<FlattenedVecs>, k: usize) {
+async fn calculate_recall(gt: Vec<FlattenedVecs>, acorn_index: Vec<FlattenedVecs>, k: usize) -> f64 {
     // Some way of getting groundtruth -TODO: check FAISS for it
     // Then decide the type of the input. Some Vec of Vec
     nq = acorn_index.len();
-    gt = calculate_gt(gt);
-    let mut n_1 = 0;
-    let mut n_10= 0;
-    let mut n_100 = 0;
-    let mut rank = 1;
     let mut results = vec![];
-    while rank <= k {
-        let gt_nn = &gt[0..rank]; // top-rank queries
-        let retrieved = &acorn_index[0..rank];
-        
-        // Compute intersection
-        let intersection = retrieved.iter().filter(|&&id| gt_nn.contains(&id)).count();
-        let recall = intersection as f64;
-        
-        recall /= rank as f64;
-        results.push(recall);
-        rank *= 10;
-    }
-    results // Recall for top-1, top-10 and top-100
+    let gt_nn = &gt[0..k]; // top-rank queries
+    let retrieved = &acorn_index[0..k];
+    
+    // Compute intersection
+    let intersection = retrieved.iter().filter(|&&id| gt_nn.contains(&id)).count();
+    intersection as f64 / k as f64
 }
 
 /// This function is needed because the SIFT dataset doesn't have predicates. The
@@ -127,18 +126,14 @@ async fn calculate_recall(gt: Vec<FlattenedVecs>, acorn_index: Vec<FlattenedVecs
 /// required predicate and thus, shouldn't be counted in recall. Instead, we 
 /// take the top-k queries that match the predicate and compare against 
 /// OAK-generated results.
-fn calculate_gt(gt_index: Vec<FlattenedVecs>)-> Vec<FlattenedVecs> {
+fn calculate_gt(gt_index: Vec<FlattenedVecs>, pred: f64, op: PredicateOp)-> Vec<FlattenedVecs> {
     // TODO: Need Lachlan's help on loading in predicates and searching by them
-    // Is there something modular? Where are pedicates generated  (in case we
+    // Is there something modular? Where are predicates generated  (in case we
     // distribute in range 1-30 or add more predicates to search by or sth)
+    match op {
+        PredicateOp::Equals => {}
+    }
     vec![]
-}
-
-/// Loading the groundtruth is simply loading in the fvecs file. The complexity
-/// of checking predicate matches is handed over to the calculate recall 
-fn load_gt(path: &str) ->  {
-    // TODO: Parse CSV into a usable GroundTruth data structure
-    Ok(GroundTruth {})
 }
 
 /// This query loop essentially takes a query load, finds the latency of running
@@ -146,26 +141,69 @@ fn load_gt(path: &str) ->  {
 /// and finally, logs the recall for each query as compared to the groundtruth
 /// indices
 fn query_loop (
-    ops: Vec<Op> // each Op knows 
-) -> Result<(), Report> {
+    dataset: FvecsDataset,
+    query_vectors: Vec<FlattenedVecs>, // TODOM: Ask Lachlan whether its Vec of or not
+    filter_id_map: Vec<c_char>,
+    k: usize,
+) -> Result<(Vec<Duration>), Report> {
     let benchmark_results = vec![];
-    for op in ops {
-        match time_req(op) {
+    for op in query_vectors {
+        match time_req(&dataset, &op, &filter_id_map, k) {
             Ok((latency, Ok((res, err)))) => {
-                let recall = calculate_recall(gt, res);
-                benchmark_results.push(QueryStats(
-                    op,
-                    recall,
-                    latency
-                ))
+                // let recall = calculate_recall(gt, res);
+                // benchmark_results.push(QueryStats(
+                //     None,
+                //     None,
+                //     latency
+                // ))
+                benchmark_results.push(latency);
             }
             Ok((_, Err(e))) => {println!("Search operation failed with error {:?}", e)}
             Err(e) => {println!("Timing operation failed with error {:?}", e)}
         }
     }
-    Ok(())
+    info!("Completed benchmarking queries!");
+    Ok((benchmark_results))
 }
 
+fn average_duration(latencies: Vec<Duration>) -> Duration {
+    let total = latencies.iter().sum();
+    let count = durations.len();
+    if count == 0 {
+        Duration::ZERO
+    } else {
+        total / count as u32
+    }
+}
+
+fn calculate_recall_1(gt: TopKSearchResultBatch, acorn_result: TopKSearchResultBatch) -> Result<(f32, f32, f32)> {
+    todo!(); // Ask lachlan how to iterate through TopKSearchResbatch
+    // Figure out how to represent the Groundtruth and index into it!!
+    nq = gt.len();
+
+    let mut n_1 = 0;
+    let mut n_10=0;
+    let mut n_100 = 0;
+
+    for i in 0..nq {
+        let gt_nn = gt[i*k]; // top 1 search
+        for j in 0..k {
+            if j <1 {
+                n_1 += 1;
+            }
+            if j < 10 {
+                n_10 +=1;
+            }
+            if j < 100 {
+                n_100 += 1;
+            }
+        }
+    }
+    let r_1 = n_1 as f64/ nq as f64;
+    let r_10 = n_10 as f64/ nq as f64;
+    let r_100 = n_100 as f64/ nq as f64;
+    Ok((r_1, r_10, r_100))
+}
 
 fn main() -> Result<()> {
     let log = ConfigLogging::StderrTerminal {
@@ -189,11 +227,33 @@ fn main() -> Result<()> {
 
     let _ = dataset.initialize(&opts);
     info!("Seed index constructed.");
+
+    // let mut groundtruth = FvecsDataset::new(args.gt)?;
+    // info!("Groundtruth loaded from disk");
+
     // Load queries
+    let queries = FvecsDataset::new("data/sift_query".to_string()).unwrap();
+    let queries = FlattenedVecs::from(&queries);
+
     // Load predicates
-    // Load GT
-    // pop from both, run queryloop 
-    // log latency, operation (query vec and predicate searched for) and recall
+    let predicate = Some(PredicateQuery::new(1));
+    let filter_id_map = todo!(); // TODOM: ask Lachlan!
+    let latencies = vec![];
+    for k in [5, 10, 15, 20]{
+        let res = query_loop(dataset, queries, filter_id_map, k);
+        match res {
+            Ok((lat)) => {latencies.append(average_duration(lat))}
+            Err(_) => {println!("Some error in calculating top-k vectors")}
+        }
+    }
+
+    // Log results to CSV
+    let mut wtr = Writer::from_path("output.csv")?;
+    writer.write_record(&["Average Latency (s)", "Recall@K"])?;
+    for d in latencies {
+        writer.write_record(&[d.as_secs().to_string()])?;
+    }
+    writer.flush()?;
 
     // let dimensionality = dataset.get_dimensionality() as usize;
     // info!("Constructing random vector to query with {dimensionality} dimensions");
