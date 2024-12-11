@@ -18,13 +18,45 @@
 Vector databases are growing in popularity as they become widely used in similarity search and RAG systems as part of ML workloads.
 At the same time, applications increasingly leverage mixed-modality data, requiring support for search over /vector data/ such as images and text, and /structured data/ such as metadata and keywords, simultaneously. 
 Recent work in ACORN helps improve the feasibility of this /hybrid search/ by providing a performant and predicate-agnostic index built on Hierarchical Navigable Small Worlds (HNSW), a state-of-the-art graph based index for approximate nearest neighbor search (ANNS).
-However, ACORN does not take into consideration predicate access patterns, leaving room for performance improvent under certain modal workloads.
+However, ACORN does not take into consideration predicate access patterns, leaving room for improved performance under certain modal workloads.
 To address this, we present OAK, a system for creating predicate subgraphs.
 To evaluate OAK, we compare OAK to ACORN on .... 
 We show that OAK achieves improved performance ...
 Our code is available at: https://github.com/breezykermo/oak.
 
 * Introduction
+
+In recent years, embedding models have advanced significantly, enabling the use of vector embeddings in a variety of applications.
+For example, retrieval-augmented generation (RAG) helps improve the accuracy and relevance of LLM outputs by including additional vector embeddings in user prompts.
+And, recommendation algorithms at companies like Netflix and TikTok use vector embeddings to represent user profiles and platform content.
+In these applications, approximate nearest neighbor search (ANNS) is the method used for performant semantic similarity search.
+Because machine learning inherently clusters/groups data, ANNS is a way to coalesce inherently unstructured data for specific operations, making it an essential primitive in big data operations.
+
+However, efficient ANNS is a challenging problem when considering multi-million or billion scale datasets.
+Both NeurIPS'21 [cite:https://big-ann-benchmarks.com/neurips21.html]and NeurIPS'23 [cite:https://big-ann-benchmarks.com/neurips23.html] hosted a competition for billion-scale indexing data structures and search algorithms, showcasing a wide range of solutions that improved search accuracy and efficiency.
+One popular approach is Hierarchical Navigable Small Worlds (HNSW) [cite:https://arxiv.org/abs/1603.09320], a hierarchical, tree-link structure where each node of the tree represents a set of vectors.
+
+ANNS becomes increasingly complex when introducing predicate filtering, i.e., performing on ANNS on a subset of data that matches a given predicate.
+For example, customers on an e-commerce site may want to search for t-shirts similar to a reference image, while filtering on price. 
+To support such functionality, applications must implement /hybrid search/, i.e., similarity search queries containing a one or more structured predicates.
+Implementations must be *performant*, retrieving results with high throughput/low latency and also *accurate*, retrieving results that are sufficiently similar to the provided query.
+
+Several strategies exist to address these challenges with varying degrees of success.
+/Pre-filtering/ first finds all vectors that satisfy a given predicate and then performs a similatiy search on the remaining vectors.
+This approach performs poorly when using medium to high selectivity predicates on large datasets.
+/Post-filtering/ first performs a similarity search on the dataset, then filters results that do not match the given predicate. 
+Since vectors with the greatest similarity may not satisfy the predicate, this approach sometimes requires searching repeatedly with increasingly large search spaces (top-1k, top-10k, etc.), incurring large amounts of overhead.
+Specialized indices such as Filtered-DiskANN [cite:] use predicates during index construction to eliminate the need for pre- or post-filtering.
+However, these indices restrict predicate set cardinalities to about 1,000 and only support equality predicates.
+
+ACORN [cite:] addresses this limitation by proposing a /predicate-agnostic/ index which supports unbounded and arbitrary predicates.
+The results are impressive but still fall short of an /oracle partition index/ (Figure 1). 
+# TODO: Include figure from presentation.
+Given some search predicate $p$ and dataset $X$, an oracle partition index is an HNSW index on $X_p$. 
+
+In this paper, we present *OAK* (Opportunistic ANNS K-Subgraphs), a system that combines the ideas of predicate-agnostic indices with oracle partition indices to support arbitary/unbounded predicates and high performance for high-frequency query predicates.
+
+* Overview
 
 * Implementation 
 
