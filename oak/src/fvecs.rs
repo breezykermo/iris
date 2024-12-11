@@ -144,6 +144,7 @@ impl From<&FvecsDataset> for Vec<PredicateQuery> {
     fn from(dataset: &FvecsDataset) -> Self {
         dataset
             .metadata
+            .as_ref()
             .iter()
             // NOTE: we assume here that the attribute loaded is safe to cast to a u8, as we have
             // generated the attributes as such. The reason that `dataset.metadata` is a u32 is
@@ -160,7 +161,7 @@ pub struct FvecsDataset {
     count: usize,
     dimensionality: usize,
     index: Option<AcornHnswIndex>,
-    pub metadata: Vec<i32>,
+    pub metadata: HybridSearchMetadata,
     pub flat: FlattenedVecs,
 }
 
@@ -205,7 +206,8 @@ impl FvecsDataset {
         let mut metadata_fname = PathBuf::new();
         metadata_fname.push(&format!("{}.csv", fname));
 
-        let metadata = read_csv_to_vec(&metadata_fname)?;
+        let metadata_vec = read_csv_to_vec(&metadata_fname)?;
+        let metadata = HybridSearchMetadata::new(metadata_vec);
         let flat = FlattenedVecs::read_from_mmap(&mmap, count, dimensionality);
 
         Ok(Self {
@@ -224,6 +226,7 @@ impl FvecsDataset {
             mask: Bitmask::new(pq, self),
             flat: None,
             index: None,
+            metadata: &self.metadata,
         }
     }
 }
@@ -310,6 +313,8 @@ pub struct FvecsDatasetPartition<'a> {
     /// imagine a pure Rust implementation of the search methods that does not require this
     /// original copy.
     flat: Option<FlattenedVecs>,
+    /// The same with the metadata
+    metadata: &'a HybridSearchMetadata,
 }
 
 impl<'a> Dataset for FvecsDatasetPartition<'a> {
@@ -322,7 +327,7 @@ impl<'a> Dataset for FvecsDatasetPartition<'a> {
     }
 
     fn get_metadata(&self) -> &HybridSearchMetadata {
-        todo!();
+        &self.metadata
     }
 
     fn get_dimensionality(&self) -> usize {

@@ -23,12 +23,13 @@ impl AcornHnswIndex {
         let dimensionality = i32::try_from(dataset.get_dimensionality())
             .expect("dimensionality should not be greater than 2,147,483,647");
 
+        let metadata = dataset.get_metadata();
         let mut index = ffi::new_index_acorn(
             dimensionality,
             options.m,
             options.gamma,
             options.m_beta,
-            &dataset.get_metadata(),
+            metadata.as_ref(),
         );
         debug!(
             "Constructed index with dimensionality: {dimensionality}, m: {}, gamma: {}, m_beta: {}",

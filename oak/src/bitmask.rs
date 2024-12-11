@@ -26,7 +26,7 @@ impl Bitmask {
         let on_bit: c_char = 1;
         let mut bitcount: usize = 0;
 
-        for (i, xq) in dataset.get_metadata().iter().enumerate() {
+        for (i, xq) in dataset.get_metadata().as_ref().iter().enumerate() {
             let bit = match pq.op {
                 PredicateOp::Equals => (xq == &rhs) as c_char,
             };

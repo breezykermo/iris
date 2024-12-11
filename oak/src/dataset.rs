@@ -39,7 +39,73 @@ pub type TopKSearchResultBatch = Vec<TopKSearchResult>;
 
 /// The type in which the attributes for hybrid search are notated. At the moment the assumed
 /// constraint is that there is at most one attribute per vector, and it is always an i32.
-pub type HybridSearchMetadata = Vec<i32>;
+pub struct HybridSearchMetadata {
+    attrs: Vec<i32>,
+    mask: Option<Bitmask>,
+}
+
+impl HybridSearchMetadata {
+    pub fn new(attrs: Vec<i32>) -> Self {
+        Self { attrs, mask: None }
+    }
+
+    pub fn new_from_bitmask(&self, mask: Bitmask) -> Self {
+        let filtered_attrs: Vec<i32> = self
+            .attrs
+            .iter()
+            .zip(mask.map.iter())
+            .filter_map(|(&attr, &keep)| {
+                if keep == 1 {
+                    Some(attr) // Keep the attribute if the bitmask allows
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        HybridSearchMetadata {
+            attrs: filtered_attrs,
+            mask: Some(mask),
+        }
+    }
+
+    pub fn len(&self) -> usize {
+        self.attrs.len()
+    }
+}
+
+impl AsRef<Vec<i32>> for HybridSearchMetadata {
+    fn as_ref(&self) -> &Vec<i32> {
+        self.attrs.as_ref()
+    }
+}
+
+// impl IntoIterator for HybridSearchMetadata {
+//     type Item = &i32;
+//     type IntoIter = HybridSearchMetadataIntoIterator;
+//
+//     fn into_iter(self) -> Self::IntoIter {
+//         HybridSearchMetadataIntoIterator {
+//             data: self,
+//             index: 0,
+//         }
+//     }
+// }
+//
+// struct HybridSearchMetadataIntoIterator {
+//     data: HybridSearchMetadata,
+//     index: usize,
+// }
+//
+// impl Iterator for HybridSearchMetadataIntoIterator {
+//     type Item = &i32;
+//
+//     fn next(&mut self) -> Option<Self::Item> {
+//         let result = self.data.attrs.get(self.index);
+//         self.index += 1;
+//         result
+//     }
+// }
 
 /// These parameters are currently essentially ACORN parameters, taken from
 /// https://github.com/csirianni/ACORN/blob/main/README.md
