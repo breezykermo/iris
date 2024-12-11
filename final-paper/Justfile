@@ -1,0 +1,4 @@
+# requires pandoc and tectonic
+build:
+  pandoc -s --citeproc --csl ./acmart.csl --template ./template.latex --bibliography ./references.bib -o final-paper.pdf --pdf-engine=tectonic final-paper.org
+
