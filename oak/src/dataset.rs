@@ -41,16 +41,15 @@ pub type TopKSearchResultBatch = Vec<TopKSearchResult>;
 /// constraint is that there is at most one attribute per vector, and it is always an i32.
 pub struct HybridSearchMetadata {
     attrs: Vec<i32>,
-    mask: Option<Bitmask>,
 }
 
 impl HybridSearchMetadata {
     pub fn new(attrs: Vec<i32>) -> Self {
-        Self { attrs, mask: None }
+        Self { attrs }
     }
 
-    pub fn new_from_bitmask(&self, mask: Bitmask) -> Self {
-        let filtered_attrs: Vec<i32> = self
+    pub fn new_from_bitmask(other: &Self, mask: &Bitmask) -> Self {
+        let filtered_attrs: Vec<i32> = other
             .attrs
             .iter()
             .zip(mask.map.iter())
@@ -65,7 +64,6 @@ impl HybridSearchMetadata {
 
         HybridSearchMetadata {
             attrs: filtered_attrs,
-            mask: Some(mask),
         }
     }
 

@@ -221,14 +221,15 @@ impl FvecsDataset {
     }
 
     pub fn view(&self, pq: &PredicateQuery) -> FvecsDatasetPartition {
+        let mask = Bitmask::new(pq, self);
+        let metadata = HybridSearchMetadata::new_from_bitmask(&self.metadata, &mask);
+
         FvecsDatasetPartition {
             base: self,
-            mask: Bitmask::new(pq, self),
+            mask,
             flat: None,
             index: None,
-            // TODO: this cannot just be this. It needs to be the filtered metadata
-            // metadata: &self.metadata,
-            metadata: unimplemented!(),
+            metadata,
         }
     }
 }
@@ -316,7 +317,7 @@ pub struct FvecsDatasetPartition<'a> {
     /// original copy.
     flat: Option<FlattenedVecs>,
     /// The same with the metadata
-    metadata: &'a HybridSearchMetadata,
+    metadata: HybridSearchMetadata,
 }
 
 impl<'a> Dataset for FvecsDatasetPartition<'a> {
