@@ -226,7 +226,9 @@ impl FvecsDataset {
             mask: Bitmask::new(pq, self),
             flat: None,
             index: None,
-            metadata: &self.metadata,
+            // TODO: this cannot just be this. It needs to be the filtered metadata
+            // metadata: &self.metadata,
+            metadata: unimplemented!(),
         }
     }
 }

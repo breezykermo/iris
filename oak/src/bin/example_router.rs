@@ -59,6 +59,9 @@ fn main() -> Result<()> {
     let dimensionality = dataset.get_dimensionality() as usize;
     assert_eq!(dimensionality, subdataset.get_dimensionality() as usize);
 
+    // Experiments
+    // --------=--
+    //
     info!("Constructing random vector to query with {dimensionality} dimensions");
     let query_vector = FlattenedVecs {
         dimensionality,
