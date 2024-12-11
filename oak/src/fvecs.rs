@@ -1,6 +1,8 @@
 use crate::acorn::AcornHnswIndex;
+use crate::bitmask::Bitmask;
 use crate::dataset::{
-    ConstructionError, Dataset, OakIndexOptions, SearchableError, TopKSearchResult,
+    ConstructionError, Dataset, HybridSearchMetadata, OakIndexOptions, SearchableError,
+    TopKSearchResult,
 };
 use crate::predicate::PredicateQuery;
 
@@ -71,6 +73,7 @@ pub struct Fvec {
 }
 
 pub struct FlattenedVecs {
+    // The length of each vector in the flattened representation.
     pub dimensionality: usize,
     // This data is the flattened representation of all vectors of size `dimensionality`.
     pub data: Vec<f32>,
@@ -80,30 +83,57 @@ impl FlattenedVecs {
     pub fn len(&self) -> usize {
         self.data.len() / self.dimensionality
     }
-}
 
-/// Create a 'flattened' representation of fvecs (meaning that the vectors are simply contiguous to
-/// each other in memory, rather than prepended by their dimensionality explicitly as in the .fvecs
-/// representation). This is necessary reformatting for calling ACORN methods via FFI, and the
-/// transformation also ensures that the vectors are in memory (rather than on disk).
-impl From<&FvecsDataset> for FlattenedVecs {
-    fn from(dataset: &FvecsDataset) -> Self {
-        let mut all_fvecs = Vec::with_capacity(dataset.count * dataset.dimensionality);
+    /// Creates a new FlattenedVecs based on a bitmask and an original one.
+    /// Only the necessary items (items that match the bitmask) are copied.
+    pub fn clone_via_bitmask(&self, bitmask: &Bitmask) -> Self {
+        let new_data: Vec<f32> = self
+            .data
+            .chunks_exact(self.dimensionality)
+            .zip(bitmask.map.iter())
+            .filter_map(|(vector, &keep)| {
+                if keep == 1 {
+                    Some(vector) // Keep the vector if bitmask says so
+                } else {
+                    None
+                }
+            })
+            .flat_map(|vector| vector.iter().copied())
+            .collect();
 
-        let fvec_len_in_bytes = (dataset.dimensionality + 1) * FOUR_BYTES;
+        Self {
+            dimensionality: self.dimensionality,
+            data: new_data,
+        }
+    }
+
+    /// Create a 'flattened' representation of fvecs (meaning that the vectors are simply contiguous to
+    /// each other in memory, rather than prepended by their dimensionality explicitly as in the .fvecs
+    /// representation). This is necessary reformatting for calling ACORN methods via FFI, and the
+    /// transformation also ensures that the vectors are in memory (rather than on disk).
+    pub fn read_from_mmap(mmap: &Mmap, count: usize, dimensionality: usize) -> Self {
+        let mut all_fvecs = Vec::with_capacity(count * dimensionality);
+
+        let fvec_len_in_bytes = (dimensionality + 1) * FOUR_BYTES;
         let mut current_index = 0;
-        for i in dataset.mmap.chunks_exact(fvec_len_in_bytes) {
+        for i in mmap.chunks_exact(fvec_len_in_bytes) {
             let mut fvecs = parse_u8_to_f32(&i);
             // skip the dimensionality, we don't need it in the flattened.
             fvecs.drain(0..1);
             all_fvecs.splice(current_index..current_index, fvecs);
-            current_index += dataset.dimensionality;
+            current_index += dimensionality;
         }
 
-        FlattenedVecs {
-            dimensionality: dataset.dimensionality,
+        Self {
+            dimensionality,
             data: all_fvecs,
         }
+    }
+}
+
+impl From<&FvecsDataset> for FlattenedVecs {
+    fn from(dataset: &FvecsDataset) -> Self {
+        FlattenedVecs::read_from_mmap(&dataset.mmap, dataset.count, dataset.dimensionality)
     }
 }
 
@@ -114,6 +144,7 @@ impl From<&FvecsDataset> for Vec<PredicateQuery> {
     fn from(dataset: &FvecsDataset) -> Self {
         dataset
             .metadata
+            .as_ref()
             .iter()
             // NOTE: we assume here that the attribute loaded is safe to cast to a u8, as we have
             // generated the attributes as such. The reason that `dataset.metadata` is a u32 is
@@ -129,12 +160,18 @@ pub struct FvecsDataset {
     pub mmap: Mmap,
     count: usize,
     dimensionality: usize,
-    index: Option<Box<AcornHnswIndex>>,
-    pub metadata: Vec<i32>,
+    index: Option<AcornHnswIndex>,
+    pub metadata: HybridSearchMetadata,
+    pub flat: FlattenedVecs,
 }
 
-impl Dataset for FvecsDataset {
-    fn new(fname: String) -> Result<Self> {
+impl FvecsDataset {
+    /// Create a new dataset, loading all fvecs into memory. The `fname` should represent a
+    /// filename that corresponds to both a "{fname}.fvecs" that contains the vectors, and a
+    /// "{fname}.csv" that contains the attributes (over which predicates can be constructed) for
+    /// those vectors. Each row in the CSV corresponds to the vector at the same index in the fvecs
+    /// file, and each column represents an attribute on that vector.
+    pub fn new(fname: String) -> Result<Self> {
         let mut fvecs_fname = PathBuf::new();
         fvecs_fname.push(&format!("{}.fvecs", fname));
 
@@ -169,7 +206,9 @@ impl Dataset for FvecsDataset {
         let mut metadata_fname = PathBuf::new();
         metadata_fname.push(&format!("{}.csv", fname));
 
-        let metadata = read_csv_to_vec(&metadata_fname)?;
+        let metadata_vec = read_csv_to_vec(&metadata_fname)?;
+        let metadata = HybridSearchMetadata::new(metadata_vec);
+        let flat = FlattenedVecs::read_from_mmap(&mmap, count, dimensionality);
 
         Ok(Self {
             index: None,
@@ -177,15 +216,24 @@ impl Dataset for FvecsDataset {
             mmap,
             dimensionality,
             metadata,
+            flat,
         })
     }
 
-    fn initialize(&mut self, opts: &OakIndexOptions) -> Result<(), ConstructionError> {
-        let main_index = AcornHnswIndex::new(&self, opts)?;
-        self.index = Some(Box::new(main_index));
-        Ok(())
+    pub fn view(&self, pq: &PredicateQuery) -> FvecsDatasetPartition {
+        FvecsDatasetPartition {
+            base: self,
+            mask: Bitmask::new(pq, self),
+            flat: None,
+            index: None,
+            // TODO: this cannot just be this. It needs to be the filtered metadata
+            // metadata: &self.metadata,
+            metadata: unimplemented!(),
+        }
     }
+}
 
+impl Dataset for FvecsDataset {
     fn len(&self) -> usize {
         self.count
     }
@@ -194,9 +242,13 @@ impl Dataset for FvecsDataset {
         self.dimensionality as usize
     }
 
+    fn get_metadata(&self) -> &HybridSearchMetadata {
+        &self.metadata
+    }
+
     fn get_data(&self) -> Result<Vec<Fvec>> {
-        let flattened = FlattenedVecs::from(self);
-        let vecs = flattened
+        let vecs = self
+            .flat
             .data
             .chunks_exact(self.dimensionality)
             .map(|x| Fvec {
@@ -205,6 +257,12 @@ impl Dataset for FvecsDataset {
             })
             .collect();
         Ok(vecs)
+    }
+
+    fn build_index(&mut self, opts: &OakIndexOptions) -> Result<(), ConstructionError> {
+        let index = AcornHnswIndex::new(self, &self.flat, opts)?;
+        self.index = Some(index);
+        Ok(())
     }
 
     fn search(
@@ -220,15 +278,92 @@ impl Dataset for FvecsDataset {
         debug!("query_vectors len: {}", query_vectors.len());
         debug!("fvecs dataset len: {}", self.len());
 
-        let mut filter_id_map = match predicate_query {
-            None => vec![true as i8; self.len() * query_vectors.len()],
-            Some(pq) => pq.serialize_as_filter_map(self)?,
+        let mut mask = match predicate_query {
+            None => Bitmask::new_full(self),
+            Some(pq) => Bitmask::new(pq, self),
         };
 
         self.index
             .as_ref()
             .unwrap()
+            .search(query_vectors, &mut mask.map, topk)
+    }
+
+    fn search_with_bitmask(
+        &self,
+        query_vectors: &FlattenedVecs,
+        bitmask: Bitmask,
+        topk: usize,
+    ) -> Result<Vec<TopKSearchResult>, SearchableError> {
+        let mut filter_id_map = Vec::<i8>::from(bitmask);
+
+        // TODO: this & to filter_id_map should not have to be mutable
+        self.index
+            .as_ref()
+            .unwrap()
             .search(query_vectors, &mut filter_id_map, topk)
+    }
+}
+
+/// A 'partition' of the FvecsDataset, originally represented just by a base dataset and a Bitmask.
+pub struct FvecsDatasetPartition<'a> {
+    base: &'a FvecsDataset,
+    mask: Bitmask,
+    index: Option<AcornHnswIndex>,
+    /// We have an Option here so that the copying of the base vectors can be deferred to the point
+    /// at which we decide to build the index. This is an implementation detail, as one could
+    /// imagine a pure Rust implementation of the search methods that does not require this
+    /// original copy.
+    flat: Option<FlattenedVecs>,
+    /// The same with the metadata
+    metadata: &'a HybridSearchMetadata,
+}
+
+impl<'a> Dataset for FvecsDatasetPartition<'a> {
+    fn len(&self) -> usize {
+        self.mask.bitcount()
+    }
+
+    fn get_data(&self) -> Result<Vec<Fvec>> {
+        unimplemented!();
+    }
+
+    fn get_metadata(&self) -> &HybridSearchMetadata {
+        &self.metadata
+    }
+
+    fn get_dimensionality(&self) -> usize {
+        self.base.dimensionality
+    }
+
+    fn build_index(&mut self, opts: &OakIndexOptions) -> Result<(), ConstructionError> {
+        let og = &self.base.flat;
+        let flat = og.clone_via_bitmask(&self.mask);
+
+        let index = AcornHnswIndex::new(self, &flat, opts)?;
+
+        self.index = Some(index);
+        self.flat = Some(flat);
+
+        Ok(())
+    }
+
+    fn search(
+        &self,
+        query_vectors: &FlattenedVecs,
+        predicate_query: &Option<PredicateQuery>,
+        topk: usize,
+    ) -> Result<Vec<TopKSearchResult>, SearchableError> {
+        todo!();
+    }
+
+    fn search_with_bitmask(
+        &self,
+        query_vectors: &FlattenedVecs,
+        bitmask: Bitmask,
+        topk: usize,
+    ) -> Result<Vec<TopKSearchResult>, SearchableError> {
+        todo!();
     }
 }
 
