@@ -39,9 +39,9 @@ impl Bitmask {
         Self { map, bitcount }
     }
 
-    pub fn new_empty<D: Dataset>(dataset: &D) -> Self {
+    pub fn new_full<D: Dataset>(dataset: &D) -> Self {
         let map = vec![true as i8; dataset.len()];
-        let bitcount = 0;
+        let bitcount = 1;
         Self { map, bitcount }
     }
 

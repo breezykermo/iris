@@ -277,7 +277,7 @@ impl Dataset for FvecsDataset {
         debug!("fvecs dataset len: {}", self.len());
 
         let mut mask = match predicate_query {
-            None => Bitmask::new_empty(self),
+            None => Bitmask::new_full(self),
             Some(pq) => Bitmask::new(pq, self),
         };
 
