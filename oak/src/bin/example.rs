@@ -45,7 +45,7 @@ fn main() -> Result<()> {
         m_beta: 64,
     };
 
-    let _ = dataset.initialize(&opts);
+    let _ = dataset.build_index(&opts);
     info!("Seed index constructed.");
 
     let dimensionality = dataset.get_dimensionality() as usize;
