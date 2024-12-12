@@ -54,14 +54,34 @@ The results are impressive but still fall short of an /oracle partition index/ (
 # TODO: Include figure from presentation.
 Given some search predicate $p$ and dataset $X$, an oracle partition index is an HNSW index on $X_p$. 
 
-In this paper, we present *OAK* (Opportunistic ANNS K-Subgraphs), a system that combines the ideas of predicate-agnostic indices with oracle partition indices to support arbitary/unbounded predicates and high performance for high-frequency query predicates.
+In this paper, we present *OAK* (Opportunistic ANNS K-Subgraphs), a system that combines predicate-agnostic indices with oracle partition indices to support arbitary/unbounded predicates and high performance for high-frequency query predicates.
 
-* Overview
+* Research Problem/Motivation
+
+* Background and Related Work
+
+* Main Design
+
+The central premise of OAK is to route queries with high-frequency predicates to an /opportunistic index/ constructed using the same predicate.
+When OAK receives a query $q$ with predicate $p$, sending to an opportunistic index is (1) potentially more performant (if the base index is larger than the opportunistic index) but (2) potentially less accurate (if the opportunistic index does not contain all vectors that match $p$).
+We factor this performance-accuracy tradeoff into our query routing strategy.
 
 * Implementation 
+
+OAK is built in approximately 700 lines of Rust.
+
+** Bindings
+
+** Predicate Filtering
+
+** Query Routing
 
 * Evaluation
 DEEP1B [cite:@babenkoEfficientIndexingBillionScale2016] and SIFT1B [cite:@jegouSearchingOneBillion2011] are datasets commonly used to test performance and accuracy for VectorDBs.
 Similarly, the big ANN benchmarks repository [cite:@simhadriHarshasimhadriBigannbenchmarks2024;@simhadriResultsBigANN2024] provides various datasets calibrated to four different classes of load: filtered (including metadata), out-of distribution (queries are significantly different in distribution than the database), sparse (vectors have a majority of zero values), and streaming (load includes insertion and deletion operations).
+
+* Future Work
+
+* Logistics
 
 * Bibliography
