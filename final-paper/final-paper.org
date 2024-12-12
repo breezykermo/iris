@@ -115,6 +115,24 @@ The ACORN ~search~ function accepts a ~filter_id_map~ bit mask that is used to f
 
 * Future Work
 
+OAK has many opportunies for future work.
+
+*Dynamic index construction*. 
+Right now, OAK constructs indices only once and before queries are dispatched.
+In a production system, it may be advantageous to contruct indices while queries are received to increase throughput.
+The overhead incurred by index construction could be measured with respect to the time to index (TTI), the size of the index, and the compute/memory resources required to construct the index.
+
+*Index type*.
+OAK uses ACORN for opportunistic indices primarily because writing bindings to additional indices is unnecessary for a proof-of-concept.
+However, given the bounded and well-defined nature of the opportunistic index type, a /specialized index/ may yield better performance.
+For example, Qdrant [cite:https://qdrant.tech/articles/filtrable-hnsw/] has proposed denser HNSW graph by knowledge of the search predicates to add additional edges.
+While this is ill-suited for ACORN's goal to be predicate-agnostic, the principle idea of opportunistic indices is /predicate-knowledge/, and thus we can leverage the known predicate to construct a better index.
+
+*Distribution*.
+The system design of OAK is also easily transferrable to a distributed context. 
+We could construct and/or host indices on different nodes, as network communication costs are dominated by the ANNS latency. [cite:]
+This would help remove the bottleneck of commodity hardware when hosting multiple indices and enable horizontal scaling and load balancing during bursty workloads.
+
 * Logistics
 
 * Bibliography
