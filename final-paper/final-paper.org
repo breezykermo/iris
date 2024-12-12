@@ -41,22 +41,36 @@ For example, customers on an e-commerce site may want to search for t-shirts sim
 To support such functionality, applications must implement /hybrid search/, i.e., similarity search queries containing a one or more structured predicates.
 Implementations must be *performant*, retrieving results with high throughput/low latency and also *accurate*, retrieving results that are sufficiently similar to the provided query.
 
-Several strategies exist to address these challenges with varying degrees of success.
+Several strategies exist to address these challenges with varying degrees of success, including pre-filtering, post-filtering, and specialized indices.
+One approach is particularly promsing: ACORN [cite:], which proposes a /predicate-agnostic/ index over unbounded and arbitrary predicates.
+But there is still room for improvement.
+
+In this paper, we present *OAK* (Opportunistic ANNS K-Subgraphs), a system that combines predicate-agnostic indices with secondary indices to support arbitary/unbounded predicates and high performance for high-frequency query predicates.
+
+* Research Problem/Motivation
+
+We now discuss the existing predicate filtering strategies.
+
 /Pre-filtering/ first finds all vectors that satisfy a given predicate and then performs a similatiy search on the remaining vectors.
 This approach performs poorly when using medium to high selectivity predicates on large datasets.
+
 /Post-filtering/ first performs a similarity search on the dataset, then filters results that do not match the given predicate. 
 Since vectors with the greatest similarity may not satisfy the predicate, this approach sometimes requires searching repeatedly with increasingly large search spaces (top-1k, top-10k, etc.), incurring large amounts of overhead.
-Specialized indices such as Filtered-DiskANN [cite:] use predicates during index construction to eliminate the need for pre- or post-filtering.
+
+/Specialized indices/ such as Filtered-DiskANN [cite:] use predicates during index construction to eliminate the need for pre- or post-filtering.
 However, these indices restrict predicate set cardinalities to about 1,000 and only support equality predicates.
 
-ACORN [cite:] addresses this limitation by proposing a /predicate-agnostic/ index which supports unbounded and arbitrary predicates.
+Recently, ACORN [cite:] has proposed a /predicate-agnostic/ index which supports unbounded and arbitrary predicates.
 The results are impressive but still fall short of an /oracle partition index/ (Figure 1). 
 # TODO: Include figure from presentation.
 Given some search predicate $p$ and dataset $X$, an oracle partition index is an HNSW index on $X_p$. 
+An oracle partition index is more performant compared to a base ACORN index because the search space is guaranteed to contain only vectors that satisfy the predicate, and thus no predicate comparison must occur during the search itself.
+The reason ACORN provides a /predicate-agnostic/ index is because in many systems, it is infeasible to construct an index for every possible predicate, and thus a general-purpose index performs well across a diverse array of queries.
 
-In this paper, we present *OAK* (Opportunistic ANNS K-Subgraphs), a system that combines predicate-agnostic indices with oracle partition indices to support arbitary/unbounded predicates and high performance for high-frequency query predicates.
-
-* Research Problem/Motivation
+However, access patterns are sometimes not uniformly distributed.
+Consider, for example, queries about football teams during Superbowl or states during election night.
+In certain scenarios, a general-purpose predicate-agnostic index can be supplemented by carefully chosen supplemental indices constructed using frequently occurring predicates.
+This is the goal of OAK.
 
 * Background and Related Work
 
