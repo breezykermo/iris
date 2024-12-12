@@ -98,14 +98,20 @@ We encountered three main engineering challenges, which we now discuss in sectio
 
 ** Bindings
 
+ACORN is implemented in C++, so writing OAK in Rust required a foreign function interface (FFI).
+We chose bindgen [cite:] to automatically generate Rust FFI bindings to ACORN, but the task required a substantial engineering effort.
+We discovered a bug in the ACORN compilation directions that resulted in PR [cite:https://github.com/guestrin-lab/ACORN/pull/7], the FFI wrappers introduced lifetime issues when dereferencing a unique pointer, and the functionality of the ACORN ~search~ function had to be largely reverse-engineered due to a lack of documentation.
 
 ** Predicate Filtering
+
+To programmatically represent predicates, we introduce the `PredicateQuery` struct which contains a predicate operator (e.g. equality) and an operand. 
+This `PredicateQuery` is used to generate a bit mask over the set of vectors and is designed to be extensible for any arbitrary predicate.
+For each vector, if the predicate is true (e.g. year == 2024), the corresponding bit mask element is set to 1.
+The ACORN ~search~ function accepts a ~filter_id_map~ bit mask that is used to filter vectors that do not satisfy the predicate during search.
 
 ** Query Routing
 
 * Evaluation
-DEEP1B [cite:@babenkoEfficientIndexingBillionScale2016] and SIFT1B [cite:@jegouSearchingOneBillion2011] are datasets commonly used to test performance and accuracy for VectorDBs.
-Similarly, the big ANN benchmarks repository [cite:@simhadriHarshasimhadriBigannbenchmarks2024;@simhadriResultsBigANN2024] provides various datasets calibrated to four different classes of load: filtered (including metadata), out-of distribution (queries are significantly different in distribution than the database), sparse (vectors have a majority of zero values), and streaming (load includes insertion and deletion operations).
 
 * Future Work
 
