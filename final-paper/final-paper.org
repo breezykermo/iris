@@ -41,16 +41,16 @@ To support such functionality, applications must implement /hybrid search/, i.e.
 Implementations must be *performant*, retrieving results with high throughput/low latency and also *accurate*, retrieving results that are sufficiently similar to the provided query.
 
 Several strategies exist to address these challenges with varying degrees of success, including pre-filtering, post-filtering, and specialized indices.
-One approach is particularly promsing: ACORN [cite:], which proposes a /predicate-agnostic/ index over unbounded and arbitrary predicates.
+One approach is particularly promising: ACORN [cite:], which proposes a /predicate-agnostic/ index over unbounded and arbitrary predicates.
 But there is still room for improvement.
 
-In this paper, we present *OAK* (Opportunistic ANNS K-Subgraphs), a system that combines predicate-agnostic indices with secondary indices to support arbitary/unbounded predicates and high performance for high-frequency query predicates.
+In this paper, we present *OAK* (Opportunistic ANNS K-Subgraphs), a system that combines predicate-agnostic indices with secondary indices to support arbitrary/unbounded predicates and high performance for high-frequency query predicates.
 
 * Research Problem/Motivation
 
 We now discuss the existing predicate filtering strategies.
 
-/Pre-filtering/ first finds all vectors that satisfy a given predicate and then performs a similatiy search on the remaining vectors.
+/Pre-filtering/ first finds all vectors that satisfy a given predicate and then performs a similarity search on the remaining vectors.
 This approach performs poorly when using medium to high selectivity predicates on large datasets.
 
 /Post-filtering/ first performs a similarity search on the dataset, then filters results that do not match the given predicate. 
@@ -77,12 +77,12 @@ The underlying data structure of both ACORN and OAK is Hierarchical Navigable Sm
 More specifically, it is a /proximity graph/, in which two vertices are linked based on proximity.
 Proximity is usually computed using Euclidean distance, though other similarity metrics exist (e.g. cosine similarity).
 
-ACORN modifies the HNSW contruction algorithm to use neighbor expansion, creating a denser graph.
-While HSNW collects $M$ approximate nearest neighbors as candidate edges for each node in the index, ACORN collects $M \dot \gamma$ approximate nearest neighbors as candidate edges per node.
+ACORN modifies the HNSW construction algorithm to use neighbor expansion, creating a denser graph.
+While HNSW collects $M$ approximate nearest neighbors as candidate edges for each node in the index, ACORN collects $M \dot \gamma$ approximate nearest neighbors as candidate edges per node.
 The intuition is that given enough redundant nodes, the search space is sufficiently large, even when filtering based on the predicate during search.
 
 This is not always the case, though. 
-If the predicate selectivity falls below a minimum specified theshold, ACORN resorts to pre-filtering and brute force search, favoring recall over performance.
+If the predicate selectivity falls below a minimum specified threshold, ACORN resorts to pre-filtering and brute force search, favoring recall over performance.
 This may explain the difference in throughput between ACORN-$\gamma$ and the opportunistic index in Figure 1.
 
 * Main Design
@@ -115,11 +115,11 @@ The ACORN ~search~ function accepts a ~filter_id_map~ bit mask that is used to f
 
 * Future Work
 
-OAK has many opportunies for future work.
+OAK has many opportunities for future work.
 
 *Dynamic index construction*. 
 Right now, OAK constructs indices only once and before queries are dispatched.
-In a production system, it may be advantageous to contruct indices while queries are received to increase throughput.
+In a production system, it may be advantageous to construct indices while queries are received to increase throughput.
 The overhead incurred by index construction could be measured with respect to the time to index (TTI), the size of the index, and the compute/memory resources required to construct the index.
 
 *Index type*.
