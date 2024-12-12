@@ -34,7 +34,6 @@ Because machine learning inherently clusters/groups data, ANNS is a way to coale
 
 However, efficient ANNS is a challenging problem when considering multi-million or billion scale datasets.
 Both NeurIPS'21 [cite:https://big-ann-benchmarks.com/neurips21.html]and NeurIPS'23 [cite:https://big-ann-benchmarks.com/neurips23.html] hosted a competition for billion-scale indexing data structures and search algorithms, showcasing a wide range of solutions that improved search accuracy and efficiency.
-One popular approach is Hierarchical Navigable Small Worlds (HNSW) [cite:https://arxiv.org/abs/1603.09320], a hierarchical, tree-link structure where each node of the tree represents a set of vectors.
 
 ANNS becomes increasingly complex when introducing predicate filtering, i.e., performing on ANNS on a subset of data that matches a given predicate.
 For example, customers on an e-commerce site may want to search for t-shirts similar to a reference image, while filtering on price. 
@@ -63,7 +62,7 @@ However, these indices restrict predicate set cardinalities to about 1,000 and o
 Recently, ACORN [cite:] has proposed a /predicate-agnostic/ index which supports unbounded and arbitrary predicates.
 The results are impressive but still fall short of an /oracle partition index/ (Figure 1). 
 # TODO: Include figure from presentation.
-Given some search predicate $p$ and dataset $X$, an oracle partition index is an HNSW index on $X_p$. 
+Given some search predicate $p$ and dataset $X$, an oracle partition index is an index on $X_p$. 
 An oracle partition index is more performant compared to a base ACORN index because the search space is guaranteed to contain only vectors that satisfy the predicate, and thus no predicate comparison must occur during the search itself.
 The reason ACORN provides a /predicate-agnostic/ index is because in many systems, it is infeasible to construct an index for every possible predicate, and thus a general-purpose index performs well across a diverse array of queries.
 
@@ -74,6 +73,18 @@ This is the goal of OAK.
 
 * Background and Related Work
 
+The underlying data structure of both ACORN and OAK is Hierarchical Navigable Small Worlds (HNSW)[cite:https://arxiv.org/abs/1603.09320], a hierarchical, tree-link structure where each node of the tree represents a set of vectors.
+More specifically, it is a /proximity graph/, in which two vertices are linked based on proximity.
+Proximity is usually computed using Euclidean distance, though other similarity metrics exist (e.g. cosine similarity).
+
+ACORN modifies the HNSW contruction algorithm to use neighbor expansion, creating a denser graph.
+While HSNW collects $M$ approximate nearest neighbors as candidate edges for each node in the index, ACORN collects $M \dot \gamma$ approximate nearest neighbors as candidate edges per node.
+The intuition is that given enough redundant nodes, the search space is sufficiently large, even when filtering based on the predicate during search.
+
+This is not always the case, though. 
+If the predicate selectivity falls below a minimum specified theshold, ACORN resorts to pre-filtering and brute force search, favoring recall over performance.
+This may explain the difference in throughput between ACORN-$\gamma$ and the opportunistic index in Figure 1.
+
 * Main Design
 
 The central premise of OAK is to route queries with high-frequency predicates to an /opportunistic index/ constructed using the same predicate.
@@ -83,8 +94,10 @@ We factor this performance-accuracy tradeoff into our query routing strategy.
 * Implementation 
 
 OAK is built in approximately 700 lines of Rust.
+We encountered three main engineering challenges, which we now discuss in sections.
 
 ** Bindings
+
 
 ** Predicate Filtering
 
