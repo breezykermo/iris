@@ -14,6 +14,7 @@ use oak::predicate::PredicateQuery;
 use csv::Writer;
 use csv::Reader;
 use core::ffi::c_char;
+use std::env;
 
 #[derive(Error, Debug)]
 pub enum ExampleError {
@@ -150,6 +151,7 @@ fn main() -> Result<()> {
 
     // let args = Args::parse();
     info!("Dataset loading...");
+    println!("Current working directory: {:?}", env::current_dir());
     let dataset_path:String = "../../../scripts/get_sift/sift/sift_base.fvecs".to_string();
 
     let mut dataset = FvecsDataset::new(dataset_path)?;
