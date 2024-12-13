@@ -7,12 +7,12 @@ from run import ivecs_read
 import numpy as np
 import os
 
-data_dir = "sift"
+data_dir = "siftsmall"
 out_dir = "outdir"
-gt_name = "sift_groundtruth"
+gt_name = "siftsmall_groundtruth"
 groundtruth_file = os.path.join(data_dir, f"{gt_name}.ivecs")
-base_attributes = os.path.join(out_dir, f"sift_base.csv")
-query_attributes = os.path.join(out_dir, f"sift_query.csv")
+base_attributes = os.path.join(out_dir, f"siftsmall_base.csv")
+query_attributes = os.path.join(out_dir, f"siftsmall_query.csv")
 
 def generate_groundtruth(gt, base_predicates, query_predicates):
     predicate_gt = []
@@ -48,10 +48,12 @@ def main():
     print("No index found for", len(no_NN), "queries")
     print(no_NN[:10])
     
-    with open(f"outdir/sift_variable_groundtruth.csv", "w") as f:
+    print("writing down to variable gt csv")
+    with open(f"outdir/siftsmall_variable_groundtruth.csv", "w") as f:
         for pred in predicate_gt:
             f.write(f"{pred}\n")
 
+    print("done!")
 
 if __name__ == "__main__":
     main()

@@ -31,6 +31,8 @@ struct Args {
     dataset: String,
     #[arg(short, long, required(true))]
     query: String,
+    #[arg(short, long, required(true))]
+    groundtruth: String,
 }
 struct ExpResult {
     durs: Vec<Duration>,
@@ -76,7 +78,7 @@ fn calculate_recall_1(gt: &Vec<usize>, acorn_result: TopKSearchResultBatch) -> R
     Ok(n_10 as f32/ gt.len() as f32)
 }
 
-fn read_csv(file_path: &str) -> Result<Vec<usize>> {
+fn read_csv(file_path: String) -> Result<Vec<usize>> {
     let mut rdr = Reader::from_path(file_path)?;
     let mut values = Vec::new();
 
@@ -121,17 +123,28 @@ fn main() -> Result<()> {
     let dimensionality = dataset.get_dimensionality() as usize;
     assert_eq!(dimensionality, subdataset.get_dimensionality() as usize);
 
-    // let mut query_set = FvecsDataset::new(args.query, false)?;
-    // let queries = FlattenedVecs::from(&query_set);
+    let mut query_set = FvecsDataset::new(args.query, false)?;
+    let queries = FlattenedVecs::from(&query_set);
     info!("Query set loaded from disk.");
 
     let topk = 10;
     let num_queries = queries.len();
+    info!("Total {num_queries} queries loaded");
+
 
     let mask_main = Bitmask::new(&query, &dataset);
     let mask_sub = Bitmask::new_full(&subdataset);
+    let v = mask_main.map.len();
+    let s = mask_sub.map.len();
+    info!("{}", v);
+    info!("{}", s);
 
-    info!("Searching full dataset for {topk} similar vectors for {num_queries} random query , where attr is equal to 5...");
+    info!("GT loading...");
+    // let variable_gt_path = "./outdir/sift_groundtruth.csv";
+    let gt = read_csv(args.groundtruth)?;
+
+    info!("Searching full dataset for {topk} similar vectors for {num_queries} random query , where attr is equal to 1...");
+
 
     let now = tokio::time::Instant::now();
     let result = dataset.search_with_bitmask(&queries, &mask_main, topk)?;
@@ -143,10 +156,10 @@ fn main() -> Result<()> {
     info!("QPS is {qps} in milliseconds");
     info!("Latency was {latency}");
 
-    info!("GT loading...");
-    let groundtruth_path = "data/outdir/sift_groundtruth.csv";
-    // let variable_gt_path = "./outdir/sift_groundtruth.csv";
-    let gt = read_csv(groundtruth_path)?;
+    // info!("GT loading...");
+    // let groundtruth_path = "data/outdir/sift_groundtruth.csv";
+    // // let variable_gt_path = "./outdir/sift_groundtruth.csv";
+    // let gt = read_csv(groundtruth_path)?;
 
     let recall = calculate_recall_1(&gt, result)?;
 

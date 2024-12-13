@@ -5,10 +5,10 @@ import random
 import shutil
 
 # Paths to the data files
-data_dir = "sift"
-base_fname = "sift_base"
-query_fname = "sift_query"
-gt_name = "sift_groundtruth"
+data_dir = "siftsmall"
+base_fname = "siftsmall_base"
+query_fname = "siftsmall_query"
+gt_name = "siftsmall_groundtruth"
 base_file = os.path.join(data_dir, f"{base_fname}.fvecs")
 query_file = os.path.join(data_dir, f"{query_fname}.fvecs")
 groundtruth_file = os.path.join(data_dir, f"{gt_name}.ivecs")
@@ -65,8 +65,10 @@ def generate_groundtruth(gt, base_predicates):
 def main():
     # Read base and query vectors
     print("Reading base vectors...")
+    print(base_file)
     base_vectors = fvecs_read(base_file)
     print("Reading query vectors...")
+    print(query_file)
     query_vectors = fvecs_read(query_file)
 
     # Assign attributes and predicates
@@ -77,29 +79,33 @@ def main():
     print("Query predicates (sample):", query_predicates[:10])
 
     # Save base attributes
+    print("Saving to outdir/" + base_fname)
     with open(f"outdir/{base_fname}.csv", "w") as f:
         for attr in base_attributes:
             f.write(f"{attr}\n")
 
     # Save query predicates
+    print("Saving to outdir/" + query_fname)
     with open(f"outdir/{query_fname}.csv", "w") as f:
         for pred in query_predicates:
             f.write(f"{pred}\n")
 
     # Generate new groundtruth
+    print("generating groundtruth...")
     groundtruth = ivecs_read(groundtruth_file)
     predicate_gt, no_NN = generate_groundtruth(groundtruth, base_attributes)
     print("No index found for", len(no_NN), "queries")
     print(no_NN[:10])
 
+    print("saving gt to outdir/"+ gt_name)
     with open(f"outdir/{gt_name}.csv", "w") as f:
         for pred in predicate_gt:
             f.write(f"{pred}\n")
 
 
     # Write gitignore 
-    with open("outdir/.gitignore", "w") as f:
-        f.write("**/*\n!.gitignore")
+    # with open("outdir/.gitignore", "w") as f:
+    #     f.write("**/*\n!.gitignore")
 
     # Copy original files
     shutil.copy2(base_file, f"outdir/{base_fname}.fvecs")
