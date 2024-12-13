@@ -121,8 +121,8 @@ fn main() -> Result<()> {
     let dimensionality = dataset.get_dimensionality() as usize;
     assert_eq!(dimensionality, subdataset.get_dimensionality() as usize);
 
-    let mut query_set = FvecsDataset::new(args.query, false)?;
-    let queries = FlattenedVecs::from(&query_set);
+    // let mut query_set = FvecsDataset::new(args.query, false)?;
+    // let queries = FlattenedVecs::from(&query_set);
     info!("Query set loaded from disk.");
 
     let topk = 10;

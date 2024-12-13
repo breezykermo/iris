@@ -183,6 +183,7 @@ impl FvecsDataset {
         // file will not be modified throughout the duration of the program, as we control the file
         // system.
         let mmap = unsafe { Mmap::map(&f)? };
+        info!("MMAPed");
 
         // In OAK, we are assuming that our datasets are always in-memory for the first set of
         // experiments.

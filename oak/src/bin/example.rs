@@ -36,7 +36,7 @@ fn main() -> Result<()> {
 
     let args = Args::parse();
 
-    let mut dataset = FvecsDataset::new(args.dataset)?;
+    let mut dataset = FvecsDataset::new(args.dataset, true)?;
     info!("Dataset loaded from disk.");
 
     let opts = OakIndexOptions {
