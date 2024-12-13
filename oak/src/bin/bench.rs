@@ -111,18 +111,18 @@ fn calculate_recall_1(gt: &i32, acorn_result: TopKSearchResult) -> Result<(bool,
     let n_100 = false;
     for (i, j) in acorn_result.enumerate() {
         if j.0 == gt {
-            if j <1 {
+            if i <1 {
                 n_1 = true;
                 n_10 = true;
                 n_100 = true;
                 break
             }
-            if j < 10 {
+            if i < 10 {
                 n_10 = true;
                 n_100 = true;
                 break
             }
-            if j < 100 {
+            if i < 100 {
                 n_100 = true;
                 break
             }
