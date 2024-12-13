@@ -7,7 +7,7 @@ use oak::predicate::PredicateOp;
 
 use std::time::Duration;
 use thiserror::Error;
-
+use slog_scope::{debug, info};
 use oak::dataset::{Dataset, OakIndexOptions, SearchableError, TopKSearchResultBatch};
 use oak::fvecs::{FlattenedVecs, FvecsDataset};
 use oak::poisson::SpinTicker;
@@ -61,7 +61,7 @@ fn time_req(
 fn query_loop (
     dataset: FvecsDataset,
     query_vectors: Vec<FlattenedVecs>, // TODOM: Ask Lachlan whether its Vec of or not
-    filter_id_map: Vec<c_char>,
+    filter_id_map: Bitmask,
     k: usize,
     gt: Vec<usize>
 ) -> Result<Vec<QueryStats>> {
@@ -91,7 +91,7 @@ fn query_loop (
 }
 
 fn averages(queries: Vec<QueryStats>) -> Result<(f32, f32, f32, f32)> {
-    let total_latencies:f32 = queries.iter().map(|qs| qs.latency.as_secs()).sum() as f32;
+    let total_latencies:f32 = queries.iter().map(|qs| qs.latency).sum::<Duration>().as_secs();
     let total_r1:f32 = queries.iter().map(|qs| qs.recall_1).count() as f32;
     let total_r10:f32 = queries.iter().map(|qs| qs.recall_10).count() as f32;
     let total_r100:f32 = queries.iter().map(|qs| qs.recall_100).count() as f32;
@@ -99,7 +99,7 @@ fn averages(queries: Vec<QueryStats>) -> Result<(f32, f32, f32, f32)> {
     Ok((total_latencies as f32 /count as f32, total_r1 as f32 /count as f32, total_r10 as f32 /count as f32, total_r100 as f32 /count as f32))
 }
 
-fn calculate_recall_1(gt: &usize, acorn_result: TopKSearchResultsBatch) -> Result<(bool, bool, bool)> {
+fn calculate_recall_1(gt: &usize, acorn_result: TopKSearchResultBatch) -> Result<(bool, bool, bool)> {
     // todo!(); // Ask lachlan how to iterate through TopKSearchResbatch
     // Figure out how to represent the Groundtruth and index into it!!
     let mut n_1= false;
@@ -132,7 +132,7 @@ fn read_csv(file_path: &str) -> Result<Vec<usize>> {
     let mut values = Vec::new();
 
     for result in rdr.records() {
-        let value = result?;
+        let record = result?;
         let value: usize = record[0].parse::<usize>()?; // why is this needed?
         values.push(value);
     }
