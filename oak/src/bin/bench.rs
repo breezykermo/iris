@@ -23,12 +23,12 @@ pub enum ExampleError {
     ServerStartError(String),
 }
 
-#[derive(Parser, Debug)]
-#[command(version, about, long_about = None)]
-struct Args {
-    #[arg(short, long, required(true))]
-    dataset: String,
-}
+// #[derive(Parser, Debug)]
+// #[command(version, about, long_about = None)]
+// struct Args {
+//     #[arg(short, long, required(true))]
+//     dataset: String,
+// }
 struct ExpResult {
     durs: Vec<Duration>,
     remaining_inflight: usize,
@@ -148,7 +148,7 @@ fn main() -> Result<()> {
 
     let _guard = slog_scope::set_global_logger(log.clone());
 
-    let args = Args::parse();
+    // let args = Args::parse();
     let dataset_path:String = "scripts/get_sift/sift/sift_base.fvecs".to_string();
 
     let mut dataset = FvecsDataset::new(dataset_path)?;
