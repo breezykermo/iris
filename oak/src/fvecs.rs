@@ -85,6 +85,14 @@ impl FlattenedVecs {
         self.data.len() / self.dimensionality
     }
 
+    pub fn to_vec(&self) -> Vec<FlattenedVecs> {
+        self.data.into_iter().map(|v|FlattenedVecs{
+            dimensionality: self.dimensionality,
+            data: vec![v]
+        })
+        .collect()
+    }
+
     /// Creates a new FlattenedVecs based on a bitmask and an original one.
     /// Only the necessary items (items that match the bitmask) are copied.
     pub fn clone_via_bitmask(&self, bitmask: &Bitmask) -> Self {

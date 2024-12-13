@@ -42,37 +42,63 @@ struct ExpResult {
 }
 
 struct QueryStats {
-    recall_1: bool,
+    // recall_1: bool,
     recall_10: bool,
-    recall_100: bool,
+    // recall_100: bool,
     latency: Duration
 }
 
-fn averages(queries: Vec<QueryStats>) -> Result<(f32, f32, f32, f32)> {
+fn query_loop(
+    queries : Vec<FlattenedVecs>,
+    bitmask : &Bitmask,
+    k: usize,
+    gt: Vec<usize>
+) -> Result<Vec<QueryStats>> {
+    let results = vec![];
+
+    for (i, q) in queries.iter().enumerate() {
+        let now = tokio::time::Instant::now();
+        let result = dataset.search_with_bitmask(&q, &bitmask, k)?;
+        let end = now.elapsed();
+        let latency = end.as_millis();
+        info!("Latency was {latency}");
+        let r10 = calculate_recall_1(gt[i], result)?;
+        results.push(QueryStats{
+            recall_10: r10,
+            latency: latency
+        });
+
+    }
+}
+fn averages(queries: Vec<QueryStats>) -> Result<(f32, f32, f32)> {
     let total_latencies:f32 = queries.iter().map(|qs| qs.latency).sum::<Duration>().as_secs() as f32;
-    let total_r1:f32 = queries.iter().map(|qs| qs.recall_1).count() as f32;
+    // let total_r1:f32 = queries.iter().map(|qs| qs.recall_1).count() as f32;
     let total_r10:f32 = queries.iter().map(|qs| qs.recall_10).count() as f32;
-    let total_r100:f32 = queries.iter().map(|qs| qs.recall_100).count() as f32;
+    // let total_r100:f32 = queries.iter().map(|qs| qs.recall_100).count() as f32;
     let count:f32 = queries.len() as f32;
-    Ok((total_latencies as f32 /count as f32, total_r1 as f32 /count as f32, total_r10 as f32 /count as f32, total_r100 as f32 /count as f32))
+    Ok((
+        total_latencies,
+        total_latencies as f32 /count as f32, 
+        // total_r1 as f32 /count as f32, 
+        total_r10 as f32 /count as f32, 
+        // total_r100 as f32 /count as f32
+    ))
 }
 
-fn calculate_recall_1(gt: &Vec<usize>, acorn_result: TopKSearchResultBatch) -> Result<f32> {
-    // Figure out how to represent the Groundtruth and index into it!!
+fn calculate_recall_1(gt: usize, acorn_result: TopKSearchResultBatch) -> Result<f32> {
     let mut n_1: usize= 0;
     let mut n_10: usize = 0;
-    for (query_index, neighbors) in acorn_result.iter().enumerate() {
-        let groundNN = gt[query_index];
-        for (i, j) in neighbors.iter().enumerate() {
-            if j.0 == groundNN {
-                if i <1 {
-                    n_1 += 1;
-                }
-                if i < 10 {
-                    n_10 += 1;
-                }
-                break;
+    for (i, j) in acorn_result[0].iter().enumerate() {
+        // topk should be 10 so this loop should be bounded at 10 per query
+        if j.0 == gt {
+            if i <1 {
+                n_1 += 1;
             }
+            if i < 10 {
+                n_10 += 1;
+            }
+            break;
+            // we can break out whenever the matching index was found
         }
     }
     Ok(n_10 as f32/ gt.len() as f32)
@@ -124,7 +150,7 @@ fn main() -> Result<()> {
     assert_eq!(dimensionality, subdataset.get_dimensionality() as usize);
 
     let mut query_set = FvecsDataset::new(args.query, false)?;
-    let queries = FlattenedVecs::from(&query_set);
+    let queries = FlattenedVecs::from(&query_set).to_vec();
     info!("Query set loaded from disk.");
 
     let topk = 10;
@@ -144,30 +170,16 @@ fn main() -> Result<()> {
     let gt = read_csv(args.groundtruth)?;
 
     info!("Searching full dataset for {topk} similar vectors for {num_queries} random query , where attr is equal to 1...");
-
-
-    let now = tokio::time::Instant::now();
-    let result = dataset.search_with_bitmask(&queries, &mask_main, topk)?;
-    let end = now.elapsed();
-
-    let latency = end.as_millis();
-    let qps = end.as_millis() / num_queries as u128;
-    // milliseconds represented as unsigned 128 bit int
-    info!("QPS is {qps} in milliseconds");
-    info!("Latency was {latency}");
-
-    // info!("GT loading...");
-    // let groundtruth_path = "data/outdir/sift_groundtruth.csv";
-    // // let variable_gt_path = "./outdir/sift_groundtruth.csv";
-    // let gt = read_csv(groundtruth_path)?;
-
-    let recall = calculate_recall_1(&gt, result)?;
-
-    info!("Recall@10 is {recall}");
-
+    let qs = query_loop(queries, &mask_main, topk, gt)?;
+    match averages(qs) {
+        Ok((lat, qps, r10)) => {
+            info!("QPS was {qps} milliseconds with total latency
+             being {lat} for {num_queries} and Recall@10 was {r10}")
+        }
+        Err(_) => {
+            info!("Error calculating averages")
+        }
+    }
     info!("Got results.");
-
     Ok(())
 }
-
-// Run.py 1 number for each vector and then 
