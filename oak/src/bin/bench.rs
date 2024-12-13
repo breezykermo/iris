@@ -57,8 +57,8 @@ fn averages(queries: Vec<QueryStats>) -> Result<(f32, f32, f32, f32)> {
 
 fn calculate_recall_1(gt: &Vec<usize>, acorn_result: TopKSearchResultBatch) -> Result<f32> {
     // Figure out how to represent the Groundtruth and index into it!!
-    let mut n_1: usize= false;
-    let mut n_10: usize = false;
+    let mut n_1: usize= 0;
+    let mut n_10: usize = 0;
     for (query_index, neighbors) in acorn_result.iter().enumerate() {
         let groundNN = gt[query_index];
         for (i, j) in neighbors.iter().enumerate() {
@@ -121,11 +121,11 @@ fn main() -> Result<()> {
     let dimensionality = dataset.get_dimensionality() as usize;
     assert_eq!(dimensionality, subdataset.get_dimensionality() as usize);
 
-    let mut dataset = FvecsDataset::new(args.query)?;
+    let mut queries = FvecsDataset::new(args.query)?;
     info!("Query set loaded from disk.");
 
     let topk = 10;
-    let num_queries = query_vector.len();
+    let num_queries = queries.len();
 
     let mask_main = Bitmask::new(&query, &dataset);
     let mask_sub = Bitmask::new_full(&subdataset);
@@ -133,7 +133,7 @@ fn main() -> Result<()> {
     info!("Searching full dataset for {topk} similar vectors for {num_queries} random query , where attr is equal to 5...");
 
     let now = tokio::time::Instant::now();
-    let result = dataset.search_with_bitmask(&query_vector, mask_main, topk)?;
+    let result = dataset.search_with_bitmask(&queries, mask_main, topk)?;
     let end = now.elapsed();
 
     let latency = end.as_millis() / num_queries;
@@ -144,11 +144,11 @@ fn main() -> Result<()> {
     // let variable_gt_path = "./outdir/sift_groundtruth.csv";
     let gt = read_csv(groundtruth_path)?;
 
-    let recall = calculate_recall_1(&gt, result);
+    let recall = calculate_recall_1(&gt, result)?;
 
     info!("Recall@10 is {recall}");
 
-
+ 
     // Log results to CSV
     // let mut wtr = Writer::from_path("output.csv")?;
     // writer.write_record(&["Average Latency (s)", "Recall@K"])?;
@@ -157,21 +157,7 @@ fn main() -> Result<()> {
     // }
     // writer.flush()?;
 
-    // let dimensionality = dataset.get_dimensionality() as usize;
-    // info!("Constructing random vector to query with {dimensionality} dimensions");
-    // let query_vector = FlattenedVecs {
-    //     dimensionality,
-    //     data: generate_random_vector(dimensionality),
-    // };
-    // let topk = 10;
-    // let num_queries = query_vector.len();
-    // let query = Some(PredicateQuery::new(5));
-    //
-    // info!("Searching for {topk} similar vectors for {num_queries} random query, where attr is equal to 5...");
-    //
-    // let result = dataset.search(&query_vector, &query, topk);
-    //
-    // info!("Got results.");
+    info!("Got results.");
     // info!("{:?}", result);
 
     Ok(())
