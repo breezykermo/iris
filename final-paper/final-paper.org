@@ -14,39 +14,41 @@
 
 
 * Abstract
-
-Vector databases are growing in popularity as they become widely used in similarity search and RAG systems as part of ML workloads.
-At the same time, applications increasingly leverage mixed-modality data, requiring support for search over /vector data/ such as images and text, and /structured data/ such as metadata and keywords, simultaneously. 
-Recent work in ACORN helps improve the feasibility of this /hybrid search/ by providing a performant and predicate-agnostic index built on Hierarchical Navigable Small Worlds (HNSW), a state-of-the-art graph based index for approximate nearest neighbor search (ANNS).
-However, ACORN does not take into consideration predicate access patterns, leaving room for improved performance under certain modal workloads.
-To address this, we present OAK, a system for creating predicate subgraphs.
-To evaluate OAK, we compare OAK to ACORN on .... 
-We show that OAK achieves improved performance ...
-Our code is available at: https://github.com/breezykermo/oak.
+Vector databases are growing in popularity as they become widely used in similarity search and RAG (Retrieval Augmented Generation) systems as part of ML workloads.
+Recent work in ACORN helps improve the feasibility of /hybrid search/ by providing a performant and predicate-agnostic index built on Hierarchical Navigable Small Worlds (HNSW), a state-of-the-art graph based index for approximate nearest neighbor search (ANNS).
+This paper presents OAK, a system that improves upon ACORN's performance for certain query loads by routing to subgraph indexes when there are gains to be had.
+To evaluate OAK, we compare OAK to ACORN ... =TODO=. 
+We show that OAK achieves improved performance ... =TODO=. 
+Our code is available on Github [cite:@kermodeBreezykermoOak2024].
 
 * Introduction
-
-In recent years, embedding models have advanced significantly, enabling the use of vector embeddings in a variety of applications.
-For example, retrieval-augmented generation (RAG) helps improve the accuracy and relevance of LLM outputs by including additional vector embeddings in user prompts.
-And, recommendation algorithms at companies like Netflix and TikTok use vector embeddings to represent user profiles and platform content.
+In recent years, vector similarity search has become a staple method in the arsenal of engineering tools for ML applications.
+Recommendation algorithms at companies like Netflix, Spotify, and TikTok use vector embeddings to represent user profiles and platform content.
 In these applications, approximate nearest neighbor search (ANNS) is the method used for performant semantic similarity search.
 Because machine learning inherently clusters/groups data, ANNS is a way to coalesce inherently unstructured data for specific operations, making it an essential primitive in big data operations.
 
-However, efficient ANNS is a challenging problem when considering multi-million or billion scale datasets.
-Both NeurIPS'21 [cite:https://big-ann-benchmarks.com/neurips21.html]and NeurIPS'23 [cite:https://big-ann-benchmarks.com/neurips23.html] hosted a competition for billion-scale indexing data structures and search algorithms, showcasing a wide range of solutions that improved search accuracy and efficiency.
+This growth is in no small part due to the success of machine-learning vectorization methods such as BERT [cite:@devlinBertPretrainingDeep2018] which generate embeddings that seem to preserve something semantic about the original document, a result that turns vector similarity search into a powerful heuristic for /semantic/ search.  
+The generality and potential of vector similarity search in pools of /unstructured/ data is limited, however, by the relative complexity of its interoperation with more traditional /structured/ search methods in databases, whereby databases can deliver better performance and correctness characteristics thanks to decades of research in SQL and SQL-like query optimization. 
 
-ANNS becomes increasingly complex when introducing predicate filtering, i.e., performing on ANNS on a subset of data that matches a given predicate.
-For example, customers on an e-commerce site may want to search for t-shirts similar to a reference image, while filtering on price. 
-To support such functionality, applications must implement /hybrid search/, i.e., similarity search queries containing a one or more structured predicates.
-Implementations must be *performant*, retrieving results with high throughput/low latency and also *accurate*, retrieving results that are sufficiently similar to the provided query.
+One increasingly important use-case for ANNS, for example, is retrieval-augmented generation (RAG), which helps improve the accuracy and relevance of LLM outputs by including additional vector embeddings in user prompts.
+In RAG it is often desirable to perform ANNS with predicates that help to narrow down the relevance of results in this task, for example finding similar prompts from the same user, or from users in the same organization.
+Creating separate vector databases for predicates manually and maintaining routing strategies among them is unwieldy and suboptimal in terms of space, as many there may be significant overlap between many of the indexes, and deciding which predicate subgraphs to build manually requires engineering effort and effective observability instrumentation on the part of the vector database client.
 
-Several strategies exist to address these challenges with varying degrees of success, including pre-filtering, post-filtering, and specialized indices.
-One approach is particularly promising: ACORN [cite:], which proposes a /predicate-agnostic/ index over unbounded and arbitrary predicates.
-But there is still room for improvement.
+Executing *hybrid search*, i.e. vector similarity search results are additionally constrained by unbounded and arbitrary predicates over the set of all possible vectors in a vector database, is therefore an important problem in vector databases, as it relieves the database client of managing this complexity.  
+The performance profile of ANNS becomes more complex when introducing such predicate filtering, however, as will be discussed in Section @@latex:\ref{sec:motivation}@@.
+One recent approach, ACORN [cite:@patelACORNPerformantPredicateAgnostic2024], proposes an architecture for a /predicate-agnostic/ ANNS index that addresses some of these performance complexities.
+# Efficient ANNS is a challenging problem when considering multi-million or billion scale datasets.
+# Both NeurIPS'21 [cite:https://big-ann-benchmarks.com/neurips21.html]and NeurIPS'23 [cite:https://big-ann-benchmarks.com/neurips23.html] hosted a competition for billion-scale indexing data structures and search algorithms, showcasing a wide range of solutions that improved search accuracy and efficiency.
+# For example, customers on an e-commerce site may want to search for t-shirts similar to a reference image, while filtering on price. 
+# To support such functionality, applications must implement /hybrid search/, i.e., similarity search queries containing a one or more structured predicates.
+# Implementations must be *performant*, retrieving results with high throughput/low latency and also *accurate*, retrieving results that are sufficiently similar to the provided query.
 
-In this paper, we present *OAK* (Opportunistic ANNS K-Subgraphs), a system that combines predicate-agnostic indices with secondary indices to support arbitrary/unbounded predicates and high performance for high-frequency query predicates.
+# Several strategies exist to address these challenges with varying degrees of success, including pre-filtering, post-filtering, and specialized indices.
+
+In this paper, we present *OAK* (Opportunistic ANNS K-Subgraphs), a system that applies ACORN's principle of predicate-agnostic hybrid vector similarity search in a system that offers better performance for certain query loads by maintaining indexes of predicate subgraphs in addition to a base index and intelligently routing to these indexes when there is significant overlap between such an index and a query predicate.
 
 * Research Problem/Motivation
+#+LABEL: sec:motivation
 
 We now discuss the existing predicate filtering strategies.
 
