@@ -55,7 +55,7 @@ fn averages(queries: Vec<QueryStats>) -> Result<(f32, f32, f32, f32)> {
     Ok((total_latencies as f32 /count as f32, total_r1 as f32 /count as f32, total_r10 as f32 /count as f32, total_r100 as f32 /count as f32))
 }
 
-fn calculate_recall_1(gt: &Vec<usize>, acorn_result: TopKSearchResultBatch) -> Result<(bool, bool, bool)> {
+fn calculate_recall_1(gt: &Vec<usize>, acorn_result: TopKSearchResultBatch) -> Result<f32> {
     // Figure out how to represent the Groundtruth and index into it!!
     let mut n_1: usize= false;
     let mut n_10: usize = false;
@@ -133,18 +133,18 @@ fn main() -> Result<()> {
     info!("Searching full dataset for {topk} similar vectors for {num_queries} random query , where attr is equal to 5...");
 
     let now = tokio::time::Instant::now();
-    let result = dataset.search_with_bitmask(&query_vector, mask_main, topk);
+    let result = dataset.search_with_bitmask(&query_vector, mask_main, topk)?;
     let end = now.elapsed();
 
-    let latency = end / num_queries;
-    info!("QPS is {latency}");
+    let latency = end.as_millis() / num_queries;
+    info!("QPS is {latency} in milliseconds");
 
     info!("GT loading...");
     let groundtruth_path = "data/outdir/sift_groundtruth.csv";
     // let variable_gt_path = "./outdir/sift_groundtruth.csv";
-    let gt = read_csv(groundtruth_path);
+    let gt = read_csv(groundtruth_path)?;
 
-    let recall = calculate_recall_1(gt, result);
+    let recall = calculate_recall_1(&gt, result);
 
     info!("Recall@10 is {recall}");
 
