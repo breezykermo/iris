@@ -2,10 +2,6 @@ use anyhow::Result;
 use clap::Parser;
 use dropshot::ConfigLogging;
 use dropshot::ConfigLoggingLevel;
-use futures_util::{
-    future::{select, Either},
-    stream::{FuturesUnordered, Stream, StreamExt, TryStreamExt},
-};
 use oak::dataset::TopKSearchResult;
 use oak::predicate::PredicateOp;
 use slog_scope::{debug, info};
@@ -159,7 +155,7 @@ fn average_duration(latencies: Vec<Duration>) -> Duration {
     }
 }
 
-fn calculate_recall_1(gt: TopKSearchResultBatch, acorn_result: TopKSearchResultBatch) -> Result<(f32, f32, f32)> {
+fn calculate_recall_1(gt: usize, acorn_result: TopKSearchResultBatch) -> Result<(f32, f32, f32)> {
     todo!(); // Ask lachlan how to iterate through TopKSearchResbatch
     // Figure out how to represent the Groundtruth and index into it!!
     nq = gt.len();
@@ -188,13 +184,13 @@ fn calculate_recall_1(gt: TopKSearchResultBatch, acorn_result: TopKSearchResultB
     Ok((r_1, r_10, r_100))
 }
 
-fn read_csv(file_path: &str) -> Result<Vec<i32>> {
+fn read_csv(file_path: &str) -> Result<Vec<usize>> {
     let mut rdr = Reader::from_path(file_path)?;
     let mut values = Vec::new();
 
     for result in rdr.records() {
         let value = result?;
-        // let value: i32 = record[0].parse()?; // why is this needed?
+        let value:usize = record[0].parse::<usize>()?;
         values.push(value);
     }
 

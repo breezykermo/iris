@@ -68,7 +68,7 @@ fn query_loop (
     query_vectors: Vec<FlattenedVecs>, // TODOM: Ask Lachlan whether its Vec of or not
     filter_id_map: Vec<c_char>,
     k: usize,
-    gt: Vec<i32>
+    gt: Vec<usize>
 ) -> Result<Vec<QueryStats>> {
     let benchmark_results = vec![];
     for (index, (op, gt)) in query_vectors.iter().zip(gt.iter()).enumerate() {
@@ -101,15 +101,15 @@ fn averages(queries: Vec<QueryStats>) -> Result<(f32, f32, f32, f32)> {
     let total_r10 = queries.iter().map(|qs| qs.recall_10).count();
     let total_r100 = queries.iter().map(|qs| qs.recall_100).count();
     let count = queries.len();
-    Ok((total_latencies/count, total_r1/count, total_r10/count, total_r100/count))
+    Ok((total_latencies as f32 /count as f32, total_r1 as f32 /count as f32, total_r10 as f32 /count as f32, total_r100 as f32 /count as f32))
 }
 
-fn calculate_recall_1(gt: &i32, acorn_result: TopKSearchResult) -> Result<(bool, bool, bool)> {
-    todo!(); // Ask lachlan how to iterate through TopKSearchResbatch
+fn calculate_recall_1(gt: &usize, acorn_result: TopKSearchResult) -> Result<(bool, bool, bool)> {
+    // todo!(); // Ask lachlan how to iterate through TopKSearchResbatch
     // Figure out how to represent the Groundtruth and index into it!!
-    let n_1= false;
-    let n_10 = false;
-    let n_100 = false;
+    let mut n_1= false;
+    let mut n_10 = false;
+    let mut n_100 = false;
     for (i, j) in acorn_result.iter().enumerate() {
         if j.0 == gt {
             if i <1 {
@@ -132,13 +132,13 @@ fn calculate_recall_1(gt: &i32, acorn_result: TopKSearchResult) -> Result<(bool,
     Ok((n_1, n_10, n_100))
 }
 
-fn read_csv(file_path: &str) -> Result<Vec<i32>> {
+fn read_csv(file_path: &str) -> Result<Vec<usize>> {
     let mut rdr = Reader::from_path(file_path)?;
     let mut values = Vec::new();
 
     for result in rdr.records() {
         let value = result?;
-        // let value: i32 = record[0].parse()?; // why is this needed?
+        let value: usize = record[0].parse::<usize>()?; // why is this needed?
         values.push(value);
     }
 
