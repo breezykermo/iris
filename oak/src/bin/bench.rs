@@ -156,7 +156,7 @@ fn main() -> Result<()> {
     let args = Args::parse();
     let dataset_path:String = "scripts/get_sift/sift/sift_base.fvecs".to_string();
 
-    let mut dataset = FvecsDataset::new(dataset_path)?;
+    let mut dataset = FvecsDataset::new(args.dataset)?;
     info!("Dataset loaded from disk.");
 
     let opts = OakIndexOptions {
@@ -165,7 +165,7 @@ fn main() -> Result<()> {
         m_beta: 64,
     };
 
-    let _ = dataset.initialize(&opts);
+    let _ = dataset.build_index(&opts);
     info!("Seed index constructed.");
 
     

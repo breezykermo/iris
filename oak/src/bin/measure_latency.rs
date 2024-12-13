@@ -236,7 +236,7 @@ fn main() -> Result<()> {
     for k in [5, 10, 15, 20]{
         let res = query_loop(dataset, queries, filter_id_map, k);
         match res {
-            Ok((lat)) => {latencies.append(average_duration(lat))}
+            Ok((lat)) => {latencies.push(average_duration(lat))}
             Err(_) => {println!("Some error in calculating top-k vectors")}
         }
     }
