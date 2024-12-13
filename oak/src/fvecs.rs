@@ -368,67 +368,6 @@ impl<'a> Dataset for FvecsDatasetPartition<'a> {
     }
 }
 
-/// A 'partition' of the FvecsDataset, originally represented just by a base dataset and a Bitmask.
-pub struct FvecsDatasetPartition<'a> {
-    base: &'a FvecsDataset,
-    mask: Bitmask,
-    index: Option<AcornHnswIndex>,
-    /// We have an Option here so that the copying of the base vectors can be deferred to the point
-    /// at which we decide to build the index. This is an implementation detail, as one could
-    /// imagine a pure Rust implementation of the search methods that does not require this
-    /// original copy.
-    flat: Option<FlattenedVecs>,
-    /// The same with the metadata
-    metadata: HybridSearchMetadata,
-}
-
-impl<'a> Dataset for FvecsDatasetPartition<'a> {
-    fn len(&self) -> usize {
-        self.mask.bitcount()
-    }
-
-    fn get_data(&self) -> Result<Vec<Fvec>> {
-        unimplemented!();
-    }
-
-    fn get_metadata(&self) -> &HybridSearchMetadata {
-        &self.metadata
-    }
-
-    fn get_dimensionality(&self) -> usize {
-        self.base.dimensionality
-    }
-
-    fn build_index(&mut self, opts: &OakIndexOptions) -> Result<(), ConstructionError> {
-        let og = &self.base.flat;
-        let flat = og.clone_via_bitmask(&self.mask);
-
-        let index = AcornHnswIndex::new(self, &flat, opts)?;
-
-        self.index = Some(index);
-        self.flat = Some(flat);
-
-        Ok(())
-    }
-
-    fn search(
-        &self,
-        query_vectors: &FlattenedVecs,
-        predicate_query: &Option<PredicateQuery>,
-        topk: usize,
-    ) -> Result<Vec<TopKSearchResult>, SearchableError> {
-        todo!();
-    }
-
-    fn search_with_bitmask(
-        &self,
-        query_vectors: &FlattenedVecs,
-        bitmask: Bitmask,
-        topk: usize,
-    ) -> Result<Vec<TopKSearchResult>, SearchableError> {
-        todo!();
-    }
-}
 
 #[cfg(test)]
 mod tests {
