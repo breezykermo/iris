@@ -149,38 +149,53 @@ fn main() -> Result<()> {
 
     let _guard = slog_scope::set_global_logger(log.clone());
 
-    // let args = Args::parse();
-    info!("Dataset loading...");
-    println!("Current working directory: {:?}", env::current_dir());
-    let dataset_path:String = "data/sift/sift_base".to_string();
+    let args = Args::parse();
 
-    let mut dataset = FvecsDataset::new(dataset_path)?;
-    info!("Dataset loaded from disk.");
+    // let mut dataset = FvecsDataset::new(args.dataset)?;
+    // info!("Dataset loaded from disk.");
 
-    let opts = OakIndexOptions {
-        gamma: 1,
-        m: 32,
-        m_beta: 64,
-    };
+    // let opts = OakIndexOptions {
+    //     gamma: 1,
+    //     m: 32,
+    //     m_beta: 64,
+    // };
+    // // How are they learning about dataset predicates?
 
-    let _ = dataset.build_index(&opts);
-    info!("Seed index constructed.");
+    // let _ = dataset.build_index(&opts);
+    // info!("Seed index constructed.");
 
-    
+    // let query = PredicateQuery::new(5);
 
-    // Load GroundTruth
-    // let base_vectors_path = "./outdir/sift_base.fvecs";
-    // let queries_path = "./outdir/sift_query.fvecs";
+    // let mut subdataset = dataset.view(&query);
+    // let _ = subdataset.build_index(&opts);
+    // info!("Subindex as view constructed.");
+
+    // let dimensionality = dataset.get_dimensionality() as usize;
+    // assert_eq!(dimensionality, subdataset.get_dimensionality() as usize);
+
+    // let mut dataset = FvecsDataset::new(args.query)?;
+    // info!("Query set loaded from disk.");
+
+    // let topk = 10;
+    // let num_queries = query_vector.len();
+
+    // let mask_main = Bitmask::new(&query, &dataset);
+    // let mask_sub = Bitmask::new_full(&subdataset);
+
+    // info!("Searching full dataset for {topk} similar vectors for {num_queries} random query , where attr is equal to 5...");
+
+    // let now = tokio::time::Instant::now();
+    // let result = dataset.search_with_bitmask(&query_vector, mask_main, topk);
+    // let end = now.elapsed();
+
+    // let latency = end / num_queries;
+
     info!("GT loading...");
     let groundtruth_path = "data/outdir/sift_groundtruth.csv";
     // let variable_gt_path = "./outdir/sift_groundtruth.csv";
     let gt = read_csv(groundtruth_path);
 
-    info!("Queries loading...");
-    // Load queries
-    let queries = FvecsDataset::new("data/sift/sift_query".to_string()).unwrap();
-    let queries = FlattenedVecs::from(&queries);
-    info!("Queries loaded from disk");
+    
 
     // Load predicates
     // let predicate = Some(PredicateQuery::new(1));
