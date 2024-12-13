@@ -121,7 +121,8 @@ fn main() -> Result<()> {
     let dimensionality = dataset.get_dimensionality() as usize;
     assert_eq!(dimensionality, subdataset.get_dimensionality() as usize);
 
-    let mut queries = FvecsDataset::new(args.query)?;
+    let mut query_set = FvecsDataset::new(args.query)?;
+    let queries = FlattenedVecs::from(&query_set);
     info!("Query set loaded from disk.");
 
     let topk = 10;
@@ -136,8 +137,11 @@ fn main() -> Result<()> {
     let result = dataset.search_with_bitmask(&queries, mask_main, topk)?;
     let end = now.elapsed();
 
-    let latency = end.as_millis() / num_queries;
-    info!("QPS is {latency} in milliseconds");
+    let latency = end.as_millis();
+    let qps = end.as_millis() / num_queries as u128;
+    // milliseconds represented as unsigned 128 bit int
+    info!("QPS is {qps} in milliseconds");
+    info!("Latency was {latency}");
 
     info!("GT loading...");
     let groundtruth_path = "data/outdir/sift_groundtruth.csv";
