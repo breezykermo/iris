@@ -1,5 +1,6 @@
 use anyhow::Result;
 use clap::Parser;
+use core::time;
 use dropshot::ConfigLogging;
 use dropshot::ConfigLoggingLevel;
 use futures_util::{
@@ -9,16 +10,15 @@ use futures_util::{
 use oak::dataset::TopKSearchResult;
 use oak::predicate::PredicateOp;
 use slog_scope::{debug, info};
-use core::time;
 use std::time::Duration;
 use thiserror::Error;
 
+use csv::Writer;
+use oak::bitmask::Bitmask;
 use oak::dataset::{Dataset, OakIndexOptions, SearchableError, TopKSearchResultBatch};
 use oak::fvecs::{FlattenedVecs, FvecsDataset};
-use oak::poisson::SpinTicker;
 use oak::predicate::PredicateQuery;
 use oak::stubs::generate_random_vector;
-use csv::Writer;
 
 #[derive(Error, Debug)]
 pub enum ExampleError {
@@ -42,27 +42,25 @@ struct ExpResult {
     num_clients: usize,
 }
 
-// struct Op {
-//     dataset: &FvecsDataset,
-//     query_vector: &FlattenedVecs,
-//     filter_id_map: &Vec<c_char>,
-//     k: usize,
-// }
-// impl Op {
-//     fn exec(&self) -> Result<TopKSearchResultBatch, SearchableError> {
-//         self.dataset
-//             .index
-//             .as_ref()
-//             .unwrap()
-//             .search(self.query_vector, self.filter_id_map, self.k)
-//     }
-// }
-
-struct QueryStats {
-    query_op: Op,
-    recall: f64,
-    latency: Duration
+struct Op<'a> {
+    dataset: &'a FvecsDataset,
+    query_vector: &'a FlattenedVecs,
+    query_mask: &'a Bitmask,
+    k: usize,
 }
+impl Op<'_> {
+    fn exec(&self) -> Result<TopKSearchResultBatch, SearchableError> {
+        self.dataset
+            .search_with_bitmask(self.query_vector, self.query_mask, self.k)
+    }
+}
+
+struct QueryStats<'a> {
+    query_op: Op<'a>,
+    recall: f64,
+    latency: Duration,
+}
+
 /// time_req measures time taken for the vectorDB call
 // fn time_req(
 //     dataset: &FvecsDataset,
@@ -73,7 +71,7 @@ struct QueryStats {
 //     let result = dataset.search_with_bitmask(&query_vector, mask_sub, topk);
 //     Ok((now.elapsed(), result))
 // }
-// ///Alt: compute gt for each query and log it into a CSV and then separately 
+// ///Alt: compute gt for each query and log it into a CSV and then separately
 /// run these to compare against pre-made gt
 /// Unsure if this is actually correct but keeping it around for reference
 // fn calculate_recall(search_result: &TopKSearchResultBatch, ground_truth: &GroundTruth) -> (f64, f64, f64) {
@@ -97,26 +95,27 @@ struct QueryStats {
 //             }
 //         }
 //     }
-//     (n_1 as f64 / nq as f64, 
-//         n_10 as f64 / nq as f64, 
+//     (n_1 as f64 / nq as f64,
+//         n_10 as f64 / nq as f64,
 //         n_100 as f64 / nq as f64)
 // }
 
-
-async fn calculate_recall(gt: Vec<FlattenedVecs>, acorn_index: Vec<FlattenedVecs>, k: usize) -> f64 {
+async fn calculate_recall(
+    gt: Vec<FlattenedVecs>,
+    acorn_index: Vec<FlattenedVecs>,
+    k: usize,
+) -> f64 {
     // Some way of getting groundtruth -TODO: check FAISS for it
     // Then decide the type of the input. Some Vec of Vec
-    nq = acorn_index.len();
+    let nq = acorn_index.len();
     let mut results = vec![];
     let gt_nn = &gt[0..k]; // top-rank queries
     let retrieved = &acorn_index[0..k];
-    
+
     // Compute intersection
     let intersection = retrieved.iter().filter(|&&id| gt_nn.contains(&id)).count();
     intersection as f64 / k as f64
 }
-
-
 
 /// This query loop essentially takes a query load, finds the latency of running
 /// the queries one at a time, looks at the total time taken and determines QPS
@@ -158,32 +157,35 @@ fn average_duration(latencies: Vec<Duration>) -> Duration {
     }
 }
 
-fn calculate_recall_1(gt: TopKSearchResultBatch, acorn_result: TopKSearchResultBatch) -> Result<(f32, f32, f32)> {
+fn calculate_recall_1(
+    gt: TopKSearchResultBatch,
+    acorn_result: TopKSearchResultBatch,
+) -> Result<(f32, f32, f32)> {
     todo!(); // Ask lachlan how to iterate through TopKSearchResbatch
-    // Figure out how to represent the Groundtruth and index into it!!
+             // Figure out how to represent the Groundtruth and index into it!!
     nq = gt.len();
 
     let mut n_1 = 0;
-    let mut n_10=0;
+    let mut n_10 = 0;
     let mut n_100 = 0;
 
     for i in 0..nq {
-        let gt_nn = gt[i*k]; // top 1 search
+        let gt_nn = gt[i * k]; // top 1 search
         for j in 0..k {
-            if j <1 {
+            if j < 1 {
                 n_1 += 1;
             }
             if j < 10 {
-                n_10 +=1;
+                n_10 += 1;
             }
             if j < 100 {
                 n_100 += 1;
             }
         }
     }
-    let r_1 = n_1 as f64/ nq as f64;
-    let r_10 = n_10 as f64/ nq as f64;
-    let r_100 = n_100 as f64/ nq as f64;
+    let r_1 = n_1 as f64 / nq as f64;
+    let r_10 = n_10 as f64 / nq as f64;
+    let r_100 = n_100 as f64 / nq as f64;
     Ok((r_1, r_10, r_100))
 }
 
@@ -233,11 +235,13 @@ fn main() -> Result<()> {
     let predicate = Some(PredicateQuery::new(1));
     let filter_id_map = todo!(); // TODOM: ask Lachlan!
     let latencies = vec![];
-    for k in [5, 10, 15, 20]{
+    for k in [5, 10, 15, 20] {
         let res = query_loop(dataset, queries, filter_id_map, k);
         match res {
-            Ok((lat)) => {latencies.append(average_duration(lat))}
-            Err(_) => {println!("Some error in calculating top-k vectors")}
+            Ok((lat)) => latencies.append(average_duration(lat)),
+            Err(_) => {
+                println!("Some error in calculating top-k vectors")
+            }
         }
     }
 
@@ -269,4 +273,5 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-// Run.py 1 number for each vector and then 
+// Run.py 1 number for each vector and then
+

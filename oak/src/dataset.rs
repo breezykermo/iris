@@ -132,7 +132,7 @@ pub trait Dataset {
     fn search_with_bitmask(
         &self,
         query_vectors: &FlattenedVecs,
-        bitmask: Bitmask,
+        bitmask: &Bitmask,
         topk: usize,
     ) -> Result<Vec<TopKSearchResult>, SearchableError>;
 }

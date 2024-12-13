@@ -4,8 +4,8 @@ use crate::dataset::{
     ConstructionError, Dataset, HybridSearchMetadata, OakIndexOptions, SearchableError,
     TopKSearchResult,
 };
-use slog_scope::{debug, info};
 use crate::predicate::PredicateQuery;
+use slog_scope::{debug, info};
 
 use anyhow::Result;
 use byteorder::{ByteOrder, LittleEndian};
@@ -295,7 +295,7 @@ impl Dataset for FvecsDataset {
     fn search_with_bitmask(
         &self,
         query_vectors: &FlattenedVecs,
-        bitmask: Bitmask,
+        bitmask: &Bitmask,
         topk: usize,
     ) -> Result<Vec<TopKSearchResult>, SearchableError> {
         let mut filter_id_map = Vec::<i8>::from(bitmask);
@@ -304,7 +304,7 @@ impl Dataset for FvecsDataset {
         self.index
             .as_ref()
             .unwrap()
-            .search(query_vectors, & mut filter_id_map, topk)
+            .search(query_vectors, &mut filter_id_map, topk)
     }
 }
 
@@ -363,13 +363,12 @@ impl<'a> Dataset for FvecsDatasetPartition<'a> {
     fn search_with_bitmask(
         &self,
         query_vectors: &FlattenedVecs,
-        bitmask: Bitmask,
+        bitmask: &Bitmask,
         topk: usize,
     ) -> Result<Vec<TopKSearchResult>, SearchableError> {
         todo!();
     }
 }
-
 
 #[cfg(test)]
 mod tests {

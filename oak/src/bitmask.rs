@@ -50,9 +50,10 @@ impl Bitmask {
     }
 }
 
-impl From<Bitmask> for Vec<i8> {
-    fn from(mask: Bitmask) -> Self {
-        mask.map
+impl From<&Bitmask> for Vec<i8> {
+    fn from(mask: &Bitmask) -> Self {
+        // NOTE: we take cloning the Bitmask here as acceptable, as the values are only i8s
+        mask.map.clone()
     }
 }
 
