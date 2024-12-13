@@ -70,11 +70,7 @@ fn time_req(
     filter_id_map: &Vec<c_char>,
     k: usize) -> Result<(Duration, Result<TopKSearchResultBatch, SearchableError>), Report> {
     let now = tokio::time::Instant::now();
-    let result = dataset
-        .index
-        .as_ref()
-        .unwrap()
-        .search(self.query_vector, self.filter_id_map, self.k);
+    let result = dataset.search_with_bitmask(&query_vector, mask_sub, topk);
     Ok((now.elapsed(), result))
 }
 ///Alt: compute gt for each query and log it into a CSV and then separately 
@@ -120,21 +116,7 @@ async fn calculate_recall(gt: Vec<FlattenedVecs>, acorn_index: Vec<FlattenedVecs
     intersection as f64 / k as f64
 }
 
-/// This function is needed because the SIFT dataset doesn't have predicates. The
-/// predicates have been generated and uniformly distributed across a space. Now
-/// when we consult groundtruth indices, the top-k queries may not match the 
-/// required predicate and thus, shouldn't be counted in recall. Instead, we 
-/// take the top-k queries that match the predicate and compare against 
-/// OAK-generated results.
-fn calculate_gt(gt_index: Vec<FlattenedVecs>, pred: f64, op: PredicateOp)-> Vec<FlattenedVecs> {
-    // TODO: Need Lachlan's help on loading in predicates and searching by them
-    // Is there something modular? Where are predicates generated  (in case we
-    // distribute in range 1-30 or add more predicates to search by or sth)
-    match op {
-        PredicateOp::Equals => {}
-    }
-    vec![]
-}
+
 
 /// This query loop essentially takes a query load, finds the latency of running
 /// the queries one at a time, looks at the total time taken and determines QPS
@@ -142,7 +124,7 @@ fn calculate_gt(gt_index: Vec<FlattenedVecs>, pred: f64, op: PredicateOp)-> Vec<
 /// indices
 fn query_loop (
     dataset: FvecsDataset,
-    query_vectors: Vec<FlattenedVecs>, // TODOM: Ask Lachlan whether its Vec of or not
+    query_vectors: FlattenedVecs, // TODOM: Ask Lachlan whether its Vec of or not
     filter_id_map: Vec<c_char>,
     k: usize,
 ) -> Result<(Vec<Duration>), Report> {
@@ -205,6 +187,19 @@ fn calculate_recall_1(gt: TopKSearchResultBatch, acorn_result: TopKSearchResultB
     Ok((r_1, r_10, r_100))
 }
 
+fn read_csv(file_path: &str) -> Result<Vec<i32>> {
+    let mut rdr = Reader::from_path(file_path)?;
+    let mut values = Vec::new();
+
+    for result in rdr.records() {
+        let value = result?;
+        // let value: i32 = record[0].parse()?; // why is this needed?
+        values.push(value);
+    }
+
+    Ok(values)
+}
+
 fn main() -> Result<()> {
     let log = ConfigLogging::StderrTerminal {
         level: ConfigLoggingLevel::Debug,
@@ -228,8 +223,7 @@ fn main() -> Result<()> {
     let _ = dataset.initialize(&opts);
     info!("Seed index constructed.");
 
-    // let mut groundtruth = FvecsDataset::new(args.gt)?;
-    // info!("Groundtruth loaded from disk");
+    // Load GroundTruth
 
     // Load queries
     let queries = FvecsDataset::new("data/sift_query".to_string()).unwrap();
@@ -274,3 +268,5 @@ fn main() -> Result<()> {
 
     Ok(())
 }
+
+// Run.py 1 number for each vector and then 

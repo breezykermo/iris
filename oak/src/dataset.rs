@@ -1,6 +1,6 @@
+use crate::bitmask::Bitmask;
 use crate::fvecs::{FlattenedVecs, Fvec};
 use crate::predicate::PredicateQuery;
-// use tracing::info;
 
 use anyhow::Result;
 use thiserror::Error;
@@ -37,7 +37,49 @@ pub type TopKSearchResult = Vec<SimilaritySearchResult>;
 // A batch of items with type `TopKSearchResult`.
 pub type TopKSearchResultBatch = Vec<TopKSearchResult>;
 
-/// These parameters are currently essentially ACORN parameters, taken from https://github.com/csirianni/ACORN/blob/main/README.md
+/// The type in which the attributes for hybrid search are notated. At the moment the assumed
+/// constraint is that there is at most one attribute per vector, and it is always an i32.
+pub struct HybridSearchMetadata {
+    attrs: Vec<i32>,
+}
+
+impl HybridSearchMetadata {
+    pub fn new(attrs: Vec<i32>) -> Self {
+        Self { attrs }
+    }
+
+    pub fn new_from_bitmask(other: &Self, mask: &Bitmask) -> Self {
+        let filtered_attrs: Vec<i32> = other
+            .attrs
+            .iter()
+            .zip(mask.map.iter())
+            .filter_map(|(&attr, &keep)| {
+                if keep == 1 {
+                    Some(attr) // Keep the attribute if the bitmask allows
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        HybridSearchMetadata {
+            attrs: filtered_attrs,
+        }
+    }
+
+    pub fn len(&self) -> usize {
+        self.attrs.len()
+    }
+}
+
+impl AsRef<Vec<i32>> for HybridSearchMetadata {
+    fn as_ref(&self) -> &Vec<i32> {
+        self.attrs.as_ref()
+    }
+}
+
+/// These parameters are currently essentially ACORN parameters, taken from
+/// https://github.com/csirianni/ACORN/blob/main/README.md
 pub struct OakIndexOptions {
     /// Degree bound for traversed nodes during ACORN search
     pub m: i32,
@@ -59,28 +101,38 @@ impl Default for OakIndexOptions {
 }
 
 /// Trait for a dataset of vectors.
-/// Note that this must be `Sized` in order that the constructor can return a Result.
-pub trait Dataset: Sized {
-    /// Create a new dataset, loading all fvecs into memory. The `fname` should represent a
-    /// filename that corresponds to both a "{fname}.fvecs" that contains the vectors, and a
-    /// "{fname}.csv" that contains the attributes (over which predicates can be constructed) for
-    /// those vectors. Each row in the CSV corresponds to the vector at the same index in the fvecs
-    /// file, and each column represents an attribute on that vector.
-    fn new(fname: String) -> Result<Self>;
-    /// Initialize the index with the vectors from the dataset.
-    fn initialize(&mut self, opts: &OakIndexOptions) -> Result<(), ConstructionError>;
+pub trait Dataset {
     /// Provide the number of vectors that have been added to the dataset.
     fn len(&self) -> usize;
+
     /// Provide the dimensionality of the vectors in the dataset.
     fn get_dimensionality(&self) -> usize;
+
     /// Returns data in dataset. Fails if full dataset doesn't fit in memory.
     fn get_data(&self) -> Result<Vec<Fvec>>;
+
+    /// Get the metadata that represents the attributes over the vectors (for hybrid search).
+    fn get_metadata(&self) -> &HybridSearchMetadata;
+
+    /// Build the index associated with this dataset. If an index has not been built, all search
+    /// methods will throw an error.
+    fn build_index(&mut self, opts: &OakIndexOptions) -> Result<(), ConstructionError>;
+
     /// Takes a Vec<Fvec> and returns a Vec<Vec<(usize, f32)>>, whereby each inner Vec<(usize, f32)> is an array
     /// of tuples in which t[0] is the index of the resthe `topk` vectors returned from the result.
     fn search(
         &self,
         query_vectors: &FlattenedVecs,
         predicate_query: &Option<PredicateQuery>,
+        topk: usize,
+    ) -> Result<Vec<TopKSearchResult>, SearchableError>;
+
+    /// Takes a Vec<Fvec> and returns a Vec<Vec<(usize, f32)>>, whereby each inner Vec<(usize, f32)> is an array
+    /// of tuples in which t[0] is the index of the resthe `topk` vectors returned from the result.
+    fn search_with_bitmask(
+        &self,
+        query_vectors: &FlattenedVecs,
+        bitmask: Bitmask,
         topk: usize,
     ) -> Result<Vec<TopKSearchResult>, SearchableError>;
 }
