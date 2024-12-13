@@ -134,7 +134,7 @@ fn main() -> Result<()> {
     info!("Searching full dataset for {topk} similar vectors for {num_queries} random query , where attr is equal to 5...");
 
     let now = tokio::time::Instant::now();
-    let result = dataset.search_with_bitmask(&queries, mask_main, topk)?;
+    let result = dataset.search_with_bitmask(&queries, &mask_main, topk)?;
     let end = now.elapsed();
 
     let latency = end.as_millis();
@@ -152,17 +152,7 @@ fn main() -> Result<()> {
 
     info!("Recall@10 is {recall}");
 
- 
-    // Log results to CSV
-    // let mut wtr = Writer::from_path("output.csv")?;
-    // writer.write_record(&["Average Latency (s)", "Recall@K"])?;
-    // for d in latencies {
-    //     writer.write_record(&[d.as_secs().to_string()])?;
-    // }
-    // writer.flush()?;
-
     info!("Got results.");
-    // info!("{:?}", result);
 
     Ok(())
 }
