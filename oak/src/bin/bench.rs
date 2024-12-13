@@ -29,6 +29,8 @@ pub enum ExampleError {
 struct Args {
     #[arg(short, long, required(true))]
     dataset: String,
+    #[arg(short, long, required(true))]
+    query: String,
 }
 struct ExpResult {
     durs: Vec<Duration>,
@@ -53,7 +55,7 @@ fn averages(queries: Vec<QueryStats>) -> Result<(f32, f32, f32, f32)> {
     Ok((total_latencies as f32 /count as f32, total_r1 as f32 /count as f32, total_r10 as f32 /count as f32, total_r100 as f32 /count as f32))
 }
 
-fn calculate_recall_1(gt: &Vec<usize>, acorn_result: TopKSearchResultBatch) -> Result<(f32)> {
+fn calculate_recall_1(gt: &Vec<usize>, acorn_result: TopKSearchResultBatch) -> Result<(bool, bool, bool)> {
     // Figure out how to represent the Groundtruth and index into it!!
     let mut n_1: usize= false;
     let mut n_10: usize = false;
