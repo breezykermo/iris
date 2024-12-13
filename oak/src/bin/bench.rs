@@ -4,7 +4,7 @@ use dropshot::ConfigLogging;
 use dropshot::ConfigLoggingLevel;
 use oak::dataset::TopKSearchResult;
 use oak::predicate::PredicateOp;
-
+use crate::bitmask::Bitmask;
 use std::time::Duration;
 use thiserror::Error;
 use slog_scope::{debug, info};
@@ -47,7 +47,7 @@ struct QueryStats {
 fn time_req(
     dataset: &FvecsDataset,
     query_vector: &FlattenedVecs,
-    filter_id_map: &Vec<c_char>,
+    filter_id_map: Bitmask,
     k: usize) -> Result<(Duration, Result<TopKSearchResultBatch, SearchableError>)> {
     let now = tokio::time::Instant::now();
     let result = dataset.search_with_bitmask(&query_vector, filter_id_map, k);
@@ -91,7 +91,7 @@ fn query_loop (
 }
 
 fn averages(queries: Vec<QueryStats>) -> Result<(f32, f32, f32, f32)> {
-    let total_latencies:f32 = queries.iter().map(|qs| qs.latency).sum::<Duration>().as_secs();
+    let total_latencies:f32 = queries.iter().map(|qs| qs.latency).sum::<Duration>().as_secs() as f32;
     let total_r1:f32 = queries.iter().map(|qs| qs.recall_1).count() as f32;
     let total_r10:f32 = queries.iter().map(|qs| qs.recall_10).count() as f32;
     let total_r100:f32 = queries.iter().map(|qs| qs.recall_100).count() as f32;
