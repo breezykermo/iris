@@ -46,10 +46,10 @@ struct QueryStats {
 fn time_req(
     dataset: &FvecsDataset,
     query_vector: &FlattenedVecs,
-    filter_id_map: Bitmask,
+    filter_id_map: &Bitmask,
     k: usize) -> Result<(Duration, Result<TopKSearchResultBatch, SearchableError>)> {
     let now = tokio::time::Instant::now();
-    let result = dataset.search_with_bitmask(&query_vector, filter_id_map, k);
+    let result = dataset.search_with_bitmask(&query_vector, *filter_id_map, k);
     Ok((now.elapsed(), result))
 }
 
@@ -66,7 +66,7 @@ fn query_loop (
 ) -> Result<Vec<QueryStats>> {
     let mut benchmark_results = vec![];
     for (index, (op, gt)) in query_vectors.iter().zip(gt.iter()).enumerate() {
-        match time_req(&dataset, &op, filter_id_map, k) {
+        match time_req(&dataset, &op, &filter_id_map, k) {
             Ok((latency, Ok(res))) => {
                 let recall = calculate_recall_1(gt, res);
                 match recall {
