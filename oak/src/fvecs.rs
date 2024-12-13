@@ -4,6 +4,7 @@ use crate::dataset::{
     ConstructionError, Dataset, HybridSearchMetadata, OakIndexOptions, SearchableError,
     TopKSearchResult,
 };
+use slog_scope::{debug, info};
 use crate::predicate::PredicateQuery;
 
 use anyhow::Result;
