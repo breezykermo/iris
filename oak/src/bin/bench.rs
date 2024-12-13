@@ -149,6 +149,7 @@ fn main() -> Result<()> {
     let _guard = slog_scope::set_global_logger(log.clone());
 
     // let args = Args::parse();
+    info!("Dataset loading...");
     let dataset_path:String = "scripts/get_sift/sift/sift_base.fvecs".to_string();
 
     let mut dataset = FvecsDataset::new(dataset_path)?;
@@ -168,12 +169,12 @@ fn main() -> Result<()> {
     // Load GroundTruth
     // let base_vectors_path = "./outdir/sift_base.fvecs";
     // let queries_path = "./outdir/sift_query.fvecs";
-    
+    info!("GT loading...");
     let groundtruth_path = "scripts/get_sift/outdir/sift_groundtruth.csv";
     // let variable_gt_path = "./outdir/sift_groundtruth.csv";
     let gt = read_csv(groundtruth_path);
 
-
+    info!("Queries loading...");
     // Load queries
     let queries = FvecsDataset::new("scripts/get_sift/sift/sift_query.fvecs".to_string()).unwrap();
     let queries = FlattenedVecs::from(&queries);
