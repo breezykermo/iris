@@ -2,14 +2,9 @@ use anyhow::Result;
 use clap::Parser;
 use dropshot::ConfigLogging;
 use dropshot::ConfigLoggingLevel;
-use futures_util::{
-    future::{select, Either},
-    stream::{FuturesUnordered, Stream, StreamExt, TryStreamExt},
-};
 use oak::dataset::TopKSearchResult;
 use oak::predicate::PredicateOp;
-use slog_scope::{debug, info};
-use core::time;
+
 use std::time::Duration;
 use thiserror::Error;
 
@@ -17,9 +12,9 @@ use oak::dataset::{Dataset, OakIndexOptions, SearchableError, TopKSearchResultBa
 use oak::fvecs::{FlattenedVecs, FvecsDataset};
 use oak::poisson::SpinTicker;
 use oak::predicate::PredicateQuery;
-use oak::stubs::generate_random_vector;
 use csv::Writer;
 use csv::Reader;
+use core::ffi::c_char;
 
 #[derive(Error, Debug)]
 pub enum ExampleError {
@@ -53,9 +48,9 @@ fn time_req(
     dataset: &FvecsDataset,
     query_vector: &FlattenedVecs,
     filter_id_map: &Vec<c_char>,
-    k: usize) -> Result<(Duration, Result<TopKSearchResultBatch, SearchableError>), Report> {
+    k: usize) -> Result<(Duration, Result<TopKSearchResultBatch, SearchableError>)> {
     let now = tokio::time::Instant::now();
-    let result = dataset.search_with_bitmask(&query_vector, mask_sub, topk);
+    let result = dataset.search_with_bitmask(&query_vector, filter_id_map, k);
     Ok((now.elapsed(), result))
 }
 
@@ -96,22 +91,22 @@ fn query_loop (
 }
 
 fn averages(queries: Vec<QueryStats>) -> Result<(f32, f32, f32, f32)> {
-    let total_latencies = queries.iter().map(|qs| qs.latency.as_secs()).sum();
-    let total_r1 = queries.iter().map(|qs| qs.recall_1).count();
-    let total_r10 = queries.iter().map(|qs| qs.recall_10).count();
-    let total_r100 = queries.iter().map(|qs| qs.recall_100).count();
-    let count = queries.len();
+    let total_latencies:f32 = queries.iter().map(|qs| qs.latency.as_secs()).sum() as f32;
+    let total_r1:f32 = queries.iter().map(|qs| qs.recall_1).count() as f32;
+    let total_r10:f32 = queries.iter().map(|qs| qs.recall_10).count() as f32;
+    let total_r100:f32 = queries.iter().map(|qs| qs.recall_100).count() as f32;
+    let count:f32 = queries.len() as f32;
     Ok((total_latencies as f32 /count as f32, total_r1 as f32 /count as f32, total_r10 as f32 /count as f32, total_r100 as f32 /count as f32))
 }
 
-fn calculate_recall_1(gt: &usize, acorn_result: TopKSearchResult) -> Result<(bool, bool, bool)> {
+fn calculate_recall_1(gt: &usize, acorn_result: TopKSearchResultsBatch) -> Result<(bool, bool, bool)> {
     // todo!(); // Ask lachlan how to iterate through TopKSearchResbatch
     // Figure out how to represent the Groundtruth and index into it!!
     let mut n_1= false;
     let mut n_10 = false;
     let mut n_100 = false;
-    for (i, j) in acorn_result.iter().enumerate() {
-        if j.0 == gt {
+    for (i, j) in acorn_result[0].iter().enumerate() {
+        if j.0 == *gt {
             if i <1 {
                 n_1 = true;
                 n_10 = true;
