@@ -172,7 +172,7 @@ impl FvecsDataset {
     /// "{fname}.csv" that contains the attributes (over which predicates can be constructed) for
     /// those vectors. Each row in the CSV corresponds to the vector at the same index in the fvecs
     /// file, and each column represents an attribute on that vector.
-    pub fn new(fname: String) -> Result<Self> {
+    pub fn new(fname: String, load_csv: bool) -> Result<Self> {
         let mut fvecs_fname = PathBuf::new();
         fvecs_fname.push(&format!("{}.fvecs", fname));
         info!("{:?}", fvecs_fname);
@@ -205,13 +205,18 @@ impl FvecsDataset {
         );
         debug!("The file read has {count} vectors.");
 
-        let mut metadata_fname = PathBuf::new();
-        metadata_fname.push(&format!("{}.csv", fname));
+        let metadata = if load_csv {
+            let mut metadata_fname = PathBuf::new();
+            metadata_fname.push(&format!("{}.csv", fname));
 
-        let metadata_vec = read_csv_to_vec(&metadata_fname)?;
-        let metadata = HybridSearchMetadata::new(metadata_vec);
+            let metadata_vec = read_csv_to_vec(&metadata_fname)?;
+            HybridSearchMetadata::new(metadata_vec)
+        } else {
+            // NOTE: this is a bad hack. It should really be an option
+            HybridSearchMetadata::new(vec![])
+        };
+
         let flat = FlattenedVecs::read_from_mmap(&mmap, count, dimensionality);
-
         Ok(Self {
             index: None,
             count,
