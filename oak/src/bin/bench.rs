@@ -76,12 +76,12 @@ fn query_loop (
                 let recall = calculate_recall_1(gt, res);
                 match recall {
                     Ok((r1, r10, r100)) => {
-                        benchmark_results.push(QueryStats(
-                            r1,
-                            r10,
-                            r100,
-                            latency
-                        ));
+                        benchmark_results.push(QueryStats{
+                            recall_1 : r1,
+                            recall_10: r10,
+                            recall_100: r100,
+                            latency: latency
+                        });
                     }
                     Err(_) => info!("Some error running recall calculation")
                 }
@@ -103,14 +103,14 @@ fn averages(queries: Vec<QueryStats>) -> Result<(f32, f32, f32, f32)> {
     Ok((total_latencies/count, total_r1/count, total_r10/count, total_r100/count))
 }
 
-fn calculate_recall_1(gt: i32, acorn_result: TopKSearchResult) -> Result<(bool, bool, bool)> {
+fn calculate_recall_1(gt: &i32, acorn_result: TopKSearchResult) -> Result<(bool, bool, bool)> {
     todo!(); // Ask lachlan how to iterate through TopKSearchResbatch
     // Figure out how to represent the Groundtruth and index into it!!
     let n_1= false;
     let n_10 = false;
     let n_100 = false;
-    for j in acorn_result {
-        if j[0] == gt {
+    for (i, j) in acorn_result.enumerate() {
+        if j.0 == gt {
             if j <1 {
                 n_1 = true;
                 n_10 = true;
