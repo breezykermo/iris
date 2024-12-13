@@ -151,7 +151,7 @@ fn main() -> Result<()> {
     let args = Args::parse();
     let dataset_path:String = "scripts/get_sift/sift/sift_base.fvecs".to_string();
 
-    let mut dataset = FvecsDataset::new(args.dataset)?;
+    let mut dataset = FvecsDataset::new(dataset_path)?;
     info!("Dataset loaded from disk.");
 
     let opts = OakIndexOptions {
