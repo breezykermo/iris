@@ -19,6 +19,7 @@ use oak::poisson::SpinTicker;
 use oak::predicate::PredicateQuery;
 use oak::stubs::generate_random_vector;
 use csv::Writer;
+use csv::Reader;
 
 #[derive(Error, Debug)]
 pub enum ExampleError {
@@ -68,11 +69,11 @@ fn query_loop (
     filter_id_map: Vec<c_char>,
     k: usize,
     gt: Vec<i32>
-) -> Result<(Vec<QueryStats>), Report> {
+) -> Result<Vec<QueryStats>> {
     let benchmark_results = vec![];
     for (index, (op, gt)) in query_vectors.iter().zip(gt.iter()).enumerate() {
         match time_req(&dataset, &op, &filter_id_map, k) {
-            Ok((latency, Ok((res, err)))) => {
+            Ok((latency, Ok(res))) => {
                 let recall = calculate_recall_1(gt, res);
                 match recall {
                     Ok((r1, r10, r100)) => {
@@ -91,15 +92,15 @@ fn query_loop (
         }
     }
     info!("Completed benchmarking queries!");
-    Ok((benchmark_results))
+    Ok(benchmark_results)
 }
 
 fn averages(queries: Vec<QueryStats>) -> Result<(f32, f32, f32, f32)> {
-    let total_latencies = query_stats.iter().map(|qs| qs.latency.as_secs()).sum();
-    let total_r1 = query_stats.iter().map(|qs| qs.recall_1).count();
-    let total_r10 = query_stats.iter().map(|qs| qs.recall_10).count();
-    let total_r100 = query_stats.iter().map(|qs| qs.recall_100).count();
-    let count = query_stats.len();
+    let total_latencies = queries.iter().map(|qs| qs.latency.as_secs()).sum();
+    let total_r1 = queries.iter().map(|qs| qs.recall_1).count();
+    let total_r10 = queries.iter().map(|qs| qs.recall_10).count();
+    let total_r100 = queries.iter().map(|qs| qs.recall_100).count();
+    let count = queries.len();
     Ok((total_latencies/count, total_r1/count, total_r10/count, total_r100/count))
 }
 
@@ -109,7 +110,7 @@ fn calculate_recall_1(gt: &i32, acorn_result: TopKSearchResult) -> Result<(bool,
     let n_1= false;
     let n_10 = false;
     let n_100 = false;
-    for (i, j) in acorn_result.enumerate() {
+    for (i, j) in acorn_result.iter().enumerate() {
         if j.0 == gt {
             if i <1 {
                 n_1 = true;
@@ -176,7 +177,7 @@ fn main() -> Result<()> {
     
     let groundtruth_path = "scripts/get_sift/outdir/sift_groundtruth.csv";
     // let variable_gt_path = "./outdir/sift_groundtruth.csv";
-    gt = read_csv(groundtruth_path);
+    let gt = read_csv(groundtruth_path);
 
 
     // Load queries

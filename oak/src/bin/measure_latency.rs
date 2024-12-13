@@ -15,10 +15,10 @@ use thiserror::Error;
 
 use oak::dataset::{Dataset, OakIndexOptions, SearchableError, TopKSearchResultBatch};
 use oak::fvecs::{FlattenedVecs, FvecsDataset};
-use oak::poisson::SpinTicker;
 use oak::predicate::PredicateQuery;
 use oak::stubs::generate_random_vector;
 use csv::Writer;
+use core::ffi::c_char;
 
 #[derive(Error, Debug)]
 pub enum ExampleError {
@@ -68,9 +68,10 @@ fn time_req(
     dataset: &FvecsDataset,
     query_vector: &FlattenedVecs,
     filter_id_map: &Vec<c_char>,
-    k: usize) -> Result<(Duration, Result<TopKSearchResultBatch, SearchableError>), Report> {
+    k: usize
+) -> Result<(Duration, Result<TopKSearchResultBatch, SearchableError>), Report> {
     let now = tokio::time::Instant::now();
-    let result = dataset.search_with_bitmask(&query_vector, mask_sub, topk);
+    let result = dataset.search_with_bitmask(&query_vector, filter_id_map, k);
     Ok((now.elapsed(), result))
 }
 ///Alt: compute gt for each query and log it into a CSV and then separately 
@@ -127,7 +128,7 @@ fn query_loop (
     query_vectors: FlattenedVecs, // TODOM: Ask Lachlan whether its Vec of or not
     filter_id_map: Vec<c_char>,
     k: usize,
-) -> Result<(Vec<Duration>), Report> {
+) -> Result<Vec<Duration>> {
     let benchmark_results = vec![];
     for op in query_vectors {
         match time_req(&dataset, &op, &filter_id_map, k) {
@@ -145,7 +146,7 @@ fn query_loop (
         }
     }
     info!("Completed benchmarking queries!");
-    Ok((benchmark_results))
+    Ok(benchmark_results)
 }
 
 fn average_duration(latencies: Vec<Duration>) -> Duration {
