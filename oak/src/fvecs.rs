@@ -174,6 +174,7 @@ impl FvecsDataset {
     pub fn new(fname: String) -> Result<Self> {
         let mut fvecs_fname = PathBuf::new();
         fvecs_fname.push(&format!("{}.fvecs", fname));
+        info!("{:?}", fvecs_fname);
 
         let f = File::open(fvecs_fname)?;
 
