@@ -64,9 +64,9 @@ fn query_loop (
     k: usize,
     gt: Vec<usize>
 ) -> Result<Vec<QueryStats>> {
-    let benchmark_results = vec![];
+    let mut benchmark_results = vec![];
     for (index, (op, gt)) in query_vectors.iter().zip(gt.iter()).enumerate() {
-        match time_req(&dataset, &op, &filter_id_map, k) {
+        match time_req(&dataset, &op, filter_id_map, k) {
             Ok((latency, Ok(res))) => {
                 let recall = calculate_recall_1(gt, res);
                 match recall {
