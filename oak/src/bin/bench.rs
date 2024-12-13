@@ -149,7 +149,7 @@ fn main() -> Result<()> {
 
     let _guard = slog_scope::set_global_logger(log.clone());
 
-    let args = Args::parse();
+    // let args = Args::parse();
 
     // let mut dataset = FvecsDataset::new(args.dataset)?;
     // info!("Dataset loaded from disk.");
