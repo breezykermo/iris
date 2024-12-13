@@ -302,7 +302,7 @@ impl Dataset for FvecsDataset {
         self.index
             .as_ref()
             .unwrap()
-            .search(query_vectors, & mutfilter_id_map, topk)
+            .search(query_vectors, & mut filter_id_map, topk)
     }
 }
 
