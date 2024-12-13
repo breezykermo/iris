@@ -2,6 +2,10 @@ use anyhow::Result;
 use clap::Parser;
 use dropshot::ConfigLogging;
 use dropshot::ConfigLoggingLevel;
+use futures_util::{
+    future::{select, Either},
+    stream::{FuturesUnordered, Stream, StreamExt, TryStreamExt},
+};
 use oak::dataset::TopKSearchResult;
 use oak::predicate::PredicateOp;
 use slog_scope::{debug, info};
@@ -11,10 +15,10 @@ use thiserror::Error;
 
 use oak::dataset::{Dataset, OakIndexOptions, SearchableError, TopKSearchResultBatch};
 use oak::fvecs::{FlattenedVecs, FvecsDataset};
+use oak::poisson::SpinTicker;
 use oak::predicate::PredicateQuery;
 use oak::stubs::generate_random_vector;
 use csv::Writer;
-use core::ffi::c_char;
 
 #[derive(Error, Debug)]
 pub enum ExampleError {
@@ -60,17 +64,16 @@ struct QueryStats {
     latency: Duration
 }
 /// time_req measures time taken for the vectorDB call
-fn time_req(
-    dataset: &FvecsDataset,
-    query_vector: &FlattenedVecs,
-    filter_id_map: &Vec<c_char>,
-    k: usize
-) -> Result<(Duration, Result<TopKSearchResultBatch, SearchableError>), Report> {
-    let now = tokio::time::Instant::now();
-    let result = dataset.search_with_bitmask(&query_vector, filter_id_map, k);
-    Ok((now.elapsed(), result))
-}
-///Alt: compute gt for each query and log it into a CSV and then separately 
+// fn time_req(
+//     dataset: &FvecsDataset,
+//     query_vector: &FlattenedVecs,
+//     filter_id_map: &Vec<c_char>,
+//     k: usize) -> Result<(Duration, Result<TopKSearchResultBatch, SearchableError>), Report> {
+//     let now = tokio::time::Instant::now();
+//     let result = dataset.search_with_bitmask(&query_vector, mask_sub, topk);
+//     Ok((now.elapsed(), result))
+// }
+// ///Alt: compute gt for each query and log it into a CSV and then separately 
 /// run these to compare against pre-made gt
 /// Unsure if this is actually correct but keeping it around for reference
 // fn calculate_recall(search_result: &TopKSearchResultBatch, ground_truth: &GroundTruth) -> (f64, f64, f64) {
@@ -119,31 +122,31 @@ async fn calculate_recall(gt: Vec<FlattenedVecs>, acorn_index: Vec<FlattenedVecs
 /// the queries one at a time, looks at the total time taken and determines QPS
 /// and finally, logs the recall for each query as compared to the groundtruth
 /// indices
-fn query_loop (
-    dataset: FvecsDataset,
-    query_vectors: FlattenedVecs, // TODOM: Ask Lachlan whether its Vec of or not
-    filter_id_map: Vec<c_char>,
-    k: usize,
-) -> Result<Vec<Duration>> {
-    let benchmark_results = vec![];
-    for op in query_vectors {
-        match time_req(&dataset, &op, &filter_id_map, k) {
-            Ok((latency, Ok((res, err)))) => {
-                // let recall = calculate_recall(gt, res);
-                // benchmark_results.push(QueryStats(
-                //     None,
-                //     None,
-                //     latency
-                // ))
-                benchmark_results.push(latency);
-            }
-            Ok((_, Err(e))) => {println!("Search operation failed with error {:?}", e)}
-            Err(e) => {println!("Timing operation failed with error {:?}", e)}
-        }
-    }
-    info!("Completed benchmarking queries!");
-    Ok(benchmark_results)
-}
+// fn query_loop (
+//     dataset: FvecsDataset,
+//     query_vectors: FlattenedVecs, // TODOM: Ask Lachlan whether its Vec of or not
+//     filter_id_map: Vec<c_char>,
+//     k: usize,
+// ) -> Result<(Vec<Duration>), Report> {
+//     let benchmark_results = vec![];
+//     for op in query_vectors {
+//         match time_req(&dataset, &op, &filter_id_map, k) {
+//             Ok((latency, Ok((res, err)))) => {
+//                 // let recall = calculate_recall(gt, res);
+//                 // benchmark_results.push(QueryStats(
+//                 //     None,
+//                 //     None,
+//                 //     latency
+//                 // ))
+//                 benchmark_results.push(latency);
+//             }
+//             Ok((_, Err(e))) => {println!("Search operation failed with error {:?}", e)}
+//             Err(e) => {println!("Timing operation failed with error {:?}", e)}
+//         }
+//     }
+//     info!("Completed benchmarking queries!");
+//     Ok((benchmark_results))
+// }
 
 fn average_duration(latencies: Vec<Duration>) -> Duration {
     let total = latencies.iter().sum();
@@ -155,7 +158,7 @@ fn average_duration(latencies: Vec<Duration>) -> Duration {
     }
 }
 
-fn calculate_recall_1(gt: usize, acorn_result: TopKSearchResultBatch) -> Result<(f32, f32, f32)> {
+fn calculate_recall_1(gt: TopKSearchResultBatch, acorn_result: TopKSearchResultBatch) -> Result<(f32, f32, f32)> {
     todo!(); // Ask lachlan how to iterate through TopKSearchResbatch
     // Figure out how to represent the Groundtruth and index into it!!
     nq = gt.len();
@@ -184,13 +187,13 @@ fn calculate_recall_1(gt: usize, acorn_result: TopKSearchResultBatch) -> Result<
     Ok((r_1, r_10, r_100))
 }
 
-fn read_csv(file_path: &str) -> Result<Vec<usize>> {
+fn read_csv(file_path: &str) -> Result<Vec<i32>> {
     let mut rdr = Reader::from_path(file_path)?;
     let mut values = Vec::new();
 
     for result in rdr.records() {
         let value = result?;
-        let value:usize = record[0].parse::<usize>()?;
+        // let value: i32 = record[0].parse()?; // why is this needed?
         values.push(value);
     }
 
@@ -233,7 +236,7 @@ fn main() -> Result<()> {
     for k in [5, 10, 15, 20]{
         let res = query_loop(dataset, queries, filter_id_map, k);
         match res {
-            Ok((lat)) => {latencies.push(average_duration(lat))}
+            Ok((lat)) => {latencies.append(average_duration(lat))}
             Err(_) => {println!("Some error in calculating top-k vectors")}
         }
     }
