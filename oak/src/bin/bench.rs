@@ -43,51 +43,51 @@ struct QueryStats {
     latency: Duration
 }
 /// time_req measures time taken for the vectorDB call
-fn time_req(
-    dataset: &FvecsDataset,
-    query_vector: &FlattenedVecs,
-    filter_id_map: &Bitmask,
-    k: usize) -> Result<(Duration, Result<TopKSearchResultBatch, SearchableError>)> {
-    let now = tokio::time::Instant::now();
-    let result = dataset.search_with_bitmask(&query_vector, *filter_id_map, k);
-    Ok((now.elapsed(), result))
-}
+// fn time_req(
+//     dataset: &FvecsDataset,
+//     query_vector: &FlattenedVecs,
+//     filter_id_map: &Bitmask,
+//     k: usize) -> Result<(Duration, Result<TopKSearchResultBatch, SearchableError>)> {
+//     let now = tokio::time::Instant::now();
+//     let result = dataset.search_with_bitmask(&query_vector, *filter_id_map, k);
+//     Ok((now.elapsed(), result))
+// }
 
 /// This query loop essentially takes a query load, finds the latency of running
 /// the queries one at a time, looks at the total time taken and determines QPS
 /// and finally, logs the recall for each query as compared to the groundtruth
 /// indices
-fn query_loop (
-    dataset: FvecsDataset,
-    query_vectors: Vec<FlattenedVecs>, // TODOM: Ask Lachlan whether its Vec of or not
-    filter_id_map: Bitmask,
-    k: usize,
-    gt: Vec<usize>
-) -> Result<Vec<QueryStats>> {
-    let mut benchmark_results = vec![];
-    for (index, (op, gt)) in query_vectors.iter().zip(gt.iter()).enumerate() {
-        match time_req(&dataset, &op, &filter_id_map, k) {
-            Ok((latency, Ok(res))) => {
-                let recall = calculate_recall_1(gt, res);
-                match recall {
-                    Ok((r1, r10, r100)) => {
-                        benchmark_results.push(QueryStats{
-                            recall_1 : r1,
-                            recall_10: r10,
-                            recall_100: r100,
-                            latency: latency
-                        });
-                    }
-                    Err(_) => info!("Some error running recall calculation")
-                }
-            }
-            Ok((_, Err(e))) => {println!("Search operation failed with error {:?}", e)}
-            Err(e) => {println!("Timing operation failed with error {:?}", e)}
-        }
-    }
-    info!("Completed benchmarking queries!");
-    Ok(benchmark_results)
-}
+// fn query_loop (
+//     dataset: FvecsDataset,
+//     query_vectors: Vec<FlattenedVecs>, // TODOM: Ask Lachlan whether its Vec of or not
+//     filter_id_map: Bitmask,
+//     k: usize,
+//     gt: Vec<usize>
+// ) -> Result<Vec<QueryStats>> {
+//     let mut benchmark_results = vec![];
+//     for (index, (op, gt)) in query_vectors.iter().zip(gt.iter()).enumerate() {
+//         match time_req(&dataset, &op, &filter_id_map, k) {
+//             Ok((latency, Ok(res))) => {
+//                 let recall = calculate_recall_1(gt, res);
+//                 match recall {
+//                     Ok((r1, r10, r100)) => {
+//                         benchmark_results.push(QueryStats{
+//                             recall_1 : r1,
+//                             recall_10: r10,
+//                             recall_100: r100,
+//                             latency: latency
+//                         });
+//                     }
+//                     Err(_) => info!("Some error running recall calculation")
+//                 }
+//             }
+//             Ok((_, Err(e))) => {println!("Search operation failed with error {:?}", e)}
+//             Err(e) => {println!("Timing operation failed with error {:?}", e)}
+//         }
+//     }
+//     info!("Completed benchmarking queries!");
+//     Ok(benchmark_results)
+// }
 
 fn averages(queries: Vec<QueryStats>) -> Result<(f32, f32, f32, f32)> {
     let total_latencies:f32 = queries.iter().map(|qs| qs.latency).sum::<Duration>().as_secs() as f32;
