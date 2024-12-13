@@ -99,7 +99,7 @@ fn main() -> Result<()> {
 
     let args = Args::parse();
 
-    let mut dataset = FvecsDataset::new(args.dataset)?;
+    let mut dataset = FvecsDataset::new(args.dataset, true)?;
     info!("Dataset loaded from disk.");
 
     let opts = OakIndexOptions {
@@ -121,7 +121,7 @@ fn main() -> Result<()> {
     let dimensionality = dataset.get_dimensionality() as usize;
     assert_eq!(dimensionality, subdataset.get_dimensionality() as usize);
 
-    let mut query_set = FvecsDataset::new(args.query)?;
+    let mut query_set = FvecsDataset::new(args.query, false)?;
     let queries = FlattenedVecs::from(&query_set);
     info!("Query set loaded from disk.");
 
