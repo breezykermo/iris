@@ -43,7 +43,7 @@ One recent approach, ACORN [cite:@patelACORNPerformantPredicateAgnostic2024], pr
 # To support such functionality, applications must implement /hybrid search/, i.e., similarity search queries containing a one or more structured predicates.
 # Implementations must be *performant*, retrieving results with high throughput/low latency and also *accurate*, retrieving results that are sufficiently similar to the provided query.
 
-# Several strategies exist to address these challenges with varying degrees of success, including pre-filtering, post-filtering, and specialized indices.
+# Several strategies exist to address these challenges with varying degrees of success, including pre-filtering, post-filtering, and specialized indexes.
 
 In this paper, we present *OAK* (Opportunistic ANNS K-Subgraphs), a system that applies ACORN's principle of predicate-agnostic hybrid vector similarity search in a system that offers better performance for certain query loads by maintaining indexes of predicate subgraphs in addition to a base index and intelligently routing to these indexes when there is significant overlap between such an index and a query predicate.
 
@@ -57,8 +57,8 @@ This approach performs poorly when using medium to high selectivity predicates o
 /Post-filtering/ first performs a similarity search on the dataset, then filters results that do not match the given predicate. 
 Since vectors with the greatest similarity may not satisfy the predicate, this approach sometimes requires searching repeatedly with increasingly large search spaces (top-1k, top-10k, etc.), incurring large amounts of overhead.
 
-/Specialized indices/ such as Filtered-DiskANN [cite:] use predicates during index construction to eliminate the need for pre- or post-filtering.
-However, these indices restrict predicate set cardinalities to about 1,000 and only support equality predicates.
+/Specialized indexes/ such as Filtered-DiskANN [cite:] use predicates during index construction to eliminate the need for pre- or post-filtering.
+However, these indexes restrict predicate set cardinalities to about 1,000 and only support equality predicates.
 
 Recently, ACORN [cite:@patelACORNPerformantPredicateAgnostic2024] has proposed a /predicate-agnostic/ index which supports unbounded and arbitrary predicates.
 The results are impressive but still fall short of an /oracle partition index/ (Figure 1). 
@@ -70,11 +70,22 @@ In many cases, it is infeasible to construct an oracle index for every possible 
 There are, however, many query distributions could be get significant and meaningful performance improvement if an oracle index were to exist that could be searched rather than an index that also contains vectors that don't match the search predicate.
 The greater the scale of the database and the volume of queries, the more critical such a performance improvement could be. 
 Consider, for example, queries about football teams during the Superbowl, or about states during election night.
-In scenarios like this, a general-purpose predicate-agnostic index can be supplemented by carefully chosen supplemental indices that are constructed so as to effectively serve some frequently occurring search predicates.
+In scenarios like this, a general-purpose predicate-agnostic index can be supplemented by carefully chosen supplemental indexes that are constructed so as to effectively serve some frequently occurring search predicates.
 Intelligently routing to supplemental indexes in such cases is the goal of OAK.
 
 * Background and Related Work
+** Distributed Vector Databases
+Our project began as an attempt to build a distributed vector database.
+Though OAK is not inherently distributed, our learnings from this literature review greatly impacted our decision to build OAK and influenced its design. 
+(We also outline OAK's distributed horizons in Section @@latex:\ref{sec:future}@@.)
+This literature is relevant as it introduces the idea of routing each query between a series of choices, and selecting and/or aggregating results.
 
+*** Replication
+=TODO=
+*** Random Partitioning
+*** Balanced Partitioning
+
+** HNSW and ACORN 
 The underlying data structure that enables vector similiarity search in both ACORN and OAK is Hierarchical Navigable Small Worlds (HNSW) [cite:@malkovEfficientRobustApproximate2018], an index that makes use of a hierarchical, tree-link structure during search to more quickly work through the plausible search space while retaining reasonable recall.
 More specifically, HNSW leverages a /proximity graph/, in which two vertices are linked based on proximity.
 Proximity is usually computed using Euclidean distance, though other similarity metrics exist (e.g. cosine similarity).
@@ -88,11 +99,24 @@ This is not always the case, though.
 If the predicate selectivity falls below a minimum specified threshold, ACORN resorts to pre-filtering and brute force search, favoring recall over performance.
 This may explain the difference in throughput between ACORN-$\gamma$ and the opportunistic index in Figure 1.
 
+
+
 * Main Design
 
-The central premise of OAK is to route queries with high-frequency predicates to an /opportunistic index/ constructed using the same predicate.
-When OAK receives a query $q$ with predicate $p$, sending to an opportunistic index is (1) potentially more performant (if the base index is larger than the opportunistic index) but (2) potentially less accurate (if the opportunistic index does not contain all vectors that match $p$).
-We factor this performance-accuracy tradeoff into our query routing strategy.
+The central premise of OAK is to route queries with high-frequency predicates to an /opportunistic index/ constructed using the same or a significantly similar predicate.
+When OAK receives a query $q$ with predicate $p$, sending to an opportunistic index is
+1) potentially more performant (if the base index is larger than the opportunistic index) 
+2) potentially less accurate (if the opportunistic index does not contain all vectors that match $p$).
+
+OAK's query routing strategy leverages these insights to manage the performance-accuracy tradeoff at hand.
+It is worth mentioning that this tradeoff is inherent to the ANNS problem space as a whole, and that using additional space in order to deliver better latency is the specific goal of ANNS.
+As such, we see OAK's use of additional indexes to speed up certain queries as a reasonable research direction, especially as memory is relatively cheap while Moore's law is no longer in effect. =TODO find some citations for this.=
+
+In order to make routing decisions, opportunistic indexes are stored as values in a hash map for which the key is a bitmask.
+Each bitmask/key is constructed over all vectors in the database, so as to provide OAK with an efficient way to consider which vectors exist in available opportunistic indexes.
+
+Query routing =TODO lachlan=
+
 
 * Implementation 
 
@@ -102,40 +126,52 @@ We encountered three main engineering challenges, which we now discuss in sectio
 ** Bindings
 
 ACORN is implemented in C++, so writing OAK in Rust required a foreign function interface (FFI).
-We chose bindgen [cite:] to automatically generate Rust FFI bindings to ACORN, but the task required a substantial engineering effort.
-We discovered a bug in the ACORN compilation directions that resulted in PR [cite:https://github.com/guestrin-lab/ACORN/pull/7], the FFI wrappers introduced lifetime issues when dereferencing a unique pointer, and the functionality of the ACORN ~search~ function had to be largely reverse-engineered due to a lack of documentation.
+We originally chose bindgen [cite:@RustlangRustbindgen2024] to automatically generate Rust FFI bindings to ACORN, but realized that the task would require a substantial engineering effort as ACORN's functionality was only implemented in C++ and not exposed to the C API that FAISS [cite:@FacebookresearchFaiss2024] (the codebase from which ACORN was forked) provides.
+We thus chose instead to use cxx [cite:@tolnayDtolnayCxx2024] to interoperate directly between C++ and Rust, an approach that worked well once we had worked through the new conceptual model for FFI.
+Our progress implementing the FFI layer was slowed, too, on a number of other counts: we discovered a bug in the ACORN compilation directions that resulted in PR ([[https://github.com/guestrin-lab/ACORN/pull/7]]); the FFI wrappers introduced lifetime issues in C++ when dereferencing a unique pointer; and the functionality of the ACORN ~search~ function had to be largely reverse-engineered due to a lack of clarifying documentation.
 
 ** Predicate Filtering
 
-To programmatically represent predicates, we introduce the `PredicateQuery` struct which contains a predicate operator (e.g. equality) and an operand. 
-This `PredicateQuery` is used to generate a bit mask over the set of vectors and is designed to be extensible for any arbitrary predicate.
-For each vector, if the predicate is true (e.g. year == 2024), the corresponding bit mask element is set to 1.
-The ACORN ~search~ function accepts a ~filter_id_map~ bit mask that is used to filter vectors that do not satisfy the predicate during search.
+Though predicates are represented internally in OAK as bitmasks (~Vec<i8>~), we introduce a ~PredicateQuery~ struct to allow clients to more concisely express their filters during search.
+~PredicateQuery~ can be used to generate a bitmask over the vectors in OAK by specifying a ~PredicateOp~ such as ~Equals~, and a ~PredicateRhs~ such as ~5~. 
+Though the equality of ~i8~ values is sufficient for the experiments outlined in this paper, ~PredicateQuery~ is designed to be extensible for arbitrary predicate operations and right-hand-sides, such as ~LessThan~ and ~Regex~.
+For each vector, if the predicate is true (e.g. year $=$ 2024), the element in the generated bitmask is set to $1$.
+The ACORN ~search~ function, by contrast, accepts a ~filter_id_map~ bit mask that is used to filter vectors that do not satisfy the predicate during search.
 
-** Query Routing
+** SimilaritySearchable
+=TODO detail this trait and how it works across the global index, subindexes, and router=
 
 * Evaluation
 
 * Future Work
+#+LABEL: sec:future
 
 OAK has many opportunities for future work.
 
 *Dynamic index construction*. 
-Right now, OAK constructs indices only once and before queries are dispatched.
-In a production system, it may be advantageous to construct indices while queries are received to increase throughput.
+Right now, OAK constructs indexes only once and before queries are dispatched.
+In a production system, it may be advantageous to construct indexes while queries are received to increase throughput.
 The overhead incurred by index construction could be measured with respect to the time to index (TTI), the size of the index, and the compute/memory resources required to construct the index.
 
 *Index type*.
-OAK uses ACORN for opportunistic indices primarily because writing bindings to additional indices is unnecessary for a proof-of-concept.
+OAK uses ACORN for opportunistic indexes primarily because writing bindings to additional indexes is unnecessary for a proof-of-concept.
 However, given the bounded and well-defined nature of the opportunistic index type, a /specialized index/ may yield better performance.
 For example, Qdrant [cite:https://qdrant.tech/articles/filtrable-hnsw/] has proposed denser HNSW graph by knowledge of the search predicates to add additional edges.
-While this is ill-suited for ACORN's goal to be predicate-agnostic, the principle idea of opportunistic indices is /predicate-knowledge/, and thus we can leverage the known predicate to construct a better index.
+While this is ill-suited for ACORN's goal to be predicate-agnostic, the principle idea of opportunistic indexes is /predicate-knowledge/, and thus we can leverage the known predicate to construct a better index.
 
 *Distribution*.
 The system design of OAK is also easily transferrable to a distributed context. 
-We could construct and/or host indices on different nodes, as network communication costs are dominated by the ANNS latency. [cite:]
-This would help remove the bottleneck of commodity hardware when hosting multiple indices and enable horizontal scaling and load balancing during bursty workloads.
+We could construct and/or host indexes on different nodes, as network communication costs are dominated by the ANNS latency. [cite:]
+This would help remove the bottleneck of commodity hardware when hosting multiple indexes and enable horizontal scaling and load balancing during bursty workloads.
 
 * Logistics
+Much of the literature review in the early stages of our project was done collectively.
+Lachlan and Cedric implemented the FFI interface between OAK and ACORN.
+Mithi and Lachlan implemented the SIFT dataset preparation scripts (as attributes needed to be randomly added to the vectors there, following the approach in the ACORN paper).
+Though the concepts and talking points for the presentation were discussed and determined collectively, Cedric was principally responsible for the visual integrity and flair.
+Mithi implemented the experimentation infrastructure, as well as the graph generation code.
+Lachlan conceived and implemented OAK's routing logic (and is solely responsible for any senselessness it contains).
+Mithi and Lachlan worked together to run the experiments on AWS.
+Cedric drafted and was chief editor for the final paper, though it was collectively edited and written.
 
 * Bibliography
