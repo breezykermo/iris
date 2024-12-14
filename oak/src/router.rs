@@ -59,16 +59,19 @@ impl SimilaritySearchable for Router<'_> {
     ) -> anyhow::Result<Vec<crate::dataset::TopKSearchResult>, crate::dataset::SearchableError>
     {
         let base_meta = self.base.get_metadata();
-        let base_meta_len = base_meta.len();
+        let base_meta_len = base_meta.len() as f32;
 
         let (best_index, best_score) = self
             .opportunistic
             .iter()
             .map(|(opp_mask, opp_index)| {
                 let opp_meta = opp_index.get_metadata();
-                let perf_gain = opp_meta.len() / base_meta_len;
+                let perf_gain = base_meta_len / (opp_meta.len() as f32);
+                debug!("Performance gain: {}", perf_gain);
                 let recall_loss = query_bitmask.jaccard_similarity(opp_mask);
-                (perf_gain as f64) / recall_loss
+                debug!("Recall loss: {}", recall_loss);
+                // Recall is a maximum of 1 (if masks perfectly overlap).
+                (perf_gain as f64) * recall_loss
             })
             // get the index of the max
             .enumerate()
@@ -80,8 +83,7 @@ impl SimilaritySearchable for Router<'_> {
             best_index, best_score
         );
 
-        let SCORE_THRESHOLD = 1_000_000 as f64;
-
+        let SCORE_THRESHOLD = 10.;
         let index_to_search = if best_score > SCORE_THRESHOLD {
             let (_, opp_index) = self.opportunistic[best_index];
             opp_index

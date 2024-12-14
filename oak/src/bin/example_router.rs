@@ -116,7 +116,7 @@ fn main() -> Result<()> {
 
     // Using router
     // ----------------------------
-    let router = Router::new(&dataset, vec![(&mask_sub, &subdataset)]);
+    let router = Router::new(&dataset, vec![(&mask_main, &subdataset)]);
 
     let routed_start = Instant::now();
     let routed_result = router.search_with_bitmask(&query_vector, &mask_main, topk);
