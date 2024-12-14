@@ -61,7 +61,7 @@ Since vectors with the greatest similarity may not satisfy the predicate, this a
 /Specialized indices/ such as Filtered-DiskANN [cite:] use predicates during index construction to eliminate the need for pre- or post-filtering.
 However, these indices restrict predicate set cardinalities to about 1,000 and only support equality predicates.
 
-Recently, ACORN [cite:] has proposed a /predicate-agnostic/ index which supports unbounded and arbitrary predicates.
+Recently, ACORN [cite:@patelACORNPerformantPredicateAgnostic2024] has proposed a /predicate-agnostic/ index which supports unbounded and arbitrary predicates.
 The results are impressive but still fall short of an /oracle partition index/ (Figure 1). 
 # TODO: Include figure from presentation.
 Given some search predicate $p$ and dataset $X$, an oracle partition index is an index on $X_p$. 
