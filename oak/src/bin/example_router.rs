@@ -2,14 +2,15 @@ use anyhow::Result;
 use clap::Parser;
 use dropshot::ConfigLogging;
 use dropshot::ConfigLoggingLevel;
-use slog_scope::info;
+use slog_scope::{debug, info};
 use std::time::Instant;
 use thiserror::Error;
 
 use oak::bitmask::Bitmask;
-use oak::dataset::{Dataset, OakIndexOptions};
+use oak::dataset::{OakIndexOptions, SimilaritySearchable};
 use oak::fvecs::{FlattenedVecs, FvecsDataset};
 use oak::predicate::PredicateQuery;
+use oak::router::Router;
 use oak::stubs::generate_random_vector;
 
 #[derive(Error, Debug)]
@@ -47,13 +48,13 @@ fn main() -> Result<()> {
         m_beta: 64,
     };
 
-    let _ = dataset.build_index(&opts);
+    let _ = dataset.initialize(&opts);
     info!("Seed index constructed.");
 
     let query = PredicateQuery::new(5);
 
     let mut subdataset = dataset.view(&query);
-    let _ = subdataset.build_index(&opts);
+    let _ = subdataset.initialize(&opts);
     info!("Subindex as view constructed.");
 
     let dimensionality = dataset.get_dimensionality() as usize;
@@ -73,16 +74,27 @@ fn main() -> Result<()> {
     let mask_main = Bitmask::new(&query, &dataset);
     let mask_sub = Bitmask::new_full(&subdataset);
 
+    debug!(
+        "Mask main filled: {} / {}",
+        mask_main.bitcount(),
+        mask_main.capacity()
+    );
+    debug!(
+        "Mask sub filled: {} / {}",
+        mask_sub.bitcount(),
+        mask_sub.capacity()
+    );
+
     info!("Searching full dataset for {topk} similar vectors for {num_queries} random query , where attr is equal to 5...");
 
     let big_start = Instant::now();
-    let big_result = dataset.search_with_bitmask(&query_vector, mask_main, topk);
+    let big_result = dataset.search_with_bitmask(&query_vector, &mask_main, topk);
     let big_end = big_start.elapsed();
 
     info!("Searching dataset partition for {topk} similar vectors for {num_queries} random query, with no predicate as we know all vectors match...");
 
     let small_start = Instant::now();
-    let small_result = dataset.search_with_bitmask(&query_vector, mask_sub, topk);
+    let small_result = dataset.search_with_bitmask(&query_vector, &mask_sub, topk);
     let small_end = small_start.elapsed();
 
     let big_mean_distance = big_result.unwrap()[0]
@@ -92,6 +104,7 @@ fn main() -> Result<()> {
 
     info!("Results from full search:");
     info!("Mean distance: {:?}", big_mean_distance);
+    info!("Time taken: {:?}", big_end);
 
     let small_mean_distance = small_result.unwrap()[0]
         .iter()
@@ -99,6 +112,23 @@ fn main() -> Result<()> {
         / topk;
     info!("Results from sub search:");
     info!("Mean distance: {:?}", small_mean_distance);
+    info!("Time taken: {:?}", small_end);
+
+    // Using router
+    // ----------------------------
+    let router = Router::new(&dataset, vec![(&mask_main, &subdataset)]);
+
+    let routed_start = Instant::now();
+    let routed_result = router.search_with_bitmask(&query_vector, &mask_main, topk);
+    let routed_end = routed_start.elapsed();
+
+    let routed_mean_distance = routed_result.unwrap()[0]
+        .iter()
+        .fold(0, |acc, (distance, _)| acc + distance)
+        / topk;
+    info!("Results from routed search:");
+    info!("Mean distance: {:?}", routed_mean_distance);
+    info!("Time taken: {:?}", routed_end);
 
     Ok(())
 }

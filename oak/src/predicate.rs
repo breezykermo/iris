@@ -1,4 +1,4 @@
-use crate::dataset::{Dataset, SearchableError};
+use crate::dataset::{SearchableError, SimilaritySearchable};
 use crate::fvecs::FvecsDataset;
 use anyhow::Result;
 

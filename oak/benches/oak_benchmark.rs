@@ -1,7 +1,7 @@
 use criterion::{
     black_box, criterion_group, criterion_main, AxisScale, Criterion, PlotConfiguration,
 };
-use oak::dataset::{Dataset, OakIndexOptions, TopKSearchResultBatch};
+use oak::dataset::{OakIndexOptions, SimilaritySearchable, TopKSearchResultBatch};
 use oak::fvecs::{FlattenedVecs, FvecsDataset};
 use oak::predicate::PredicateQuery;
 use oak::stubs::generate_random_vector;

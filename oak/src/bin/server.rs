@@ -16,7 +16,7 @@ use slog_scope::{debug, info};
 use std::fs::OpenOptions;
 use thiserror::Error;
 
-use oak::dataset::{Dataset, OakIndexOptions};
+use oak::dataset::{OakIndexOptions, SimilaritySearchable};
 use oak::fvecs::{FlattenedVecs, FvecsDataset};
 use oak::predicate::PredicateQuery;
 // use oak::stubs::generate_random_vector;

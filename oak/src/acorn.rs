@@ -1,5 +1,5 @@
 use crate::dataset::{
-    ConstructionError, Dataset, OakIndexOptions, SearchableError, TopKSearchResult,
+    ConstructionError, OakIndexOptions, SearchableError, SimilaritySearchable, TopKSearchResult,
 };
 use crate::ffi;
 use crate::fvecs::{FlattenedVecs, FvecsDataset};
@@ -15,7 +15,7 @@ pub struct AcornHnswIndex {
 
 #[cfg(feature = "hnsw_faiss")]
 impl AcornHnswIndex {
-    pub fn new<D: Dataset>(
+    pub fn new<D: SimilaritySearchable>(
         dataset: &D,
         flattened: &FlattenedVecs,
         options: &OakIndexOptions,

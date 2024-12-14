@@ -101,22 +101,19 @@ impl Default for OakIndexOptions {
 }
 
 /// Trait for a dataset of vectors.
-pub trait Dataset {
+pub trait SimilaritySearchable {
     /// Provide the number of vectors that have been added to the dataset.
     fn len(&self) -> usize;
 
     /// Provide the dimensionality of the vectors in the dataset.
     fn get_dimensionality(&self) -> usize;
 
-    /// Returns data in dataset. Fails if full dataset doesn't fit in memory.
-    fn get_data(&self) -> Result<Vec<Fvec>>;
-
     /// Get the metadata that represents the attributes over the vectors (for hybrid search).
     fn get_metadata(&self) -> &HybridSearchMetadata;
 
     /// Build the index associated with this dataset. If an index has not been built, all search
     /// methods will throw an error.
-    fn build_index(&mut self, opts: &OakIndexOptions) -> Result<(), ConstructionError>;
+    fn initialize(&mut self, opts: &OakIndexOptions) -> Result<(), ConstructionError>;
 
     /// Takes a Vec<Fvec> and returns a Vec<Vec<(usize, f32)>>, whereby each inner Vec<(usize, f32)> is an array
     /// of tuples in which t[0] is the index of the resthe `topk` vectors returned from the result.
@@ -132,7 +129,7 @@ pub trait Dataset {
     fn search_with_bitmask(
         &self,
         query_vectors: &FlattenedVecs,
-        bitmask: Bitmask,
+        bitmask: &Bitmask,
         topk: usize,
     ) -> Result<Vec<TopKSearchResult>, SearchableError>;
 }

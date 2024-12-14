@@ -1,6 +1,25 @@
-use crate::dataset::Dataset;
+use crate::dataset::SimilaritySearchable;
 use crate::predicate::{PredicateOp, PredicateQuery};
 use core::ffi::c_char;
+use std::collections::HashSet;
+
+// TODO: should probably represent Bitmasks as HashSets
+fn jaccard_similarity_vecs(vec1: Vec<i8>, vec2: Vec<i8>) -> f64 {
+    // Convert vectors to sets
+    let set1: HashSet<i8> = vec1.into_iter().collect();
+    let set2: HashSet<i8> = vec2.into_iter().collect();
+
+    // Calculate the intersection and union
+    let intersection: HashSet<_> = set1.intersection(&set2).cloned().collect();
+    let union: HashSet<_> = set1.union(&set2).cloned().collect();
+
+    // Calculate Jaccard similarity
+    if union.is_empty() {
+        0.0 // Handle edge case when both sets are empty
+    } else {
+        intersection.len() as f64 / union.len() as f64
+    }
+}
 
 pub struct Bitmask {
     pub map: Vec<i8>,
@@ -16,7 +35,7 @@ impl Bitmask {
     ///
     /// If an attribute matching the `lhs` of the query does not exist in the dataset, then an
     /// error will be raised.
-    pub fn new<D: Dataset>(pq: &PredicateQuery, dataset: &D) -> Self {
+    pub fn new<D: SimilaritySearchable>(pq: &PredicateQuery, dataset: &D) -> Self {
         let ds_len = dataset.len();
         let mut map: Vec<c_char> = vec![0; ds_len];
 
@@ -39,20 +58,67 @@ impl Bitmask {
         Self { map, bitcount }
     }
 
-    pub fn new_full<D: Dataset>(dataset: &D) -> Self {
-        let map = vec![true as i8; dataset.len()];
-        let bitcount = 1;
-        Self { map, bitcount }
+    pub fn capacity(&self) -> usize {
+        self.map.len()
     }
 
     pub fn bitcount(&self) -> usize {
         self.bitcount
+    }
+
+    pub fn new_full<D: SimilaritySearchable>(dataset: &D) -> Self {
+        let map = vec![true as i8; dataset.len()];
+        let bitcount = map.len();
+        Self { map, bitcount }
+    }
+
+    pub fn to_hashset(&self) -> HashSet<i8> {
+        self.map.clone().into_iter().collect()
+    }
+
+    pub fn jaccard_similarity(&self, other: &Self) -> f64 {
+        // Convert vectors to sets
+        let set1 = self.to_hashset();
+        let set2 = other.to_hashset();
+
+        // Calculate the intersection and union
+        let intersection: HashSet<_> = set1.intersection(&set2).cloned().collect();
+        let union: HashSet<_> = set1.union(&set2).cloned().collect();
+
+        // Calculate Jaccard similarity
+        if union.is_empty() {
+            0.0 // Handle edge case when both sets are empty
+        } else {
+            intersection.len() as f64 / union.len() as f64
+        }
     }
 }
 
 impl From<Bitmask> for Vec<i8> {
     fn from(mask: Bitmask) -> Self {
         mask.map
+    }
+}
+
+impl From<&Bitmask> for Vec<i8> {
+    fn from(mask: &Bitmask) -> Self {
+        // NOTE: we take cloning the Bitmask here as acceptable, as the values are only i8s
+        mask.map.clone()
+    }
+}
+
+impl From<Vec<i32>> for Bitmask {
+    fn from(attrs: Vec<i32>) -> Bitmask {
+        let bitcount = attrs.iter().sum::<i32>() as usize;
+        let map = attrs.into_iter().map(|x| x as i8).collect();
+        Self { map, bitcount }
+    }
+}
+
+impl From<Vec<i8>> for Bitmask {
+    fn from(map: Vec<i8>) -> Bitmask {
+        let bitcount = map.iter().sum::<i8>() as usize;
+        Self { map, bitcount }
     }
 }
 
