@@ -3,7 +3,7 @@ pub mod bitmask;
 pub mod dataset;
 pub mod fvecs;
 pub mod predicate;
-// pub mod router;
+pub mod router;
 pub mod stubs;
 
 #[cxx::bridge(namespace = "faiss")]
@@ -29,11 +29,13 @@ pub mod ffi {
 
         unsafe fn search_index(
             idx: &UniquePtr<IndexACORNFlat>,
-            n: i64,                     // number of query vectors
-            x: *const f32,              // pointer to an array of the query vectors
-            k: i64,                     // number of vectors to return for each query vector
+            n: i64,              // number of query vectors
+            x: *const f32,       // pointer to an array of the query vectors
+            k: i64,              // number of vectors to return for each query vector
             distances: *mut f32, // pointer to an array of (k*n) floats, each representing a distance of the result from the query vector
             labels: *mut i64, // pointer to an array of (k*n) indices, each representing the ID of the query vector in idx
+            // NOTE: this is mut because of the way that ACORN search is implemented in C++. It
+            // probably shouldn't be.
             filter_id_map: *mut c_char, // a bitmap of the IDs in the filter, an array of (n * N) bools, where N is the total number of vectors in the index, and a '1' represents that the vector at that index passes the predicate for that query.
         ) -> Result<()>;
     }
