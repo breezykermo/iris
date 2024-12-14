@@ -13,8 +13,9 @@ use slog_scope::info;
 use std::fs::OpenOptions;
 use thiserror::Error;
 
-use oak::dataset::{Dataset, OakIndexOptions};
-use oak::fvecs::FvecsDataset;
+use oak::dataset::{OakIndexOptions, SimilaritySearchable};
+use oak::fvecs::{FlattenedVecs, FvecsDataset};
+use oak::predicate::PredicateQuery;
 // use oak::stubs::generate_random_vector;
 
 // Ensure that only one of FAISS or hnsw_rs is used.

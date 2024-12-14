@@ -1,8 +1,8 @@
 use crate::acorn::AcornHnswIndex;
 use crate::bitmask::Bitmask;
 use crate::dataset::{
-    ConstructionError, Dataset, HybridSearchMetadata, OakIndexOptions, SearchableError,
-    TopKSearchResult,
+    ConstructionError, HybridSearchMetadata, OakIndexOptions, SearchableError,
+    SimilaritySearchable, TopKSearchResult,
 };
 use crate::predicate::PredicateQuery;
 use slog_scope::{debug, info};
@@ -122,7 +122,6 @@ impl FlattenedVecs {
     /// transformation also ensures that the vectors are in memory (rather than on disk).
     pub fn read_from_mmap(mmap: &Mmap, count: usize, dimensionality: usize) -> Self {
         let mut all_fvecs = Vec::with_capacity(count * dimensionality);
-
         let fvec_len_in_bytes = (dimensionality + 1) * FOUR_BYTES;
         let mut current_index = 0;
         for i in mmap.chunks_exact(fvec_len_in_bytes) {
@@ -217,7 +216,6 @@ impl FvecsDataset {
         let metadata = if load_csv {
             let mut metadata_fname = PathBuf::new();
             metadata_fname.push(&format!("{}.csv", fname));
-
             let metadata_vec = read_csv_to_vec(&metadata_fname)?;
             HybridSearchMetadata::new(metadata_vec)
         } else {
@@ -236,6 +234,19 @@ impl FvecsDataset {
         })
     }
 
+    fn get_data(&self) -> Result<Vec<Fvec>> {
+        let vecs = self
+            .flat
+            .data
+            .chunks_exact(self.dimensionality)
+            .map(|x| Fvec {
+                dimensionality: self.dimensionality,
+                data: x.to_vec(),
+            })
+            .collect();
+        Ok(vecs)
+    }
+
     pub fn view(&self, pq: &PredicateQuery) -> FvecsDatasetPartition {
         let mask = Bitmask::new(pq, self);
         let metadata = HybridSearchMetadata::new_from_bitmask(&self.metadata, &mask);
@@ -250,7 +261,7 @@ impl FvecsDataset {
     }
 }
 
-impl Dataset for FvecsDataset {
+impl SimilaritySearchable for FvecsDataset {
     fn len(&self) -> usize {
         self.count
     }
@@ -274,9 +285,9 @@ impl Dataset for FvecsDataset {
             })
             .collect();
         Ok(vecs)
-    }
+  }
 
-    fn build_index(&mut self, opts: &OakIndexOptions) -> Result<(), ConstructionError> {
+      fn initialize(&mut self, opts: &OakIndexOptions) -> Result<(), ConstructionError> {
         let index = AcornHnswIndex::new(self, &self.flat, opts)?;
         self.index = Some(index);
         Ok(())
@@ -336,13 +347,9 @@ pub struct FvecsDatasetPartition<'a> {
     metadata: HybridSearchMetadata,
 }
 
-impl<'a> Dataset for FvecsDatasetPartition<'a> {
+impl<'a> SimilaritySearchable for FvecsDatasetPartition<'a> {
     fn len(&self) -> usize {
         self.mask.bitcount()
-    }
-
-    fn get_data(&self) -> Result<Vec<Fvec>> {
-        unimplemented!();
     }
 
     fn get_metadata(&self) -> &HybridSearchMetadata {
@@ -353,7 +360,7 @@ impl<'a> Dataset for FvecsDatasetPartition<'a> {
         self.base.dimensionality
     }
 
-    fn build_index(&mut self, opts: &OakIndexOptions) -> Result<(), ConstructionError> {
+    fn initialize(&mut self, opts: &OakIndexOptions) -> Result<(), ConstructionError> {
         let og = &self.base.flat;
         let flat = og.clone_via_bitmask(&self.mask);
 
@@ -367,18 +374,18 @@ impl<'a> Dataset for FvecsDatasetPartition<'a> {
 
     fn search(
         &self,
-        _query_vectors: &FlattenedVecs,
-        _predicate_query: &Option<PredicateQuery>,
-        _topk: usize,
+        query_vectors: &FlattenedVecs,
+        predicate_query: &Option<PredicateQuery>,
+        topk: usize,
     ) -> Result<Vec<TopKSearchResult>, SearchableError> {
         todo!();
     }
 
     fn search_with_bitmask(
         &self,
-        _query_vectors: &FlattenedVecs,
-        _bitmask: &Bitmask,
-        _topk: usize,
+        query_vectors: &FlattenedVecs,
+        bitmask: &Bitmask,
+        topk: usize,
     ) -> Result<Vec<TopKSearchResult>, SearchableError> {
         todo!();
     }

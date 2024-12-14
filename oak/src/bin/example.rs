@@ -5,7 +5,7 @@ use dropshot::ConfigLoggingLevel;
 use slog_scope::info;
 use thiserror::Error;
 
-use oak::dataset::{Dataset, OakIndexOptions};
+use oak::dataset::{OakIndexOptions, SimilaritySearchable};
 use oak::fvecs::{FlattenedVecs, FvecsDataset};
 use oak::predicate::PredicateQuery;
 use oak::stubs::generate_random_vector;

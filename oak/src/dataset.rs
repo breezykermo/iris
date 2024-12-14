@@ -101,7 +101,8 @@ impl Default for OakIndexOptions {
 }
 
 /// Trait for a dataset of vectors.
-pub trait Dataset {
+
+pub trait SimilaritySearchable {
     /// Provide the number of vectors that have been added to the dataset.
     fn len(&self) -> usize;
 
@@ -116,7 +117,7 @@ pub trait Dataset {
 
     /// Build the index associated with this dataset. If an index has not been built, all search
     /// methods will throw an error.
-    fn build_index(&mut self, opts: &OakIndexOptions) -> Result<(), ConstructionError>;
+    fn initialize(&mut self, opts: &OakIndexOptions) -> Result<(), ConstructionError>;
 
     /// Takes a Vec<Fvec> and returns a Vec<Vec<(usize, f32)>>, whereby each inner Vec<(usize, f32)> is an array
     /// of tuples in which t[0] is the index of the resthe `topk` vectors returned from the result.
