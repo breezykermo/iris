@@ -49,7 +49,6 @@ In this paper, we present *OAK* (Opportunistic ANNS K-Subgraphs), a system that 
 
 * Research Problem/Motivation
 #+LABEL: sec:motivation
-
 We now discuss the existing predicate filtering strategies.
 
 /Pre-filtering/ first finds all vectors that satisfy a given predicate and then performs a similarity search on the remaining vectors.
@@ -65,13 +64,14 @@ Recently, ACORN [cite:@patelACORNPerformantPredicateAgnostic2024] has proposed a
 The results are impressive but still fall short of an /oracle partition index/ (Figure 1). 
 # TODO: Include figure from presentation.
 Given some search predicate $p$ and dataset $X$, an oracle partition index is an index on $X_p$. 
-An oracle partition index is more performant compared to a base ACORN index because the search space is guaranteed to contain only vectors that satisfy the predicate, and thus no predicate comparison must occur during the search itself.
-The reason ACORN provides a /predicate-agnostic/ index is because in many systems, it is infeasible to construct an index for every possible predicate, and thus a general-purpose index performs well across a diverse array of queries.
+An oracle partition index is more performant compared to a base ACORN index because the search space is guaranteed to contain only vectors that satisfy the predicate, and thus no further filtering needs to occur before, during, or after the search itself.
+In many cases, it is infeasible to construct an oracle index for every possible predicate, and thus a general-purpose index such as ACORN is more desirable, as it performs reasonably well across a diverse array of queries and is much more space efficient.
 
-However, access patterns are sometimes not uniformly distributed.
-Consider, for example, queries about football teams during Superbowl or states during election night.
-In certain scenarios, a general-purpose predicate-agnostic index can be supplemented by carefully chosen supplemental indices constructed using frequently occurring predicates.
-This is the goal of OAK.
+There are, however, many query distributions could be get significant and meaningful performance improvement if an oracle index were to exist that could be searched rather than an index that also contains vectors that don't match the search predicate.
+The greater the scale of the database and the volume of queries, the more critical such a performance improvement could be. 
+Consider, for example, queries about football teams during the Superbowl, or about states during election night.
+In scenarios like this, a general-purpose predicate-agnostic index can be supplemented by carefully chosen supplemental indices that are constructed so as to effectively serve some frequently occurring search predicates.
+Intelligently routing to supplemental indexes in such cases is the goal of OAK.
 
 * Background and Related Work
 
