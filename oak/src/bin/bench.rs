@@ -28,12 +28,6 @@ struct Args {
     #[arg(short, long, required(true))]
     groundtruth: String,
 }
-struct ExpResult {
-    durs: Vec<Duration>,
-    remaining_inflight: usize,
-    tot_time: Duration,
-    num_clients: usize,
-}
 
 struct QueryStats {
     recall_10: bool,
@@ -53,7 +47,7 @@ fn query_loop(
         let now = tokio::time::Instant::now();
         let result = dataset.search_with_bitmask(&q, &bitmask, k)?;
         let end = now.elapsed();
-        let latency = end.as_millis();
+        let latency = end.as_micros();
         let r10 = calculate_recall_1(gt[i], result)?;
         results.push(QueryStats{
             recall_10: r10,
@@ -66,7 +60,7 @@ fn query_loop(
 fn averages(queries: Vec<QueryStats>) -> Result<(f64, f64, f64)> {
     let total_latencies:f64 = queries.iter().map(|qs| qs.latency).sum::<u128>() as f64;
     let total_r10:f64 = queries.iter().filter(|qs| qs.recall_10).count() as f64;
-    info!("TOTAL R10: {}", total_r10);
+    // info!("TOTAL R10: {}", total_r10);
     let count:f64 = queries.len() as f64;
     Ok((
         total_latencies,
@@ -80,7 +74,7 @@ fn calculate_recall_1(gt: usize, acorn_result: TopKSearchResultBatch) -> Result<
     for (i, j) in acorn_result[0].iter().enumerate() {
         // topk should be 10 so this loop should be bounded at 10 per query
         if j.0 == gt {
-            info!("{} == {} recall", j.0, gt);
+            // info!("{} == {} recall", j.0, gt);
             if i < 10 {
                 n_10 = true;
             }
@@ -88,9 +82,9 @@ fn calculate_recall_1(gt: usize, acorn_result: TopKSearchResultBatch) -> Result<
             // we can break out whenever the matching index was found
         }
     }
-    if !n_10 {
-        info!("HIIIIII");
-    }
+    // if !n_10 {
+    //     info!("HIIIIII");
+    // }
     Ok(n_10)
 }
 
@@ -149,7 +143,7 @@ fn main() -> Result<()> {
     let num_queries = batched_queries.len();
     info!("Total {num_queries} queries loaded");
     let queries = batched_queries.to_vec();
-    assert_eq!(queries.len(), 100);
+    // assert_eq!(queries.len(), 100);
     info!("Converted into {}", queries.len());
 
     let mask_main = Bitmask::new(&query, &dataset);
@@ -168,7 +162,7 @@ fn main() -> Result<()> {
     let qs = query_loop(dataset, queries, &mask_main, topk, gt)?;
     match averages(qs) {
         Ok((lat, qps, r10)) => {
-            info!("QPS was {qps} milliseconds with total latency
+            info!("QPS was {qps} microseconds with total latency
              being {lat} for {num_queries} and Recall@10 was {r10}")
         }
         Err(_) => {

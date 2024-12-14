@@ -61,16 +61,16 @@ impl AcornHnswIndex {
         k: usize,
     ) -> Result<Vec<TopKSearchResult>, SearchableError> {
         let number_of_query_vectors: usize = query_vectors.len();
-        debug!("Searching queries: {number_of_query_vectors} in batch.");
+        // debug!("Searching queries: {number_of_query_vectors} in batch.");
         let length_of_results = k * number_of_query_vectors;
-        debug!("Length of results arrays: {length_of_results}.");
+        // debug!("Length of results arrays: {length_of_results}.");
 
         // These two arrays are where the outputs from the cpp methods will be stored
         let mut distances: Vec<f32> = vec![0 as f32; length_of_results];
         let mut labels: Vec<i64> = vec![0; length_of_results];
 
         let filter_id_map_length = filter_id_map.len();
-        debug!("Length of bitmap representing predicate: {filter_id_map_length}.");
+        // debug!("Length of bitmap representing predicate: {filter_id_map_length}.");
 
         unsafe {
             ffi::search_index(
@@ -84,7 +84,7 @@ impl AcornHnswIndex {
             )?
         }
 
-        info!("Search complete");
+        // info!("Search complete");
 
         let combined: Vec<(usize, f32)> = labels
             .into_iter()
