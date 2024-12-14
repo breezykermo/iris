@@ -75,8 +75,8 @@ Intelligently routing to supplemental indexes in such cases is the goal of OAK.
 
 * Background and Related Work
 
-The underlying data structure of both ACORN and OAK is Hierarchical Navigable Small Worlds (HNSW)[cite:https://arxiv.org/abs/1603.09320], a hierarchical, tree-link structure where each node of the tree represents a set of vectors.
-More specifically, it is a /proximity graph/, in which two vertices are linked based on proximity.
+The underlying data structure that enables vector similiarity search in both ACORN and OAK is Hierarchical Navigable Small Worlds (HNSW) [cite:@malkovEfficientRobustApproximate2018], an index that makes use of a hierarchical, tree-link structure during search to more quickly work through the plausible search space while retaining reasonable recall.
+More specifically, HNSW leverages a /proximity graph/, in which two vertices are linked based on proximity.
 Proximity is usually computed using Euclidean distance, though other similarity metrics exist (e.g. cosine similarity).
 
 ACORN modifies the HNSW construction algorithm to use neighbor expansion, creating a denser graph.
