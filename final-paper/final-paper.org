@@ -83,6 +83,7 @@ ACORN modifies the HNSW construction algorithm to use neighbor expansion, creati
 While HNSW collects $M$ approximate nearest neighbors as candidate edges for each node in the index, ACORN collects $M \dot \gamma$ approximate nearest neighbors as candidate edges per node.
 The intuition is that given enough redundant nodes, the search space is sufficiently large, even when filtering based on the predicate during search.
 
+
 This is not always the case, though. 
 If the predicate selectivity falls below a minimum specified threshold, ACORN resorts to pre-filtering and brute force search, favoring recall over performance.
 This may explain the difference in throughput between ACORN-$\gamma$ and the opportunistic index in Figure 1.
