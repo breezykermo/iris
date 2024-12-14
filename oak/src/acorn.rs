@@ -2,7 +2,7 @@ use crate::dataset::{
     ConstructionError, Dataset, OakIndexOptions, SearchableError, TopKSearchResult,
 };
 use crate::ffi;
-use crate::fvecs::{FlattenedVecs, FvecsDataset};
+use crate::fvecs::FlattenedVecs;
 
 use core::ffi::c_char;
 use slog_scope::{debug, info};

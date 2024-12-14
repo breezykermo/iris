@@ -2,20 +2,14 @@ use anyhow::Result;
 use clap::Parser;
 use dropshot::ConfigLogging;
 use dropshot::ConfigLoggingLevel;
-use oak::dataset::TopKSearchResult;
-use oak::predicate::PredicateOp;
 use oak::bitmask::Bitmask;
 use std::time::Duration;
 use thiserror::Error;
-use slog_scope::{debug, info};
+use slog_scope::info;
 use oak::dataset::{Dataset, OakIndexOptions, SearchableError, TopKSearchResultBatch};
 use oak::fvecs::{FlattenedVecs, FvecsDataset};
 use oak::predicate::PredicateQuery;
-use csv::Writer;
-use csv::Reader;
-use core::ffi::c_char;
-use std::env;
-
+use csv::ReaderBuilder;
 #[derive(Error, Debug)]
 pub enum ExampleError {
     #[error("Generic error")]
@@ -42,26 +36,24 @@ struct ExpResult {
 }
 
 struct QueryStats {
-    // recall_1: bool,
     recall_10: bool,
-    // recall_100: bool,
-    latency: Duration
+    latency: u128 //currently representing milliseconds, need to rework since its per query
 }
 
 fn query_loop(
+    dataset: FvecsDataset,
     queries : Vec<FlattenedVecs>,
     bitmask : &Bitmask,
     k: usize,
     gt: Vec<usize>
 ) -> Result<Vec<QueryStats>> {
-    let results = vec![];
-
+    let mut results = vec![];
+    info!{"We have {} queries and {} gt elts", queries.len(), gt.len()};
     for (i, q) in queries.iter().enumerate() {
         let now = tokio::time::Instant::now();
         let result = dataset.search_with_bitmask(&q, &bitmask, k)?;
         let end = now.elapsed();
         let latency = end.as_millis();
-        info!("Latency was {latency}");
         let r10 = calculate_recall_1(gt[i], result)?;
         results.push(QueryStats{
             recall_10: r10,
@@ -69,43 +61,43 @@ fn query_loop(
         });
 
     }
+    Ok(results)
 }
-fn averages(queries: Vec<QueryStats>) -> Result<(f32, f32, f32)> {
-    let total_latencies:f32 = queries.iter().map(|qs| qs.latency).sum::<Duration>().as_secs() as f32;
-    // let total_r1:f32 = queries.iter().map(|qs| qs.recall_1).count() as f32;
-    let total_r10:f32 = queries.iter().map(|qs| qs.recall_10).count() as f32;
-    // let total_r100:f32 = queries.iter().map(|qs| qs.recall_100).count() as f32;
-    let count:f32 = queries.len() as f32;
+fn averages(queries: Vec<QueryStats>) -> Result<(f64, f64, f64)> {
+    let total_latencies:f64 = queries.iter().map(|qs| qs.latency).sum::<u128>() as f64;
+    let total_r10:f64 = queries.iter().filter(|qs| qs.recall_10).count() as f64;
+    info!("TOTAL R10: {}", total_r10);
+    let count:f64 = queries.len() as f64;
     Ok((
         total_latencies,
-        total_latencies as f32 /count as f32, 
-        // total_r1 as f32 /count as f32, 
-        total_r10 as f32 /count as f32, 
-        // total_r100 as f32 /count as f32
+        total_latencies /count, 
+        total_r10 /count, 
     ))
 }
 
-fn calculate_recall_1(gt: usize, acorn_result: TopKSearchResultBatch) -> Result<f32> {
-    let mut n_1: usize= 0;
-    let mut n_10: usize = 0;
+fn calculate_recall_1(gt: usize, acorn_result: TopKSearchResultBatch) -> Result<bool> {
+    let mut n_10: bool = false;
     for (i, j) in acorn_result[0].iter().enumerate() {
         // topk should be 10 so this loop should be bounded at 10 per query
         if j.0 == gt {
-            if i <1 {
-                n_1 += 1;
-            }
+            info!("{} == {} recall", j.0, gt);
             if i < 10 {
-                n_10 += 1;
+                n_10 = true;
             }
             break;
             // we can break out whenever the matching index was found
         }
     }
-    Ok(n_10 as f32/ gt.len() as f32)
+    if !n_10 {
+        info!("HIIIIII");
+    }
+    Ok(n_10)
 }
 
 fn read_csv(file_path: String) -> Result<Vec<usize>> {
-    let mut rdr = Reader::from_path(file_path)?;
+    let mut rdr = ReaderBuilder::new()
+                    .has_headers(false)
+                    .from_path(file_path)?;
     let mut values = Vec::new();
 
     for result in rdr.records() {
@@ -150,13 +142,15 @@ fn main() -> Result<()> {
     assert_eq!(dimensionality, subdataset.get_dimensionality() as usize);
 
     let mut query_set = FvecsDataset::new(args.query, false)?;
-    let queries = FlattenedVecs::from(&query_set).to_vec();
+    let batched_queries = FlattenedVecs::from(&query_set);
     info!("Query set loaded from disk.");
 
     let topk = 10;
-    let num_queries = queries.len();
+    let num_queries = batched_queries.len();
     info!("Total {num_queries} queries loaded");
-
+    let queries = batched_queries.to_vec();
+    assert_eq!(queries.len(), 100);
+    info!("Converted into {}", queries.len());
 
     let mask_main = Bitmask::new(&query, &dataset);
     let mask_sub = Bitmask::new_full(&subdataset);
@@ -168,9 +162,10 @@ fn main() -> Result<()> {
     info!("GT loading...");
     // let variable_gt_path = "./outdir/sift_groundtruth.csv";
     let gt = read_csv(args.groundtruth)?;
+    info!("{} gt queries found", gt.len());
 
     info!("Searching full dataset for {topk} similar vectors for {num_queries} random query , where attr is equal to 1...");
-    let qs = query_loop(queries, &mask_main, topk, gt)?;
+    let qs = query_loop(dataset, queries, &mask_main, topk, gt)?;
     match averages(qs) {
         Ok((lat, qps, r10)) => {
             info!("QPS was {qps} milliseconds with total latency

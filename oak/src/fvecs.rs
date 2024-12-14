@@ -85,12 +85,12 @@ impl FlattenedVecs {
         self.data.len() / self.dimensionality
     }
 
-    pub fn to_vec(&self) -> Vec<FlattenedVecs> {
-        self.data.into_iter().map(|v|FlattenedVecs{
+    pub fn to_vec(self) -> Vec<FlattenedVecs> {
+        self.data.chunks(self.dimensionality)
+        .map(|c| FlattenedVecs{
             dimensionality: self.dimensionality,
-            data: vec![v]
-        })
-        .collect()
+            data: c.to_vec(),
+        }).collect()
     }
 
     /// Creates a new FlattenedVecs based on a bitmask and an original one.
@@ -367,18 +367,18 @@ impl<'a> Dataset for FvecsDatasetPartition<'a> {
 
     fn search(
         &self,
-        query_vectors: &FlattenedVecs,
-        predicate_query: &Option<PredicateQuery>,
-        topk: usize,
+        _query_vectors: &FlattenedVecs,
+        _predicate_query: &Option<PredicateQuery>,
+        _topk: usize,
     ) -> Result<Vec<TopKSearchResult>, SearchableError> {
         todo!();
     }
 
     fn search_with_bitmask(
         &self,
-        query_vectors: &FlattenedVecs,
-        bitmask: &Bitmask,
-        topk: usize,
+        _query_vectors: &FlattenedVecs,
+        _bitmask: &Bitmask,
+        _topk: usize,
     ) -> Result<Vec<TopKSearchResult>, SearchableError> {
         todo!();
     }
