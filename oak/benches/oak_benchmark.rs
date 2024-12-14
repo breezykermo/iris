@@ -17,7 +17,7 @@ static mut DATASET_GAMMA_Y: Option<FvecsDataset> = None;
 fn load_dataset_gamma_1() -> &'static FvecsDataset {
     // Only create the index once when benchmarking.
     INIT.call_once(|| {
-        let mut dataset = FvecsDataset::new("data/sift_base".to_string()).unwrap();
+        let mut dataset = FvecsDataset::new("data/sift_base".to_string(), true).unwrap();
         let options = OakIndexOptions::default();
         let _ = dataset.initialize(&options);
         unsafe {
@@ -31,7 +31,7 @@ fn load_dataset_gamma_1() -> &'static FvecsDataset {
 fn load_dataset_gamma_y() -> &'static FvecsDataset {
     // Only create the index once when benchmarking.
     INIT.call_once(|| {
-        let mut dataset = FvecsDataset::new("data/sift_base".to_string()).unwrap();
+        let mut dataset = FvecsDataset::new("data/sift_base".to_string(), true).unwrap();
         let options = OakIndexOptions {
             gamma: 12,
             m: 32,
@@ -57,7 +57,7 @@ fn run_query(
 fn single_query_no_predicate_gamma_1(c: &mut Criterion) {
     let dataset = load_dataset_gamma_1();
 
-    let queries = FvecsDataset::new("data/sift_query".to_string()).unwrap();
+    let queries = FvecsDataset::new("data/sift_query".to_string(), false).unwrap();
     // let predicates = Vec::<PredicateQuery>::from(&queries);
     // NOTE: passing all 10000 queries at the same time with a non-None query throughs a segfault,
     // presumably as the bitmask generation is too memory intensive.

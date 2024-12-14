@@ -274,20 +274,7 @@ impl SimilaritySearchable for FvecsDataset {
         &self.metadata
     }
 
-    fn get_data(&self) -> Result<Vec<Fvec>> {
-        let vecs = self
-            .flat
-            .data
-            .chunks_exact(self.dimensionality)
-            .map(|x| Fvec {
-                dimensionality: self.dimensionality,
-                data: x.to_vec(),
-            })
-            .collect();
-        Ok(vecs)
-  }
-
-      fn initialize(&mut self, opts: &OakIndexOptions) -> Result<(), ConstructionError> {
+    fn initialize(&mut self, opts: &OakIndexOptions) -> Result<(), ConstructionError> {
         let index = AcornHnswIndex::new(self, &self.flat, opts)?;
         self.index = Some(index);
         Ok(())
@@ -399,7 +386,7 @@ mod tests {
 
     #[test]
     fn test_not_initialized_error() {
-        let dataset = FvecsDataset::new("data/sift_query".to_string()).unwrap();
+        let dataset = FvecsDataset::new("data/sift_query".to_string(), false).unwrap();
         let predicate: Option<PredicateQuery> = None;
         let dimensionality = dataset.dimensionality;
         let query_vector = FlattenedVecs {
@@ -417,7 +404,7 @@ mod tests {
 
     #[test]
     fn test_fvecs_to_flattened_vec() {
-        let dataset = FvecsDataset::new("data/sift_query".to_string()).unwrap();
+        let dataset = FvecsDataset::new("data/sift_query".to_string(), true).unwrap();
         let dataset_len = dataset.len();
         let vecs = FlattenedVecs::from(&dataset);
 
