@@ -3,7 +3,6 @@ pub mod bitmask;
 pub mod dataset;
 pub mod fvecs;
 pub mod predicate;
-
 pub mod router;
 pub mod stubs;
 
@@ -38,7 +37,7 @@ pub mod ffi {
             // NOTE: this is mut because of the way that ACORN search is implemented in C++. It
             // probably shouldn't be.
             filter_id_map: *mut c_char, // a bitmap of the IDs in the filter, an array of (n * N) bools, where N is the total number of vectors in the index, and a '1' represents that the vector at that index passes the predicate for that query.
-	    efsearch: i64
+            efsearch: i64,              // the search-time parameter to tweak recall
         ) -> Result<()>;
     }
 }

@@ -5,7 +5,7 @@ use crate::dataset::{
     SimilaritySearchable, TopKSearchResult,
 };
 use crate::predicate::PredicateQuery;
-use slog_scope::{debug, info};
+use slog_scope::debug;
 
 use anyhow::Result;
 use byteorder::{ByteOrder, LittleEndian};
@@ -86,11 +86,13 @@ impl FlattenedVecs {
     }
 
     pub fn to_vec(self) -> Vec<FlattenedVecs> {
-        self.data.chunks(self.dimensionality)
-        .map(|c| FlattenedVecs{
-            dimensionality: self.dimensionality,
-            data: c.to_vec(),
-        }).collect()
+        self.data
+            .chunks(self.dimensionality)
+            .map(|c| FlattenedVecs {
+                dimensionality: self.dimensionality,
+                data: c.to_vec(),
+            })
+            .collect()
     }
 
     /// Creates a new FlattenedVecs based on a bitmask and an original one.
@@ -182,7 +184,6 @@ impl FvecsDataset {
     pub fn new(fname: String, load_csv: bool) -> Result<Self> {
         let mut fvecs_fname = PathBuf::new();
         fvecs_fname.push(&format!("{}.fvecs", fname));
-        info!("{:?}", fvecs_fname);
 
         let f = File::open(fvecs_fname)?;
 
@@ -190,7 +191,6 @@ impl FvecsDataset {
         // file will not be modified throughout the duration of the program, as we control the file
         // system.
         let mmap = unsafe { Mmap::map(&f)? };
-        info!("MMAPed");
 
         // In OAK, we are assuming that our datasets are always in-memory for the first set of
         // experiments.
@@ -234,18 +234,19 @@ impl FvecsDataset {
         })
     }
 
-    // fn get_data(&self) -> Result<Vec<Fvec>> {
-    //     let vecs = self
-    //         .flat
-    //         .data
-    //         .chunks_exact(self.dimensionality)
-    //         .map(|x| Fvec {
-    //             dimensionality: self.dimensionality,
-    //             data: x.to_vec(),
-    //         })
-    //         .collect();
-    //     Ok(vecs)
-    // }
+    #[allow(dead_code)]
+    fn get_data(&self) -> Result<Vec<Fvec>> {
+        let vecs = self
+            .flat
+            .data
+            .chunks_exact(self.dimensionality)
+            .map(|x| Fvec {
+                dimensionality: self.dimensionality,
+                data: x.to_vec(),
+            })
+            .collect();
+        Ok(vecs)
+    }
 
     pub fn view(&self, pq: &PredicateQuery) -> FvecsDatasetPartition {
         let mask = Bitmask::new(pq, self);
@@ -285,7 +286,7 @@ impl SimilaritySearchable for FvecsDataset {
         query_vectors: &FlattenedVecs,
         predicate_query: &Option<PredicateQuery>,
         topk: usize,
-	efsearch: i64
+        efsearch: i64,
     ) -> Result<Vec<TopKSearchResult>, SearchableError> {
         if self.index.is_none() {
             return Err(SearchableError::DatasetIsNotIndexed);
@@ -310,7 +311,7 @@ impl SimilaritySearchable for FvecsDataset {
         query_vectors: &FlattenedVecs,
         bitmask: &Bitmask,
         topk: usize,
-	efsearch: i64,
+        efsearch: i64,
     ) -> Result<Vec<TopKSearchResult>, SearchableError> {
         let mut filter_id_map = Vec::<i8>::from(bitmask);
 
@@ -384,7 +385,6 @@ impl<'a> SimilaritySearchable for FvecsDatasetPartition<'a> {
             .as_ref()
             .unwrap()
             .search(query_vectors, &mut mask.map, topk, efsearch)
-
     }
 
     fn search_with_bitmask(
@@ -437,3 +437,4 @@ mod tests {
         assert_eq!(vecs.len(), dataset_len);
     }
 }
+
