@@ -62,7 +62,9 @@ However, these indexes restrict predicate set cardinalities to about 1,000 and o
 
 Recently, ACORN [cite:@patelACORNPerformantPredicateAgnostic2024] has proposed a /predicate-agnostic/ index which supports unbounded and arbitrary predicates.
 The results are impressive but still fall short of an /oracle partition index/ (Figure 1). 
-# TODO: Include figure from presentation.
+
+[[./figures/acorn-fig-7.png]]
+
 Given some search predicate $p$ and dataset $X$, an oracle partition index is an index on $X_p$. 
 An oracle partition index is more performant compared to a base ACORN index because the search space is guaranteed to contain only vectors that satisfy the predicate, and thus no further filtering needs to occur before, during, or after the search itself.
 In many cases, it is infeasible to construct an oracle index for every possible predicate, and thus a general-purpose index such as ACORN is more desirable, as it performs reasonably well across a diverse array of queries and is much more space efficient.
