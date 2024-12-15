@@ -5,12 +5,12 @@ use crate::dataset::{
     SimilaritySearchable, TopKSearchResult,
 };
 use crate::predicate::PredicateQuery;
+use slog_scope::debug;
 
 use anyhow::Result;
 use byteorder::{ByteOrder, LittleEndian};
 use csv::ReaderBuilder;
 use memmap2::Mmap;
-use slog_scope::debug;
 use std::fs::File;
 use std::path::PathBuf;
 
@@ -84,6 +84,16 @@ impl FlattenedVecs {
         self.data.len() / self.dimensionality
     }
 
+    pub fn to_vec(self) -> Vec<FlattenedVecs> {
+        self.data
+            .chunks(self.dimensionality)
+            .map(|c| FlattenedVecs {
+                dimensionality: self.dimensionality,
+                data: c.to_vec(),
+            })
+            .collect()
+    }
+
     /// Creates a new FlattenedVecs based on a bitmask and an original one.
     /// Only the necessary items (items that match the bitmask) are copied.
     pub fn clone_via_bitmask(&self, bitmask: &Bitmask) -> Self {
@@ -113,7 +123,6 @@ impl FlattenedVecs {
     /// transformation also ensures that the vectors are in memory (rather than on disk).
     pub fn read_from_mmap(mmap: &Mmap, count: usize, dimensionality: usize) -> Self {
         let mut all_fvecs = Vec::with_capacity(count * dimensionality);
-
         let fvec_len_in_bytes = (dimensionality + 1) * FOUR_BYTES;
         let mut current_index = 0;
         for i in mmap.chunks_exact(fvec_len_in_bytes) {
@@ -171,7 +180,7 @@ impl FvecsDataset {
     /// "{fname}.csv" that contains the attributes (over which predicates can be constructed) for
     /// those vectors. Each row in the CSV corresponds to the vector at the same index in the fvecs
     /// file, and each column represents an attribute on that vector.
-    pub fn new(fname: String) -> Result<Self> {
+    pub fn new(fname: String, load_csv: bool) -> Result<Self> {
         let mut fvecs_fname = PathBuf::new();
         fvecs_fname.push(&format!("{}.fvecs", fname));
 
@@ -203,13 +212,17 @@ impl FvecsDataset {
         );
         debug!("The file read has {count} vectors.");
 
-        let mut metadata_fname = PathBuf::new();
-        metadata_fname.push(&format!("{}.csv", fname));
+        let metadata = if load_csv {
+            let mut metadata_fname = PathBuf::new();
+            metadata_fname.push(&format!("{}.csv", fname));
+            let metadata_vec = read_csv_to_vec(&metadata_fname)?;
+            HybridSearchMetadata::new(metadata_vec)
+        } else {
+            // NOTE: this is a bad hack. It should really be an option
+            HybridSearchMetadata::new(vec![])
+        };
 
-        let metadata_vec = read_csv_to_vec(&metadata_fname)?;
-        let metadata = HybridSearchMetadata::new(metadata_vec);
         let flat = FlattenedVecs::read_from_mmap(&mmap, count, dimensionality);
-
         Ok(Self {
             index: None,
             count,
@@ -220,6 +233,7 @@ impl FvecsDataset {
         })
     }
 
+    #[allow(dead_code)]
     fn get_data(&self) -> Result<Vec<Fvec>> {
         let vecs = self
             .flat
@@ -271,6 +285,7 @@ impl SimilaritySearchable for FvecsDataset {
         query_vectors: &FlattenedVecs,
         predicate_query: &Option<PredicateQuery>,
         topk: usize,
+        efsearch: i64,
     ) -> Result<Vec<TopKSearchResult>, SearchableError> {
         if self.index.is_none() {
             return Err(SearchableError::DatasetIsNotIndexed);
@@ -287,7 +302,7 @@ impl SimilaritySearchable for FvecsDataset {
         self.index
             .as_ref()
             .unwrap()
-            .search(query_vectors, &mut mask.map, topk)
+            .search(query_vectors, &mut mask.map, topk, efsearch)
     }
 
     fn search_with_bitmask(
@@ -295,6 +310,7 @@ impl SimilaritySearchable for FvecsDataset {
         query_vectors: &FlattenedVecs,
         bitmask: &Bitmask,
         topk: usize,
+        efsearch: i64,
     ) -> Result<Vec<TopKSearchResult>, SearchableError> {
         let mut filter_id_map = Vec::<i8>::from(bitmask);
 
@@ -302,7 +318,7 @@ impl SimilaritySearchable for FvecsDataset {
         self.index
             .as_ref()
             .unwrap()
-            .search(query_vectors, &mut filter_id_map, topk)
+            .search(query_vectors, &mut filter_id_map, topk, efsearch)
     }
 }
 
@@ -350,6 +366,7 @@ impl<'a> SimilaritySearchable for FvecsDatasetPartition<'a> {
         query_vectors: &FlattenedVecs,
         predicate_query: &Option<PredicateQuery>,
         topk: usize,
+        efsearch: i64,
     ) -> Result<Vec<TopKSearchResult>, SearchableError> {
         if self.index.is_none() {
             return Err(SearchableError::DatasetIsNotIndexed);
@@ -366,7 +383,7 @@ impl<'a> SimilaritySearchable for FvecsDatasetPartition<'a> {
         self.index
             .as_ref()
             .unwrap()
-            .search(query_vectors, &mut mask.map, topk)
+            .search(query_vectors, &mut mask.map, topk, efsearch)
     }
 
     fn search_with_bitmask(
@@ -374,6 +391,7 @@ impl<'a> SimilaritySearchable for FvecsDatasetPartition<'a> {
         query_vectors: &FlattenedVecs,
         bitmask: &Bitmask,
         topk: usize,
+        efsearch: i64,
     ) -> Result<Vec<TopKSearchResult>, SearchableError> {
         let mut filter_id_map = Vec::<i8>::from(bitmask);
 
@@ -381,7 +399,7 @@ impl<'a> SimilaritySearchable for FvecsDatasetPartition<'a> {
         self.index
             .as_ref()
             .unwrap()
-            .search(query_vectors, &mut filter_id_map, topk)
+            .search(query_vectors, &mut filter_id_map, topk, efsearch)
     }
 }
 
@@ -393,7 +411,7 @@ mod tests {
 
     #[test]
     fn test_not_initialized_error() {
-        let dataset = FvecsDataset::new("data/sift_query".to_string()).unwrap();
+        let dataset = FvecsDataset::new("data/sift_query".to_string(), false).unwrap();
         let predicate: Option<PredicateQuery> = None;
         let dimensionality = dataset.dimensionality;
         let query_vector = FlattenedVecs {
@@ -411,7 +429,7 @@ mod tests {
 
     #[test]
     fn test_fvecs_to_flattened_vec() {
-        let dataset = FvecsDataset::new("data/sift_query".to_string()).unwrap();
+        let dataset = FvecsDataset::new("data/sift_query".to_string(), true).unwrap();
         let dataset_len = dataset.len();
         let vecs = FlattenedVecs::from(&dataset);
 

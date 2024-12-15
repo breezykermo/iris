@@ -36,7 +36,7 @@ fn main() -> Result<()> {
 
     let args = Args::parse();
 
-    let mut dataset = FvecsDataset::new(args.dataset)?;
+    let mut dataset = FvecsDataset::new(args.dataset, true)?;
     info!("Dataset loaded from disk.");
 
     let opts = OakIndexOptions {
@@ -60,7 +60,7 @@ fn main() -> Result<()> {
 
     info!("Searching for {topk} similar vectors for {num_queries} random query, where attr is equal to 5...");
 
-    let result = dataset.search(&query_vector, &query, topk);
+    let result = dataset.search(&query_vector, &query, topk, 16);
 
     info!("Got results.");
     info!("{:?}", result);

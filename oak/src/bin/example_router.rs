@@ -3,6 +3,7 @@ use clap::Parser;
 use dropshot::ConfigLogging;
 use dropshot::ConfigLoggingLevel;
 use slog_scope::{debug, info};
+
 use std::time::Instant;
 use thiserror::Error;
 
@@ -39,7 +40,7 @@ fn main() -> Result<()> {
 
     let args = Args::parse();
 
-    let mut dataset = FvecsDataset::new(args.dataset)?;
+    let mut dataset = FvecsDataset::new(args.dataset, true)?;
     info!("Dataset loaded from disk.");
 
     let opts = OakIndexOptions {
@@ -88,13 +89,13 @@ fn main() -> Result<()> {
     info!("Searching full dataset for {topk} similar vectors for {num_queries} random query , where attr is equal to 5...");
 
     let big_start = Instant::now();
-    let big_result = dataset.search_with_bitmask(&query_vector, &mask_main, topk);
+    let big_result = dataset.search_with_bitmask(&query_vector, &mask_main, topk, 16);
     let big_end = big_start.elapsed();
 
     info!("Searching dataset partition for {topk} similar vectors for {num_queries} random query, with no predicate as we know all vectors match...");
 
     let small_start = Instant::now();
-    let small_result = subdataset.search_with_bitmask(&query_vector, &mask_sub, topk);
+    let small_result = subdataset.search_with_bitmask(&query_vector, &mask_sub, topk, 16);
     let small_end = small_start.elapsed();
 
     let big_mean_distance = big_result.unwrap()[0]
@@ -112,6 +113,7 @@ fn main() -> Result<()> {
         / topk;
     info!("Results from sub search:");
     info!("Mean distance: {:?}", small_mean_distance);
+
     info!("Time taken: {:?}", small_end);
 
     // Using router
@@ -119,7 +121,7 @@ fn main() -> Result<()> {
     let router = Router::new(&dataset, vec![(&mask_main, &subdataset)]);
 
     let routed_start = Instant::now();
-    let routed_result = router.search_with_bitmask(&query_vector, &mask_main, topk);
+    let routed_result = router.search_with_bitmask(&query_vector, &mask_main, topk, 16);
     let routed_end = routed_start.elapsed();
 
     let routed_mean_distance = routed_result.unwrap()[0]

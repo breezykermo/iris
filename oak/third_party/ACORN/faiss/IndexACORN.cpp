@@ -524,13 +524,16 @@ void search_index(
   idx_t k,            // number of vectors to return for each query vector
   float* distances,   // pointer to an array of (k*n) floats, each representing a distance of the result from the query vector 
   idx_t* labels,      // pointer to an array of (k*n) indices, each representing the ID of the query vector in idx 
-  char* filter_id_map // a bitmap of the IDs in the filter, an array of (n * N) bools, where N is the total number of vectors in the index, and a '1' represents that the vector at that index passes the predicate for that query.
+  char* filter_id_map,// a bitmap of the IDs in the filter, an array of (n * N) bools, where N is the total number of vectors in the index, and a '1' represents that the vector at that index passes the predicate for that query.
+  idx_t efsearch      // an integer that can be tweaked to affect ACORN's recall/performance tradeoff dynamically
 ) {
   FAISS_THROW_IF_NOT(x != nullptr);
   FAISS_THROW_IF_NOT(distances != nullptr);
   FAISS_THROW_IF_NOT(labels != nullptr);
   FAISS_THROW_IF_NOT(filter_id_map != nullptr);
   FAISS_THROW_IF_NOT(n > 0 && k > 0);
+
+  idx.get()->acorn.efSearch = efsearch;
 
   idx->search(n, x, k, distances, labels, filter_id_map);
 }

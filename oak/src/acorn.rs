@@ -2,10 +2,10 @@ use crate::dataset::{
     ConstructionError, OakIndexOptions, SearchableError, SimilaritySearchable, TopKSearchResult,
 };
 use crate::ffi;
-use crate::fvecs::{FlattenedVecs, FvecsDataset};
+use crate::fvecs::FlattenedVecs;
 
 use core::ffi::c_char;
-use slog_scope::{debug, info};
+use slog_scope::debug;
 
 #[allow(dead_code)]
 pub struct AcornHnswIndex {
@@ -59,6 +59,7 @@ impl AcornHnswIndex {
         query_vectors: &FlattenedVecs,
         filter_id_map: &mut Vec<c_char>,
         k: usize,
+        efsearch: i64,
     ) -> Result<Vec<TopKSearchResult>, SearchableError> {
         let number_of_query_vectors: usize = query_vectors.len();
         debug!("Searching queries: {number_of_query_vectors} in batch.");
@@ -81,10 +82,11 @@ impl AcornHnswIndex {
                 distances.as_mut_ptr(),
                 labels.as_mut_ptr(),
                 filter_id_map.as_mut_ptr(),
+                efsearch,
             )?
         }
 
-        info!("Search complete");
+        debug!("Search complete");
 
         let combined: Vec<(usize, f32)> = labels
             .into_iter()

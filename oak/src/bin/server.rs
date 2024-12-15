@@ -1,24 +1,20 @@
 use anyhow::Result;
 use clap::Parser;
-use dropshot::endpoint;
-use dropshot::ApiDescription;
 use dropshot::ConfigLogging;
 use dropshot::ConfigLoggingLevel;
 use dropshot::HttpError;
 use dropshot::HttpResponseOk;
 use dropshot::RequestContext;
 use dropshot::ServerBuilder;
-use http::Method;
 use schemars::JsonSchema;
 use semver;
 use serde::Serialize;
-use slog_scope::{debug, info};
+use slog_scope::info;
 use std::fs::OpenOptions;
 use thiserror::Error;
 
 use oak::dataset::{OakIndexOptions, SimilaritySearchable};
-use oak::fvecs::{FlattenedVecs, FvecsDataset};
-use oak::predicate::PredicateQuery;
+use oak::fvecs::FvecsDataset;
 // use oak::stubs::generate_random_vector;
 
 // Ensure that only one of FAISS or hnsw_rs is used.
@@ -93,7 +89,7 @@ impl OakApi for ServerImpl {
     }
 
     async fn oak_anns_query(
-        rqctx: RequestContext<Self::Context>,
+        _rqctx: RequestContext<Self::Context>,
     ) -> Result<HttpResponseOk<OakAnnsResult>, HttpError> {
         unimplemented!();
         // info!("Constructing random vector to query with {dimensionality} dimensions");
@@ -123,7 +119,7 @@ async fn main() -> Result<()> {
 
     let args = Args::parse();
 
-    let mut dataset = FvecsDataset::new(args.dataset)?;
+    let mut dataset = FvecsDataset::new(args.dataset, true)?;
     info!("Dataset loaded from disk.");
 
     let opts = OakIndexOptions {

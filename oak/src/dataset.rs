@@ -1,5 +1,5 @@
 use crate::bitmask::Bitmask;
-use crate::fvecs::{FlattenedVecs, Fvec};
+use crate::fvecs::FlattenedVecs;
 use crate::predicate::PredicateQuery;
 
 use anyhow::Result;
@@ -101,6 +101,7 @@ impl Default for OakIndexOptions {
 }
 
 /// Trait for a dataset of vectors.
+
 pub trait SimilaritySearchable {
     /// Provide the number of vectors that have been added to the dataset.
     fn len(&self) -> usize;
@@ -122,6 +123,7 @@ pub trait SimilaritySearchable {
         query_vectors: &FlattenedVecs,
         predicate_query: &Option<PredicateQuery>,
         topk: usize,
+        efsearch: i64,
     ) -> Result<Vec<TopKSearchResult>, SearchableError>;
 
     /// Takes a Vec<Fvec> and returns a Vec<Vec<(usize, f32)>>, whereby each inner Vec<(usize, f32)> is an array
@@ -131,5 +133,6 @@ pub trait SimilaritySearchable {
         query_vectors: &FlattenedVecs,
         bitmask: &Bitmask,
         topk: usize,
+        efsearch: i64,
     ) -> Result<Vec<TopKSearchResult>, SearchableError>;
 }
