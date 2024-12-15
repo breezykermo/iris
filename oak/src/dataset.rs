@@ -1,5 +1,5 @@
 use crate::bitmask::Bitmask;
-use crate::fvecs::{FlattenedVecs, Fvec};
+use crate::fvecs::FlattenedVecs;
 use crate::predicate::PredicateQuery;
 
 use anyhow::Result;

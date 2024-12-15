@@ -2,14 +2,13 @@ use anyhow::Result;
 use clap::Parser;
 use dropshot::ConfigLogging;
 use dropshot::ConfigLoggingLevel;
-use oak::acorn;
 use oak::bitmask::Bitmask;
 use thiserror::Error;
 use slog_scope::info;
 use oak::dataset::{SimilaritySearchable, OakIndexOptions, TopKSearchResultBatch};
 use oak::fvecs::{FlattenedVecs, FvecsDataset};
 use oak::predicate::PredicateQuery;
-use csv::ReaderBuilder;
+use csv::{ReaderBuilder, Writer};
 use oak::router::Router;
 
 #[derive(Error, Debug)]
@@ -67,8 +66,8 @@ fn query_loop(
 
         let oak_now = tokio::time::Instant::now();
         let oak_result = router.search_with_bitmask(&q, &bitmask, k, efsearch)?;
-        let oak_end = now.elapsed();
-        let oak_latency = end.as_micros();
+        let oak_end = oak_now.elapsed();
+        let oak_latency = oak_end.as_micros();
         let oak_recall = calculate_recall_1(gt[i], oak_result);
         results.push(QueryStats{
             acorn_latency: acorn_latency,
@@ -182,7 +181,7 @@ fn main() -> Result<()> {
     // be redirected to an OI
     let router = Router::new(&dataset, vec![(&mask_main, &subdataset)]);
 
-    let results: Vec<ExperimentResults> = vec![];
+    let mut results: Vec<ExperimentResults> = vec![];
 
     for efs in efsearch {
     	let qs = query_loop(
@@ -192,10 +191,10 @@ fn main() -> Result<()> {
             Ok(exp_result) => {
                 info!("ACORN: QPS was {} microseconds with total latency
                 being {} for {} and Recall@10 was {}", 
-                exp_result.acorn_qps, exp_result.acorn_latency, exp_result.acorn_recall);
+                exp_result.acorn_qps, exp_result.acorn_latency, num_queries, exp_result.acorn_recall);
                 info!("OAK: QPS was {} microseconds with total latency
                 being {} for {} and Recall@10 was {}", 
-                exp_result.oak_qps, exp_result.oak_latency, exp_result.oak_recall);
+                exp_result.oak_qps, exp_result.oak_latency, num_queries, exp_result.oak_recall);
                 results.push(exp_result);
             }
             Err(_) => {

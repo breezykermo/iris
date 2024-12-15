@@ -5,7 +5,7 @@ use crate::ffi;
 use crate::fvecs::FlattenedVecs;
 
 use core::ffi::c_char;
-use slog_scope::{debug, info};
+use slog_scope::debug;
 
 #[allow(dead_code)]
 pub struct AcornHnswIndex {
@@ -71,7 +71,7 @@ impl AcornHnswIndex {
         let mut distances: Vec<f32> = vec![0 as f32; length_of_results];
         let mut labels: Vec<i64> = vec![0; length_of_results];
 
-        let filter_id_map_length = filter_id_map.len();
+        let _filter_id_map_length = filter_id_map.len();
         // debug!("Length of bitmap representing predicate: {filter_id_map_length}.");
 
         unsafe {

@@ -234,18 +234,18 @@ impl FvecsDataset {
         })
     }
 
-    fn get_data(&self) -> Result<Vec<Fvec>> {
-        let vecs = self
-            .flat
-            .data
-            .chunks_exact(self.dimensionality)
-            .map(|x| Fvec {
-                dimensionality: self.dimensionality,
-                data: x.to_vec(),
-            })
-            .collect();
-        Ok(vecs)
-    }
+    // fn get_data(&self) -> Result<Vec<Fvec>> {
+    //     let vecs = self
+    //         .flat
+    //         .data
+    //         .chunks_exact(self.dimensionality)
+    //         .map(|x| Fvec {
+    //             dimensionality: self.dimensionality,
+    //             data: x.to_vec(),
+    //         })
+    //         .collect();
+    //     Ok(vecs)
+    // }
 
     pub fn view(&self, pq: &PredicateQuery) -> FvecsDatasetPartition {
         let mask = Bitmask::new(pq, self);

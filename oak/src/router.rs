@@ -1,7 +1,6 @@
-use crate::acorn::AcornHnswIndex;
 use crate::bitmask::Bitmask;
 use crate::dataset::SimilaritySearchable;
-use slog_scope::{debug, info};
+use slog_scope::debug;
 
 pub struct Router<'a> {
     base: &'a dyn SimilaritySearchable,
