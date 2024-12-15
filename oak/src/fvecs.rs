@@ -384,6 +384,7 @@ impl<'a> SimilaritySearchable for FvecsDatasetPartition<'a> {
             .as_ref()
             .unwrap()
             .search(query_vectors, &mut mask.map, topk, efsearch)
+
     }
 
     fn search_with_bitmask(
@@ -393,6 +394,9 @@ impl<'a> SimilaritySearchable for FvecsDatasetPartition<'a> {
         topk: usize,
         efsearch: i64,
     ) -> Result<Vec<TopKSearchResult>, SearchableError> {
+        let mut filter_id_map = Vec::<i8>::from(bitmask);
+
+        // TODO: this & to filter_id_map should not have to be mutable
         self.index
             .as_ref()
             .unwrap()

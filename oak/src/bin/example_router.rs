@@ -95,7 +95,7 @@ fn main() -> Result<()> {
     info!("Searching dataset partition for {topk} similar vectors for {num_queries} random query, with no predicate as we know all vectors match...");
 
     let small_start = Instant::now();
-    let small_result = dataset.search_with_bitmask(&query_vector, &mask_sub, topk, 16);
+    let small_result = subdataset.search_with_bitmask(&query_vector, &mask_sub, topk);
     let small_end = small_start.elapsed();
 
     let big_mean_distance = big_result.unwrap()[0]
