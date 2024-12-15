@@ -83,10 +83,35 @@ This literature is relevant as it introduces the idea of routing each query betw
 *** Replication
 =TODO=
 *** Random Partitioning
+
+When an index does not fit in RAM, it can be partitioned across multiple nodes.
+Many commerical services [cite:@FacebookresearchFaiss2024][cite:https://qdrant.tech/documentation/guides/distributed_deployment/#sharding] support this functionality through *random partioning*.
+
+The general approach is as follows:
+1. Split the entire database into random, equally-sized partitions.
+2. For each data node, train an index on one partition.
+
+This design addresses the memory constraint incurred by large datasets but is not performant.
+The router must dispatch every query to every node, potentially scanning many unnecessary vectors during the search process. [cite:https://www.research-collection.ethz.ch/handle/20.500.11850/664643]
+
 *** Balanced Partitioning
 
+Random partitioning can be improved by searching only nodes relevant to the query vector.
+*Balanced partitioning* implements this idea by partitioning vectors based on similarity.
+
+The approach is analogous to sharding in a RDBMS or KV Store.
+Concretely, shards are computed by partitioning vertices into roughly equal size sets such that the number of edges which connect different sets is approximately minimized. 
+A shardmaster/router can then dispatch queries to only a subset of the total shards, thus improving performance and scalability.
+
+Balanced graph partitioning is a well-studied problem.
+For example, Pyramid [cite:https://ieeexplore.ieee.org/document/9006219] proposes building a much smaller meta-HNSW that captures the structure of the entire dataset, which can then be used to route queries to the correct partition HNSW index(es).
+More recently, Gottesburen et al. proposed a balanced graph partitioning strategy using k-means clustering with theoretical routing guarantees. [cite:https://arxiv.org/abs/2403.01797]
+
+Despite these advancements, balanced partitioning is still not supported on platforms such as FAISS or QDrant.
+This could be explained by the significantly greater complexity of balanced partitioning compared to random partitioning, which requires substantial engineering effort to implement.
+
 ** HNSW and ACORN 
-The underlying data structure that enables vector similiarity search in both ACORN and OAK is Hierarchical Navigable Small Worlds (HNSW) [cite:@malkovEfficientRobustApproximate2018], an index that makes use of a hierarchical, tree-link structure during search to more quickly work through the plausible search space while retaining reasonable recall.
+The underlying data structure that enables vector similarity search in both ACORN and OAK is Hierarchical Navigable Small Worlds (HNSW) [cite:@malkovEfficientRobustApproximate2018], an index that makes use of a hierarchical, tree-link structure during search to more quickly work through the plausible search space while retaining reasonable recall.
 =TODO lachlan (update citation)=
 More specifically, HNSW leverages a /proximity graph/[cite:https://www.pinecone.io/learn/series/faiss/hnsw/], in which two vertices are linked based on proximity.
 Proximity is usually computed using Euclidean distance, though other similarity metrics exist (e.g. cosine similarity).
@@ -179,3 +204,4 @@ Mithi and Lachlan worked together to run the experiments on AWS.
 Cedric drafted and was chief editor for the final paper, though it was collectively edited and written.
 
 * Bibliography
+
