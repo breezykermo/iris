@@ -64,6 +64,7 @@ fn query_loop(
         let acorn_latency = end.as_micros();
         let acorn_recall = calculate_recall_1(gt[i], result)?;
 
+        info!("Now searching oak");
         let oak_now = tokio::time::Instant::now();
         let oak_result = router.search_with_bitmask(&q, &bitmask, k, efsearch)?;
         let oak_end = oak_now.elapsed();
