@@ -46,9 +46,10 @@ impl SimilaritySearchable for Router<'_> {
         query_vectors: &crate::fvecs::FlattenedVecs,
         predicate_query: &Option<crate::predicate::PredicateQuery>,
         topk: usize,
+	efsearch: i64,
     ) -> anyhow::Result<Vec<crate::dataset::TopKSearchResult>, crate::dataset::SearchableError>
     {
-        self.base.search(query_vectors, predicate_query, topk)
+        self.base.search(query_vectors, predicate_query, topk, efsearch)
     }
 
     fn search_with_bitmask(
@@ -56,6 +57,7 @@ impl SimilaritySearchable for Router<'_> {
         query_vectors: &crate::fvecs::FlattenedVecs,
         query_bitmask: &crate::bitmask::Bitmask,
         topk: usize,
+	efsearch: i64,
     ) -> anyhow::Result<Vec<crate::dataset::TopKSearchResult>, crate::dataset::SearchableError>
     {
         let base_meta = self.base.get_metadata();
@@ -91,6 +93,6 @@ impl SimilaritySearchable for Router<'_> {
             self.base
         };
 
-        index_to_search.search_with_bitmask(query_vectors, query_bitmask, topk)
+        index_to_search.search_with_bitmask(query_vectors, query_bitmask, topk, efsearch)
     }
 }

@@ -285,6 +285,7 @@ impl SimilaritySearchable for FvecsDataset {
         query_vectors: &FlattenedVecs,
         predicate_query: &Option<PredicateQuery>,
         topk: usize,
+	efsearch: i64
     ) -> Result<Vec<TopKSearchResult>, SearchableError> {
         if self.index.is_none() {
             return Err(SearchableError::DatasetIsNotIndexed);
@@ -301,7 +302,7 @@ impl SimilaritySearchable for FvecsDataset {
         self.index
             .as_ref()
             .unwrap()
-            .search(query_vectors, &mut mask.map, topk)
+            .search(query_vectors, &mut mask.map, topk, efsearch)
     }
 
     fn search_with_bitmask(
@@ -309,6 +310,7 @@ impl SimilaritySearchable for FvecsDataset {
         query_vectors: &FlattenedVecs,
         bitmask: &Bitmask,
         topk: usize,
+	efsearch: i64,
     ) -> Result<Vec<TopKSearchResult>, SearchableError> {
         let mut filter_id_map = Vec::<i8>::from(bitmask);
 
@@ -316,7 +318,7 @@ impl SimilaritySearchable for FvecsDataset {
         self.index
             .as_ref()
             .unwrap()
-            .search(query_vectors, &mut filter_id_map, topk)
+            .search(query_vectors, &mut filter_id_map, topk, efsearch)
     }
 }
 
@@ -361,18 +363,20 @@ impl<'a> SimilaritySearchable for FvecsDatasetPartition<'a> {
 
     fn search(
         &self,
-        query_vectors: &FlattenedVecs,
-        predicate_query: &Option<PredicateQuery>,
-        topk: usize,
+        _query_vectors: &FlattenedVecs,
+        _predicate_query: &Option<PredicateQuery>,
+        _topk: usize,
+	_efsearch: i64,
     ) -> Result<Vec<TopKSearchResult>, SearchableError> {
         todo!();
     }
 
     fn search_with_bitmask(
         &self,
-        query_vectors: &FlattenedVecs,
-        bitmask: &Bitmask,
-        topk: usize,
+        _query_vectors: &FlattenedVecs,
+        _bitmask: &Bitmask,
+        _topk: usize,
+	_efsearch: i64,
     ) -> Result<Vec<TopKSearchResult>, SearchableError> {
         todo!();
     }

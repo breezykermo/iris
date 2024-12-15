@@ -100,6 +100,13 @@ impl From<Bitmask> for Vec<i8> {
     }
 }
 
+impl From<&Bitmask> for Vec<i8> {
+    fn from(mask: &Bitmask) -> Self {
+        // NOTE: we take cloning the Bitmask here as acceptable, as the values are only i8s
+        mask.map.clone()
+    }
+}
+
 impl From<Vec<i32>> for Bitmask {
     fn from(attrs: Vec<i32>) -> Bitmask {
         let bitcount = attrs.iter().sum::<i32>() as usize;

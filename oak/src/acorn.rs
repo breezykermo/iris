@@ -60,6 +60,7 @@ impl AcornHnswIndex {
         query_vectors: &FlattenedVecs,
         filter_id_map: &mut Vec<c_char>,
         k: usize,
+	efsearch: i64
     ) -> Result<Vec<TopKSearchResult>, SearchableError> {
         let number_of_query_vectors: usize = query_vectors.len();
         // debug!("Searching queries: {number_of_query_vectors} in batch.");
@@ -82,6 +83,7 @@ impl AcornHnswIndex {
                 distances.as_mut_ptr(),
                 labels.as_mut_ptr(),
                 filter_id_map.as_mut_ptr(),
+		efsearch,
             )?
         }
 
