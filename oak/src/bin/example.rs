@@ -45,7 +45,7 @@ fn main() -> Result<()> {
         m_beta: 64,
     };
 
-    let _ = dataset.build_index(&opts);
+    let _ = dataset.initialize(&opts);
     info!("Seed index constructed.");
 
     let dimensionality = dataset.get_dimensionality() as usize;
@@ -60,7 +60,7 @@ fn main() -> Result<()> {
 
     info!("Searching for {topk} similar vectors for {num_queries} random query, where attr is equal to 5...");
 
-    let result = dataset.search(&query_vector, &query, topk);
+    let result = dataset.search(&query_vector, &query, topk, 16);
 
     info!("Got results.");
     info!("{:?}", result);
