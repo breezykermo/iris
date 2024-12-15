@@ -1,0 +1,395 @@
+@inproceedings{babenkoEfficientIndexingBillionScale2016,
+  title = {Efficient {{Indexing}} of {{Billion-Scale Datasets}} of {{Deep Descriptors}}},
+  booktitle = {Proceedings of the {{IEEE Conference}} on {{Computer Vision}} and {{Pattern Recognition}}},
+  author = {Babenko, Artem and Lempitsky, Victor},
+  year = {2016},
+  pages = {2055--2063},
+  urldate = {2024-10-01},
+  file = {/home/alice/apps/Zotero/storage/ADT9TAGG/Babenko and Lempitsky - 2016 - Efficient Indexing of Billion-Scale Datasets of Deep Descriptors.pdf}
+}
+
+@misc{BaiduPuckPuck,
+  title = {Baidu/Puck: {{Puck}} Is a High-Performance {{ANN}} Search Engine},
+  shorttitle = {Baidu/Puck},
+  journal = {GitHub},
+  urldate = {2024-09-29},
+  abstract = {Puck is a high-performance ANN search engine. Contribute to baidu/puck development by creating an account on GitHub.},
+  howpublished = {https://github.com/baidu/puck},
+  langid = {english},
+  file = {/home/alice/apps/Zotero/storage/GFNXZQ35/puck.html}
+}
+
+@inproceedings{chenSPANNHighlyefficientBillionscale2021,
+  title = {{{SPANN}}: {{Highly-efficient Billion-scale Approximate Nearest Neighborhood Search}}},
+  shorttitle = {{{SPANN}}},
+  booktitle = {Advances in {{Neural Information Processing Systems}}},
+  author = {Chen, Qi and Zhao, Bing and Wang, Haidong and Li, Mingqin and Liu, Chuanjie and Li, Zengzhong and Yang, Mao and Wang, Jingdong},
+  year = {2021},
+  volume = {34},
+  pages = {5199--5212},
+  publisher = {Curran Associates, Inc.},
+  urldate = {2024-09-29},
+  abstract = {The in-memory algorithms for approximate nearest neighbor search (ANNS) have achieved great success for fast high-recall search, but are extremely expensive when handling very large scale database. Thus, there is an increasing request for the hybrid ANNS solutions with small memory and inexpensive solid-state drive (SSD). In this paper, we present a simple but efficient memory-disk hybrid indexing and search system, named SPANN, that follows the inverted index methodology. It stores the centroid points of the posting lists in the memory and the large posting lists in the disk. We guarantee both disk-access efficiency (low  latency) and high recall by effectively reducing the disk-access number and retrieving high-quality posting lists. In the index-building stage, we adopt a hierarchical balanced clustering algorithm to balance the length of posting lists and augment the posting list by adding the points in the closure of the corresponding clusters. In the search stage, we use a query-aware scheme to dynamically prune the access of unnecessary posting lists.  Experiment results demonstrate that SPANN is 2X faster than the state-of-the-art ANNS solution DiskANN to reach the same recall quality 90\% with same memory cost in three billion-scale datasets. It can reach 90\% recall@1 and recall@10 in just around one millisecond with only about 10\% of original memory cost.  Code is available at: https://github.com/microsoft/SPTAG.},
+  file = {/home/alice/apps/Zotero/storage/U7DMEW4N/Chen et al. - 2021 - SPANN Highly-efficient Billion-scale Approximate Nearest Neighborhood Search.pdf}
+}
+
+@inproceedings{dengPyramidGeneralFramework2019,
+  title = {Pyramid: {{A General Framework}} for {{Distributed Similarity Search}} on {{Large-scale Datasets}}},
+  shorttitle = {Pyramid},
+  booktitle = {2019 {{IEEE International Conference}} on {{Big Data}} ({{Big Data}})},
+  author = {Deng, Shiyuan and Yan, Xiao and Kelvin, K.W. Ng and Jiang, Chenyu and Cheng, James},
+  year = {2019},
+  month = dec,
+  pages = {1066--1071},
+  doi = {10.1109/BigData47090.2019.9006219},
+  urldate = {2024-09-25},
+  abstract = {Similarity search is a core component in various applications such as image matching and product recommendation. However, single-machine solutions are usually insufficient due to the large cardinality of modern datasets. We present Pyramid, a general and efficient framework for distributed similarity search. Pyramid supports search with popular similarity functions including Euclidean distance, angular distance and inner product. Different from existing distributed solutions that are based on KD-tree or locality sensitive hashing (LSH), Pyramid is based on the Hierarchical Navigable Small World graph (HNSW), which is the state-of-the-art similarity search algorithm. To achieve high query processing throughput, Pyramid partitions a dataset into sub-datasets containing similar items for index building and assigns a query to only some of the sub-datasets for query processing. Experiments on large-scale datasets show that Pyramid produces quality results for similarity search, achieves high query processing throughput and low latency, and is robust under node failure and straggler.},
+  keywords = {Buildings,distributed system,Euclidean distance,Indexes,Partitioning algorithms,Query processing,Robustness,similarity search,Throughput},
+  file = {/home/alice/apps/Zotero/storage/M378JSKE/Deng et al. - 2019 - Pyramid A General Framework for Distributed Similarity Search on Large-scale Datasets.pdf}
+}
+
+@article{devlinBertPretrainingDeep2018,
+  title = {Bert: {{Pre-training}} of Deep Bidirectional Transformers for Language Understanding},
+  shorttitle = {Bert},
+  author = {Devlin, Jacob},
+  year = {2018},
+  journal = {arXiv preprint arXiv:1810.04805},
+  eprint = {1810.04805},
+  archiveprefix = {arXiv}
+}
+
+@misc{DistributedDeploymentQdrant,
+  title = {Distributed {{Deployment}} - {{Qdrant}}},
+  urldate = {2024-12-15},
+  abstract = {Qdrant is an Open-Source Vector Database and Vector Search Engine written in Rust. It provides fast and scalable vector similarity search service with convenient API.},
+  howpublished = {https://qdrant.tech/documentation/guides/distributed\_deployment/},
+  langid = {english},
+  file = {/home/alice/apps/Zotero/storage/4SZ2KV4C/distributed_deployment.html}
+}
+
+@misc{douzeFaissLibrary2024,
+  title = {The {{Faiss}} Library},
+  author = {Douze, Matthijs and Guzhva, Alexandr and Deng, Chengqi and Johnson, Jeff and Szilvasy, Gergely and Mazar{\'e}, Pierre-Emmanuel and Lomeli, Maria and Hosseini, Lucas and J{\'e}gou, Herv{\'e}},
+  year = {2024},
+  month = jan,
+  journal = {arXiv.org},
+  urldate = {2024-10-01},
+  abstract = {Vector databases typically manage large collections of embedding vectors. Currently, AI applications are growing rapidly, and so is the number of embeddings that need to be stored and indexed. The Faiss library is dedicated to vector similarity search, a core functionality of vector databases. Faiss is a toolkit of indexing methods and related primitives used to search, cluster, compress and transform vectors. This paper describes the trade-off space of vector search and the design principles of Faiss in terms of structure, approach to optimization and interfacing. We benchmark key features of the library and discuss a few selected applications to highlight its broad applicability.},
+  howpublished = {https://arxiv.org/abs/2401.08281v2},
+  langid = {english},
+  file = {/home/alice/apps/Zotero/storage/59I2GPJI/Douze et al. - 2024 - The Faiss library.pdf}
+}
+
+@misc{FacebookresearchFaiss2024,
+  title = {Facebookresearch/Faiss},
+  year = {2024},
+  month = dec,
+  urldate = {2024-12-14},
+  abstract = {A library for efficient similarity search and clustering of dense vectors.},
+  copyright = {MIT},
+  howpublished = {Meta Research}
+}
+
+@misc{gottesburenUnleashingGraphPartitioning2024,
+  title = {Unleashing {{Graph Partitioning}} for {{Large-Scale Nearest Neighbor Search}}},
+  author = {Gottesb{\"u}ren, Lars and Dhulipala, Laxman and Jayaram, Rajesh and Lacki, Jakub},
+  year = {2024},
+  month = mar,
+  number = {arXiv:2403.01797},
+  eprint = {2403.01797},
+  primaryclass = {cs},
+  publisher = {arXiv},
+  urldate = {2024-09-28},
+  abstract = {We consider the fundamental problem of decomposing a large-scale approximate nearest neighbor search (ANNS) problem into smaller sub-problems. The goal is to partition the input points into neighborhood-preserving shards, so that the nearest neighbors of any point are contained in only a few shards. When a query arrives, a routing algorithm is used to identify the shards which should be searched for its nearest neighbors. This approach forms the backbone of distributed ANNS, where the dataset is so large that it must be split across multiple machines. In this paper, we design simple and highly efficient routing methods, and prove strong theoretical guarantees on their performance. A crucial characteristic of our routing algorithms is that they are inherently modular, and can be used with any partitioning method. This addresses a key drawback of prior approaches, where the routing algorithms are inextricably linked to their associated partitioning method. In particular, our new routing methods enable the use of balanced graph partitioning, which is a high-quality partitioning method without a naturally associated routing algorithm. Thus, we provide the first methods for routing using balanced graph partitioning that are extremely fast to train, admit low latency, and achieve high recall. We provide a comprehensive evaluation of our full partitioning and routing pipeline on billion-scale datasets, where it outperforms existing scalable partitioning methods by significant margins, achieving up to 2.14x higher QPS at 90\% recall\$@10\$ than the best competitor.},
+  archiveprefix = {arXiv},
+  keywords = {Computer Science - Data Structures and Algorithms,Computer Science - Information Retrieval},
+  file = {/home/alice/apps/Zotero/storage/NBZGE8FY/Gottesbüren et al. - 2024 - Unleashing Graph Partitioning for Large-Scale Nearest Neighbor Search.pdf;/home/alice/apps/Zotero/storage/YXE44C9W/2403.html}
+}
+
+@misc{guoManuCloudNative2022,
+  title = {Manu: {{A Cloud Native Vector Database Management System}}},
+  shorttitle = {Manu},
+  author = {Guo, Rentong and Luan, Xiaofan and Xiang, Long and Yan, Xiao and Yi, Xiaomeng and Luo, Jigao and Cheng, Qianya and Xu, Weizhi and Luo, Jiarui and Liu, Frank and Cao, Zhenshan and Qiao, Yanliang and Wang, Ting and Tang, Bo and Xie, Charles},
+  year = {2022},
+  month = jun,
+  number = {arXiv:2206.13843},
+  eprint = {2206.13843},
+  primaryclass = {cs},
+  publisher = {arXiv},
+  doi = {10.48550/arXiv.2206.13843},
+  urldate = {2024-10-01},
+  abstract = {With the development of learning-based embedding models, embedding vectors are widely used for analyzing and searching unstructured data. As vector collections exceed billion-scale, fully managed and horizontally scalable vector databases are necessary. In the past three years, through interaction with our 1200+ industry users, we have sketched a vision for the features that next-generation vector databases should have, which include long-term evolvability, tunable consistency, good elasticity, and high performance. We present Manu, a cloud native vector database that implements these features. It is difficult to integrate all these features if we follow traditional DBMS design rules. As most vector data applications do not require complex data models and strong data consistency, our design philosophy is to relax the data model and consistency constraints in exchange for the aforementioned features. Specifically, Manu firstly exposes the write-ahead log (WAL) and binlog as backbone services. Secondly, write components are designed as log publishers while all read-only analytic and search components are designed as independent subscribers to the log services. Finally, we utilize multi-version concurrency control (MVCC) and a delta consistency model to simplify the communication and cooperation among the system components. These designs achieve a low coupling among the system components, which is essential for elasticity and evolution. We also extensively optimize Manu for performance and usability with hardware-aware implementations and support for complex search semantics.},
+  archiveprefix = {arXiv},
+  keywords = {Computer Science - Databases},
+  file = {/home/alice/apps/Zotero/storage/77L3LAJG/Guo et al. - 2022 - Manu A Cloud Native Vector Database Management System.pdf;/home/alice/apps/Zotero/storage/RNPQ67AU/2206.html}
+}
+
+@misc{hanComprehensiveSurveyVector2023,
+  title = {A {{Comprehensive Survey}} on {{Vector Database}}: {{Storage}} and {{Retrieval Technique}}, {{Challenge}}},
+  shorttitle = {A {{Comprehensive Survey}} on {{Vector Database}}},
+  author = {Han, Yikun and Liu, Chunjiang and Wang, Pengfei},
+  year = {2023},
+  month = oct,
+  number = {arXiv:2310.11703},
+  eprint = {2310.11703},
+  publisher = {arXiv},
+  urldate = {2024-11-01},
+  abstract = {A vector database is used to store high-dimensional data that cannot be characterized by traditional DBMS. Although there are not many articles describing existing or introducing new vector database architectures, the approximate nearest neighbor search problem behind vector databases has been studied for a long time, and considerable related algorithmic articles can be found in the literature. This article attempts to comprehensively review relevant algorithms to provide a general understanding of this booming research area. The basis of our framework categorises these studies by the approach of solving ANNS problem, respectively hash-based, tree-based, graph-based and quantization-based approaches. Then we present an overview of existing challenges for vector databases. Lastly, we sketch how vector databases can be combined with large language models and provide new possibilities.},
+  archiveprefix = {arXiv},
+  keywords = {Computer Science - Artificial Intelligence,Computer Science - Databases},
+  file = {/home/alice/apps/Zotero/storage/EXLGMEG6/Han et al. - 2023 - A Comprehensive Survey on Vector Database Storage and Retrieval Technique, Challenge.pdf;/home/alice/apps/Zotero/storage/DJVWQS32/2310.html}
+}
+
+@inproceedings{iwabuchiMassivescaleDistributedNeighborhood2023,
+  title = {Towards {{A Massive-scale Distributed Neighborhood Graph Construction}}},
+  booktitle = {Proceedings of the {{SC}} '23 {{Workshops}} of {{The International Conference}} on {{High Performance Computing}}, {{Network}}, {{Storage}}, and {{Analysis}}},
+  author = {Iwabuchi, Keita and Steil, Trevor and Priest, Benjamin and Pearce, Roger and Sanders, Geoffrey},
+  year = {2023},
+  month = nov,
+  series = {{{SC-W}} '23},
+  pages = {730--738},
+  publisher = {Association for Computing Machinery},
+  address = {New York, NY, USA},
+  doi = {10.1145/3624062.3625132},
+  urldate = {2024-09-25},
+  abstract = {Graph-based approximate nearest neighbor algorithms have shown high performance and quality. However, such approaches require a large amount of memory and still take a long time to construct high-quality nearest neighbor graphs (NNGs). Using distributed memory systems is important when data is large or a shorter indexing time is desired. We develop a distributed memory version of NN-Descent, a widely known graph-based ANN algorithm, closely following algorithmic advances by PyNN-Descent authors. Our distributed NN-Descent (DNND) is built on top of MPI and leverages two existing high-performance computing libraries: YGM (an asynchronous communication library) and Metall (a persistent memory allocator). We evaluate the performance of DNND on an HPC system using billion-scale datasets, demonstrating that our approach shows high performance and strong scaling and has great potential for developing massive-scale NNG frameworks.},
+  isbn = {9798400707858}
+}
+
+@inproceedings{jayaramsubramanyaDiskANNFastAccurate2019,
+  title = {{{DiskANN}}: {{Fast Accurate Billion-point Nearest Neighbor Search}} on a {{Single Node}}},
+  shorttitle = {{{DiskANN}}},
+  booktitle = {Advances in {{Neural Information Processing Systems}}},
+  author = {Jayaram Subramanya, Suhas and Devvrit, Fnu and Simhadri, Harsha Vardhan and Krishnawamy, Ravishankar and Kadekodi, Rohan},
+  year = {2019},
+  volume = {32},
+  publisher = {Curran Associates, Inc.},
+  urldate = {2024-09-29},
+  abstract = {Current state-of-the-art approximate nearest neighbor search (ANNS) algorithms generate indices that must be stored in main memory for fast high-recall search. This makes them expensive and limits the size of the dataset. We present a new graph-based indexing and search system called DiskANN that can index, store, and search a billion point database on a single workstation with just 64GB RAM and an inexpensive solid-state drive (SSD). Contrary to current wisdom, we demonstrate that the SSD-based indices built by DiskANN can meet all three desiderata for large-scale ANNS: high-recall, low query latency and high density (points indexed per node). On the billion point SIFT1B bigann dataset, DiskANN serves {$>$} 5000 queries a second with {$<$} 3ms mean latency and 95\%+ 1-recall@1 on a 16 core machine, where state-of-the-art billion-point ANNS algorithms with similar memory footprint like FAISS and IVFOADC+G+P plateau at around 50\% 1-recall@1. Alternately, in the high recall regime, DiskANN can index and serve 5 - 10x more points per node compared to state-of-the-art graph- based methods such as HNSW and NSG. Finally, as part of our overall DiskANN system, we introduce Vamana, a new graph-based ANNS index that is more versatile than the graph indices even for in-memory indices.},
+  file = {/home/alice/apps/Zotero/storage/LDHCS4HB/Jayaram Subramanya et al. - 2019 - DiskANN Fast Accurate Billion-point Nearest Neighbor Search on a Single Node.pdf}
+}
+
+@inproceedings{jegouSearchingOneBillion2011,
+  title = {Searching in One Billion Vectors: {{Re-rank}} with Source Coding},
+  shorttitle = {Searching in One Billion Vectors},
+  booktitle = {2011 {{IEEE International Conference}} on {{Acoustics}}, {{Speech}} and {{Signal Processing}} ({{ICASSP}})},
+  author = {J{\'e}gou, Herv{\'e} and Tavenard, Romain and Douze, Matthijs and Amsaleg, Laurent},
+  year = {2011},
+  month = may,
+  pages = {861--864},
+  issn = {2379-190X},
+  doi = {10.1109/ICASSP.2011.5946540},
+  urldate = {2024-10-01},
+  abstract = {Recent indexing techniques inspired by source coding have been shown successful to index billions of high-dimensional vectors in memory. In this paper, we propose an approach that re-ranks the neighbor hypotheses obtained by these compressed-domain indexing methods. In contrast to the usual post-verification scheme, which performs exact distance calculation on the short-list of hypotheses, the estimated distances are refined based on short quantization codes, to avoid reading the full vectors from disk. We have released a new public dataset of one billion 128 dimensional vectors and proposed an experimental setup to evaluate high dimensional indexing algorithms on a realistic scale. Experiments show that our method accurately and efficiently re-ranks the neighbor hypotheses using little memory compared to the full vectors representation.},
+  keywords = {Approximation algorithms,Approximation methods,Artificial neural networks,high dimensional indexing,Indexing,large databases,nearest neighbor search,quantization,Quantization,source coding,Source coding},
+  file = {/home/alice/apps/Zotero/storage/LJBBBM9E/Jégou et al. - 2011 - Searching in one billion vectors Re-rank with source coding.pdf;/home/alice/apps/Zotero/storage/7ATJGWBX/5946540.html}
+}
+
+@misc{kermodeBreezykermoOak2024,
+  title = {Breezykermo/Oak},
+  author = {Kermode, Lachlan},
+  year = {2024},
+  month = dec,
+  urldate = {2024-12-13}
+}
+
+@article{malkovEfficientRobustApproximate2018,
+  title = {Efficient and Robust Approximate Nearest Neighbor Search Using Hierarchical Navigable Small World Graphs},
+  author = {Malkov, Yu A. and Yashunin, Dmitry A.},
+  year = {2018},
+  journal = {IEEE transactions on pattern analysis and machine intelligence},
+  volume = {42},
+  number = {4},
+  pages = {824--836},
+  publisher = {IEEE},
+  urldate = {2024-12-14}
+}
+
+@inproceedings{manoharParlayANNScalableDeterministic2024,
+  title = {{{ParlayANN}}: {{Scalable}} and {{Deterministic Parallel Graph-Based Approximate Nearest Neighbor Search Algorithms}}},
+  shorttitle = {{{ParlayANN}}},
+  booktitle = {Proceedings of the 29th {{ACM SIGPLAN Annual Symposium}} on {{Principles}} and {{Practice}} of {{Parallel Programming}}},
+  author = {Manohar, Magdalen Dobson and Shen, Zheqi and Blelloch, Guy and Dhulipala, Laxman and Gu, Yan and Simhadri, Harsha Vardhan and Sun, Yihan},
+  year = {2024},
+  month = feb,
+  series = {{{PPoPP}} '24},
+  pages = {270--285},
+  publisher = {Association for Computing Machinery},
+  address = {New York, NY, USA},
+  doi = {10.1145/3627535.3638475},
+  urldate = {2024-09-28},
+  abstract = {Approximate nearest-neighbor search (ANNS) algorithms are a key part of the modern deep learning stack due to enabling efficient similarity search over high-dimensional vector space representations (i.e., embeddings) of data. Among various ANNS algorithms, graph-based algorithms are known to achieve the best throughput-recall tradeoffs. Despite the large scale of modern ANNS datasets, existing parallel graph-based implementations suffer from significant challenges to scale to large datasets due to heavy use of locks and other sequential bottlenecks, which 1) prevents them from efficiently scaling to a large number of processors, and 2) results in non-determinism that is undesirable in certain applications.In this paper, we introduce ParlayANN, a library of deterministic and parallel graph-based approximate nearest neighbor search algorithms, along with a set of useful tools for developing such algorithms. In this library, we develop novel parallel implementations for four state-of-the-art graph-based ANNS algorithms that scale to billion-scale datasets. Our algorithms are deterministic and achieve high scalability across a diverse set of challenging datasets. In addition to the new algorithmic ideas, we also conduct a detailed experimental study of our new algorithms as well as two existing non-graph approaches. Our experimental results both validate the effectiveness of our new techniques, and lead to a comprehensive comparison among ANNS algorithms on large scale datasets with a list of interesting findings.},
+  isbn = {9798400704352},
+  file = {/home/alice/apps/Zotero/storage/2PTQ8ET5/Manohar et al. - 2024 - ParlayANN Scalable and Deterministic Parallel Graph-Based Approximate Nearest Neighbor Search Algor.pdf}
+}
+
+@misc{MicrosoftSPTAG2024,
+  title = {Microsoft/{{SPTAG}}},
+  year = {2024},
+  month = sep,
+  urldate = {2024-09-29},
+  abstract = {A distributed approximate nearest neighborhood search (ANN) library which provides a high quality vector index build, search and distributed online serving toolkits for large scale vector search scenario.},
+  copyright = {MIT},
+  howpublished = {Microsoft},
+  keywords = {approximate-nearest-neighbor-search,distributed-serving,fresh-update,neighborhood-graph,space-partition-tree,vector-search}
+}
+
+@misc{myrielSemanticCacheAccelerating2024,
+  title = {Semantic {{Cache}}: {{Accelerating AI}} with {{Lightning-Fast Data Retrieval}} - {{Qdrant}}},
+  shorttitle = {Semantic {{Cache}}},
+  author = {Myriel, David, Daniel Romero},
+  year = {2024},
+  month = may,
+  urldate = {2024-10-01},
+  abstract = {Semantic cache is reshaping AI applications by enabling rapid data retrieval. Discover how its implementation benefits your RAG setup.},
+  howpublished = {https://qdrant.tech/blog/semantic-cache-ai-data-retrieval/},
+  langid = {english},
+  file = {/home/alice/apps/Zotero/storage/36K4T38A/semantic-cache-ai-data-retrieval.html}
+}
+
+@misc{patelACORNPerformantPredicateAgnostic2024,
+  title = {{{ACORN}}: {{Performant}} and {{Predicate-Agnostic Search Over Vector Embeddings}} and {{Structured Data}}},
+  shorttitle = {{{ACORN}}},
+  author = {Patel, Liana and Kraft, Peter and Guestrin, Carlos and Zaharia, Matei},
+  year = {2024},
+  month = mar,
+  number = {arXiv:2403.04871},
+  eprint = {2403.04871},
+  primaryclass = {cs},
+  publisher = {arXiv},
+  doi = {10.48550/arXiv.2403.04871},
+  urldate = {2024-09-25},
+  abstract = {Applications increasingly leverage mixed-modality data, and must jointly search over vector data, such as embedded images, text and video, as well as structured data, such as attributes and keywords. Proposed methods for this hybrid search setting either suffer from poor performance or support a severely restricted set of search predicates (e.g., only small sets of equality predicates), making them impractical for many applications. To address this, we present ACORN, an approach for performant and predicate-agnostic hybrid search. ACORN builds on Hierarchical Navigable Small Worlds (HNSW), a state-of-the-art graph-based approximate nearest neighbor index, and can be implemented efficiently by extending existing HNSW libraries. ACORN introduces the idea of predicate subgraph traversal to emulate a theoretically ideal, but impractical, hybrid search strategy. ACORN's predicate-agnostic construction algorithm is designed to enable this effective search strategy, while supporting a wide array of predicate sets and query semantics. We systematically evaluate ACORN on both prior benchmark datasets, with simple, low-cardinality predicate sets, and complex multi-modal datasets not supported by prior methods. We show that ACORN achieves state-of-the-art performance on all datasets, outperforming prior methods with 2-1,000x higher throughput at a fixed recall.},
+  archiveprefix = {arXiv},
+  keywords = {Computer Science - Databases,Computer Science - Information Retrieval}
+}
+
+@misc{pineconeHierarchicalNavigableSmall,
+  title = {Hierarchical {{Navigable Small Worlds}} ({{HNSW}})},
+  author = {{Pinecone}},
+  journal = {Faiss: The Missing Manual},
+  urldate = {2024-12-15},
+  howpublished = {https://www.pinecone.io/learn/series/faiss/hnsw/},
+  langid = {english},
+  file = {/home/alice/apps/Zotero/storage/7IH9IMFM/hnsw.html}
+}
+
+@inproceedings{renHMANNEfficientBillionPoint2020,
+  title = {{{HM-ANN}}: {{Efficient Billion-Point Nearest Neighbor Search}} on {{Heterogeneous Memory}}},
+  shorttitle = {{{HM-ANN}}},
+  booktitle = {Advances in {{Neural Information Processing Systems}}},
+  author = {Ren, Jie and Zhang, Minjia and Li, Dong},
+  year = {2020},
+  volume = {33},
+  pages = {10672--10684},
+  publisher = {Curran Associates, Inc.},
+  urldate = {2024-09-25},
+  abstract = {The state-of-the-art approximate nearest neighbor search (ANNS) algorithms face a fundamental tradeoff between query latency and accuracy, because of small main memory capacity: To store indices in main memory for short query latency, the ANNS algorithms have to limit dataset size or use a quantization scheme which hurts search accuracy. The emergence of heterogeneous memory (HM) brings a solution to significantly increase memory capacity and break the above tradeoff: Using HM, billions of data points can be placed in the main memory on a single machine without using any data compression. However, HM consists of both fast (but small) memory and slow (but large) memory, and using HM inappropriately slows down query significantly.  In this work, we present a novel graph-based similarity search algorithm called HM-ANN, which takes both memory and data heterogeneity into consideration and enables billion-scale similarity search on a single node without using compression. On two billion-sized datasets BIGANN and DEEP1B, HM-ANN outperforms state-of-the-art compression-based solutions such as L\&C and IMI+OPQ in recall-vs-latency by a large margin, obtaining 46\% higher recall under the same search latency. We also extend existing graph-based methods such as HNSW and NSG with two strong baseline implementations on HM. At billion-point scale, HM-ANN is 2X and 5.8X faster than our HNSWand NSG baselines respectively to reach the same accuracy.}
+}
+
+@misc{RustlangRustbindgen2024,
+  title = {Rust-Lang/Rust-Bindgen},
+  year = {2024},
+  month = dec,
+  urldate = {2024-12-14},
+  abstract = {Automatically generates Rust FFI bindings to C (and some C++) libraries.},
+  copyright = {BSD-3-Clause},
+  howpublished = {The Rust Programming Language},
+  keywords = {bindings,codegen,ffi}
+}
+
+@misc{simhadriHarshasimhadriBigannbenchmarks2024,
+  title = {Harsha-Simhadri/Big-Ann-Benchmarks},
+  author = {Simhadri, Harsha Vardhan},
+  year = {2024},
+  month = sep,
+  urldate = {2024-10-01},
+  abstract = {Framework for evaluating ANNS algorithms on billion scale datasets.},
+  copyright = {MIT},
+  keywords = {approximate-nearest-neighbor-search,information-retrival}
+}
+
+@misc{simhadriResultsBigANN2024,
+  title = {Results of the {{Big ANN}}: {{NeurIPS}}'23 Competition},
+  shorttitle = {Results of the {{Big ANN}}},
+  author = {Simhadri, Harsha Vardhan and Aum{\"u}ller, Martin and Ingber, Amir and Douze, Matthijs and Williams, George and Manohar, Magdalen Dobson and Baranchuk, Dmitry and Liberty, Edo and Liu, Frank and Landrum, Ben and Karjikar, Mazin and Dhulipala, Laxman and Chen, Meng and Chen, Yue and Ma, Rui and Zhang, Kai and Cai, Yuzheng and Shi, Jiayang and Chen, Yizhuo and Zheng, Weiguo and Wan, Zihao and Yin, Jie and Huang, Ben},
+  year = {2024},
+  month = sep,
+  number = {arXiv:2409.17424},
+  eprint = {2409.17424},
+  primaryclass = {cs},
+  publisher = {arXiv},
+  doi = {10.48550/arXiv.2409.17424},
+  urldate = {2024-09-29},
+  abstract = {The 2023 Big ANN Challenge, held at NeurIPS 2023, focused on advancing the state-of-the-art in indexing data structures and search algorithms for practical variants of Approximate Nearest Neighbor (ANN) search that reflect the growing complexity and diversity of workloads. Unlike prior challenges that emphasized scaling up classical ANN search {\textasciitilde}{\textbackslash}cite\{DBLP:conf/nips/SimhadriWADBBCH21\}, this competition addressed filtered search, out-of-distribution data, sparse and streaming variants of ANNS. Participants developed and submitted innovative solutions that were evaluated on new standard datasets with constrained computational resources. The results showcased significant improvements in search accuracy and efficiency over industry-standard baselines, with notable contributions from both academic and industrial teams. This paper summarizes the competition tracks, datasets, evaluation metrics, and the innovative approaches of the top-performing submissions, providing insights into the current advancements and future directions in the field of approximate nearest neighbor search.},
+  archiveprefix = {arXiv},
+  keywords = {Computer Science - Data Structures and Algorithms,Computer Science - Information Retrieval,Computer Science - Machine Learning,Computer Science - Performance,H.3.3},
+  file = {/home/alice/apps/Zotero/storage/A93JH99D/Simhadri et al. - 2024 - Results of the Big ANN NeurIPS'23 competition.pdf;/home/alice/apps/Zotero/storage/56EYK5RA/2409.html}
+}
+
+@misc{simhadriResultsNeurIPS21Challenge2022,
+  title = {Results of the {{NeurIPS}}'21 {{Challenge}} on {{Billion-Scale Approximate Nearest Neighbor Search}}},
+  author = {Simhadri, Harsha Vardhan and Williams, George and Aum{\"u}ller, Martin and Douze, Matthijs and Babenko, Artem and Baranchuk, Dmitry and Chen, Qi and Hosseini, Lucas and Krishnaswamy, Ravishankar and Srinivasa, Gopal and Subramanya, Suhas Jayaram and Wang, Jingdong},
+  year = {2022},
+  month = may,
+  number = {arXiv:2205.03763},
+  eprint = {2205.03763},
+  primaryclass = {cs},
+  publisher = {arXiv},
+  urldate = {2024-10-01},
+  abstract = {Despite the broad range of algorithms for Approximate Nearest Neighbor Search, most empirical evaluations of algorithms have focused on smaller datasets, typically of 1 million points (Aumu{\textasciidieresis}ller et al., 2020). However, deploying recent advances in embedding based techniques for search, recommendation and ranking at scale require ANNS indices at billion, trillion or larger scale. Barring a few recent papers, there is limited consensus on which algorithms are effective at this scale vis-`a-vis their hardware cost.},
+  archiveprefix = {arXiv},
+  langid = {english},
+  keywords = {Computer Science - Data Structures and Algorithms,Computer Science - Databases,Computer Science - Machine Learning,Computer Science - Performance},
+  file = {/home/alice/apps/Zotero/storage/JVCU56MN/Simhadri et al. - 2022 - Results of the NeurIPS'21 Challenge on Billion-Scale Approximate Nearest Neighbor Search.pdf}
+}
+
+@mastersthesis{sunDistributedSystemLarge2024,
+  title = {A {{Distributed System}} for {{Large Scale Vector Search}}},
+  author = {Sun, Yuxin},
+  year = {2024},
+  doi = {10.3929/ethz-b-000664643},
+  urldate = {2024-09-25},
+  abstract = {Machine learning (ML) models can encode various types of data as vectors that represent the data semantics. Consequently, vector similarity search is now the backbone of modern information retrieval and machine learning systems. In a search engine, an ML model first encodes the query as a vector. The query vector is then compared against the database vectors, and the ones that are closest to the query are returned. Such search process is formally known as approximate nearest neighbor search. In order to support for larger scale of dataset, a fast distributed vector retrieval engine is needed.  In this thesis, we aim to build a distributed system which can support large scale vector search. More specifically, our system includes a master node and several data nodes. Given a query, the system will first traverse an in-memory index on the master node to select nearest clusters and then dispatch the query to corresponding data nodes for further search. The data nodes will do the actual search with several optimization strategies, such as buffer management, SIMD vectorization and OpenMP parallelization. Finally, data nodes will send the search results back and the master node will gather these results and return them to the users.  Evaluation results demonstrates that our system outperforms the distributed versions of Faiss, one of the most popular implementations of approximate nearest neighbor search. Our system also shows its good ability to handle hot queries.},
+  copyright = {http://rightsstatements.org/page/InC-NC/1.0/},
+  langid = {english},
+  school = {ETH Zurich},
+  annotation = {Accepted: 2024-03-18T10:01:12Z}
+}
+
+@article{sunSOARImprovedIndexing2023,
+  title = {{{SOAR}}: {{Improved Indexing}} for {{Approximate Nearest Neighbor Search}}},
+  author = {Sun, Philip and Simcha, David and Dopson, Dave and Guo, Ruiqi and Kumar, Sanjiv},
+  year = {2023},
+  abstract = {This paper introduces SOAR: Spilling with Orthogonality-Amplified Residuals, a novel data indexing technique for approximate nearest neighbor (ANN) search. SOAR extends upon previous approaches to ANN search, such as spill trees, that utilize multiple redundant representations while partitioning the data to reduce the probability of missing a nearest neighbor during search. Rather than training and computing these redundant representations independently, however, SOAR uses an orthogonality-amplified residual loss, which optimizes each representation to compensate for cases where other representations perform poorly. This drastically improves the overall index quality, resulting in state-of-the-art ANN benchmark performance while maintaining fast indexing times and low memory consumption.},
+  langid = {english},
+  file = {/home/alice/apps/Zotero/storage/GHI3MARC/Sun et al. - SOAR Improved Indexing for Approximate Nearest Neighbor Search.pdf}
+}
+
+@misc{tianFusionANNSEfficientCPU2024,
+  title = {{{FusionANNS}}: {{An Efficient CPU}}/{{GPU Cooperative Processing Architecture}} for {{Billion-scale Approximate Nearest Neighbor Search}}},
+  shorttitle = {{{FusionANNS}}},
+  author = {Tian, Bing and Liu, Haikun and Tang, Yuhang and Xiao, Shihai and Duan, Zhuohui and Liao, Xiaofei and Zhang, Xuecang and Zhu, Junhua and Zhang, Yu},
+  year = {2024},
+  month = sep,
+  number = {arXiv:2409.16576},
+  eprint = {2409.16576},
+  primaryclass = {cs},
+  publisher = {arXiv},
+  doi = {10.48550/arXiv.2409.16576},
+  urldate = {2024-09-29},
+  abstract = {Approximate nearest neighbor search (ANNS) has emerged as a crucial component of database and AI infrastructure. Ever-increasing vector datasets pose significant challenges in terms of performance, cost, and accuracy for ANNS services. None of modern ANNS systems can address these issues simultaneously. We present FusionANNS, a high-throughput, low-latency, cost-efficient, and high-accuracy ANNS system for billion-scale datasets using SSDs and only one entry-level GPU. The key idea of FusionANNS lies in CPU/GPU collaborative filtering and re-ranking mechanisms, which significantly reduce I/O operations across CPUs, GPU, and SSDs to break through the I/O performance bottleneck. Specifically, we propose three novel designs: (1) multi-tiered indexing to avoid data swapping between CPUs and GPU, (2) heuristic re-ranking to eliminate unnecessary I/Os and computations while guaranteeing high accuracy, and (3) redundant-aware I/O deduplication to further improve I/O efficiency. We implement FusionANNS and compare it with the state-of-the-art SSD-based ANNS system--SPANN and GPU-accelerated in-memory ANNS system--RUMMY. Experimental results show that FusionANNS achieves 1) 9.4-13.1X higher query per second (QPS) and 5.7-8.8X higher cost efficiency compared with SPANN; 2) and 2-4.9X higher QPS and 2.3-6.8X higher cost efficiency compared with RUMMY, while guaranteeing low latency and high accuracy.},
+  archiveprefix = {arXiv},
+  keywords = {Computer Science - Databases,Computer Science - Information Retrieval,Computer Science - Operating Systems},
+  file = {/home/alice/apps/Zotero/storage/5G8LQU7F/Tian et al. - 2024 - FusionANNS An Efficient CPUGPU Cooperative Processing Architecture for Billion-scale Approximate N.pdf;/home/alice/apps/Zotero/storage/GY4JTF9U/2409.html}
+}
+
+@misc{tolnayDtolnayCxx2024,
+  title = {Dtolnay/Cxx},
+  author = {Tolnay, David},
+  year = {2024},
+  month = dec,
+  urldate = {2024-12-14},
+  abstract = {Safe interop between Rust and C++},
+  copyright = {Apache-2.0}
+}
