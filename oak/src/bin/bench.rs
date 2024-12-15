@@ -2,6 +2,7 @@ use anyhow::Result;
 use clap::Parser;
 use dropshot::ConfigLogging;
 use dropshot::ConfigLoggingLevel;
+use oak::acorn;
 use oak::bitmask::Bitmask;
 use thiserror::Error;
 use slog_scope::info;
@@ -32,12 +33,23 @@ struct Args {
 }
 
 struct QueryStats {
-    recall_10: bool,
-    latency: u128 //currently representing milliseconds, need to rework since its per query
+    acorn_recall_10: bool,
+    acorn_latency: u128,
+    oak_recall_10: bool,
+    oak_latency: u128, //currently representing milliseconds, need to rework since its per query
+}
+struct ExperimentResults {
+    acorn_latency: f64,
+    oak_latency: f64,
+    acorn_qps: f64,
+    oak_qps: f64,
+    acorn_recall: f64,
+    oak_recall: f64,
 }
 
 fn query_loop(
     dataset: &FvecsDataset,
+    router: &Router,
     queries : &Vec<FlattenedVecs>,
     bitmask : &Bitmask,
     k: usize,
@@ -50,70 +62,50 @@ fn query_loop(
         let now = tokio::time::Instant::now();
         let result = dataset.search_with_bitmask(&q, &bitmask, k, efsearch)?;
         let end = now.elapsed();
-        let latency = end.as_micros();
-        let r10 = calculate_recall_1(gt[i], result)?;
-        results.push(QueryStats{
-            recall_10: r10,
-            latency: latency
-        });
+        let acorn_latency = end.as_micros();
+        let acorn_recall = calculate_recall_1(gt[i], result)?;
 
+        let oak_now = tokio::time::Instant::now();
+        let oak_result = router.search_with_bitmask(&q, &bitmask, k, efsearch)?;
+        let oak_end = now.elapsed();
+        let oak_latency = end.as_micros();
+        let oak_recall = calculate_recall_1(gt[i], oak_result);
+        results.push(QueryStats{
+            acorn_latency: acorn_latency,
+            acorn_recall_10: acorn_recall,
+            oak_latency: 10,
+            oak_recall_10: true
+        });
     }
     Ok(results)
 }
 
-fn oak_loop(
-    router: &Router,
-    queries : &Vec<FlattenedVecs>,
-    bitmask : &Bitmask,
-    k: usize,
-    gt: &Vec<usize>,
-    efsearch: i64
-) -> Result<Vec<QueryStats>> {
-    let mut results = vec![];
-    info!{"We have {} queries and {} gt elts", queries.len(), gt.len()};
-    for (i, q) in queries.iter().enumerate() {
-        let now = tokio::time::Instant::now();
-        let result = router.search_with_bitmask(&q, &bitmask, k, efsearch)?;
-        let end = now.elapsed();
-        let latency = end.as_micros();
-        let r10 = calculate_recall_1(gt[i], result)?;
-        results.push(QueryStats{
-            recall_10: r10,
-            latency: latency
-        });
-
-    }
-    Ok(results)
-}
-
-fn averages(queries: Vec<QueryStats>) -> Result<(f64, f64, f64)> {
-    let total_latencies:f64 = queries.iter().map(|qs| qs.latency).sum::<u128>() as f64;
-    let total_r10:f64 = queries.iter().filter(|qs| qs.recall_10).count() as f64;
-    // info!("TOTAL R10: {}", total_r10);
+fn averages(queries: Vec<QueryStats>) -> Result<ExperimentResults> {
+    let acorn_latencies:f64 = queries.iter().map(|qs| qs.acorn_latency).sum::<u128>() as f64;
+    let acorn_r10s:f64 = queries.iter().filter(|qs| qs.acorn_recall_10).count() as f64;
+    let oak_latencies:f64 = queries.iter().map(|qs| qs.oak_latency).sum::<u128>() as f64;
+    let oak_r10s:f64 = queries.iter().filter(|qs| qs.oak_recall_10).count() as f64;
     let count:f64 = queries.len() as f64;
-    Ok((
-        total_latencies,
-        total_latencies /count, 
-        total_r10 /count, 
-    ))
+    Ok(ExperimentResults{
+        acorn_latency: acorn_latencies,
+        oak_latency: oak_latencies,
+        acorn_qps: acorn_latencies / count,
+        oak_qps: oak_latencies / count,
+        acorn_recall: acorn_r10s / count,
+        oak_recall: oak_r10s / count,
+    })
 }
 
 fn calculate_recall_1(gt: usize, acorn_result: TopKSearchResultBatch) -> Result<bool> {
     let mut n_10: bool = false;
     for (i, j) in acorn_result[0].iter().enumerate() {
-        // topk should be 10 so this loop should be bounded at 10 per query
         if j.0 == gt {
-            // info!("{} == {} recall", j.0, gt);
             if i < 10 {
                 n_10 = true;
             }
             break;
-            // we can break out whenever the matching index was found
         }
     }
-    // if !n_10 {
-    //     info!("HIIIIII");
-    // }
     Ok(n_10)
 }
 
@@ -150,7 +142,6 @@ fn main() -> Result<()> {
         m: 32,
         m_beta: 64,
     };
-    // How are they learning about dataset predicates?
 
     let _ = dataset.initialize(&opts);
     info!("Seed index constructed.");
@@ -184,50 +175,56 @@ fn main() -> Result<()> {
 
     info!("Searching full dataset for {topk} similar vectors for {num_queries} random query , where attr is equal to 1...");
     let efsearch = vec![1, 4, 8, 16, 32];
-    let mut latencies = vec![];
-    let mut r10s = vec![];
-    let mut queries_per_sec = vec![];
-    // To test ACORN, we simply call search_with_bitmask which routes to the base index for ACORN
-    for efs in &efsearch {
-    	let qs = query_loop(&dataset, &queries, &mask_main, topk, &gt, efs)?;
-    	match averages(qs) {
-            Ok((lat, qps, r10)) => {
-            	info!("ACORN: QPS was {qps} microseconds with total latency
-             	being {lat} for {num_queries} and Recall@10 was {r10}");
-		latencies.push(lat);
-		queries_per_sec.push(qps);
-		r10s.push(r10);
-            }
-            Err(_) => {
-            	info!("Error calculating averages")
-            }
-    	}
-    }
+    // To test ACORN, we simply call search_with_bitmask which routes to the 
+    // base index for ACORN
 
+    // To test OAK, we use the router which decides whether the query should 
+    // be redirected to an OI
     let router = Router::new(&dataset, vec![(&mask_main, &subdataset)]);
 
-    let mut oak_latencies = vec![];
-    let mut oak_r10s = vec![];
-    let mut oak_queries_psec = vec![];
-    for efs in &efsearch {
-       let oak_res  = oak_loop(&router, &queries, &mask_main, topk, &gt, efs)?;
-       match averages(oak_res) {
-           Ok((lat, qps, r10)) => {
-	      info!("OAK: QPS was {qps} microseconds with total latency
-	      being {lat} for {num_queries} and Recall@10 was {r10}");
-	      oak_latencies.push(lat);
-	      oak_r10s.push(r10);
-	      oak_queries_psec.push(qps);
-	   }
-	   Err(_) => {
-		info!("Error calculating averages 2")
-	   }
-       }
-   }
+    let results: Vec<ExperimentResults> = vec![];
+
+    for efs in efsearch {
+    	let qs = query_loop(
+            &dataset, &router, &queries, &mask_main, topk, &gt, efs
+        )?;
+        match averages(qs) {
+            Ok(exp_result) => {
+                info!("ACORN: QPS was {} microseconds with total latency
+                being {} for {} and Recall@10 was {}", 
+                exp_result.acorn_qps, exp_result.acorn_latency, exp_result.acorn_recall);
+                info!("OAK: QPS was {} microseconds with total latency
+                being {} for {} and Recall@10 was {}", 
+                exp_result.oak_qps, exp_result.oak_latency, exp_result.oak_recall);
+                results.push(exp_result);
+            }
+            Err(_) => {
+            info!("Error calculating averages 2")
+            }
+        }
+    }
 	   
     info!("Got results.");
-    // info!("{}", latencies);
-    // info!("{}", queries_per_sec);
-    // info!("{}", r10s);
+
+    let mut wtr = Writer::from_path("experiments.csv")?;
+
+    // Write the header
+    wtr.write_record(&["ACORN Latency", "ACORN QPS", "ACORN Recall@10", "OAK Latency", "OAK QPS", "OAK Recall@10"])?;
+
+    // Write the data
+    for exp in results.iter() {
+        wtr.write_record(&[
+            exp.acorn_latency.to_string(),
+            exp.acorn_qps.to_string(),
+            exp.acorn_recall.to_string(),
+            exp.oak_latency.to_string(),
+            exp.oak_qps.to_string(),
+            exp.oak_recall.to_string(),
+            ])?;
+    }
+
+    // Flush the writer to ensure all data is written
+    wtr.flush()?;
+    println!("Data written to output.csv");
     Ok(())
 }
