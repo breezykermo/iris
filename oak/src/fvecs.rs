@@ -351,7 +351,22 @@ impl<'a> SimilaritySearchable for FvecsDatasetPartition<'a> {
         predicate_query: &Option<PredicateQuery>,
         topk: usize,
     ) -> Result<Vec<TopKSearchResult>, SearchableError> {
-        todo!();
+        if self.index.is_none() {
+            return Err(SearchableError::DatasetIsNotIndexed);
+        }
+
+        debug!("query_vectors len: {}", query_vectors.len());
+        debug!("fvecs dataset len: {}", self.len());
+
+        let mut mask = match predicate_query {
+            None => Bitmask::new_full(self),
+            Some(pq) => Bitmask::new(pq, self),
+        };
+
+        self.index
+            .as_ref()
+            .unwrap()
+            .search(query_vectors, &mut mask.map, topk)
     }
 
     fn search_with_bitmask(
@@ -360,7 +375,13 @@ impl<'a> SimilaritySearchable for FvecsDatasetPartition<'a> {
         bitmask: &Bitmask,
         topk: usize,
     ) -> Result<Vec<TopKSearchResult>, SearchableError> {
-        todo!();
+        let mut filter_id_map = Vec::<i8>::from(bitmask);
+
+        // TODO: this & to filter_id_map should not have to be mutable
+        self.index
+            .as_ref()
+            .unwrap()
+            .search(query_vectors, &mut filter_id_map, topk)
     }
 }
 
