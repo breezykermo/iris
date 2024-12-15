@@ -363,22 +363,40 @@ impl<'a> SimilaritySearchable for FvecsDatasetPartition<'a> {
 
     fn search(
         &self,
-        _query_vectors: &FlattenedVecs,
-        _predicate_query: &Option<PredicateQuery>,
-        _topk: usize,
-	_efsearch: i64,
+        query_vectors: &FlattenedVecs,
+        predicate_query: &Option<PredicateQuery>,
+        topk: usize,
+        efsearch: i64,
     ) -> Result<Vec<TopKSearchResult>, SearchableError> {
-        todo!();
+        if self.index.is_none() {
+            return Err(SearchableError::DatasetIsNotIndexed);
+        }
+
+        debug!("query_vectors len: {}", query_vectors.len());
+        debug!("fvecs dataset len: {}", self.len());
+
+        let mut mask = match predicate_query {
+            None => Bitmask::new_full(self),
+            Some(pq) => Bitmask::new(pq, self),
+        };
+
+        self.index
+            .as_ref()
+            .unwrap()
+            .search(query_vectors, &mut mask.map, topk, efsearch)
     }
 
     fn search_with_bitmask(
         &self,
-        _query_vectors: &FlattenedVecs,
-        _bitmask: &Bitmask,
-        _topk: usize,
-	_efsearch: i64,
+        query_vectors: &FlattenedVecs,
+        bitmask: &Bitmask,
+        topk: usize,
+        efsearch: i64,
     ) -> Result<Vec<TopKSearchResult>, SearchableError> {
-        todo!();
+        self.index
+            .as_ref()
+            .unwrap()
+            .search(query_vectors, &mut filter_id_map, topk, efsearch)
     }
 }
 

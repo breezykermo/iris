@@ -73,8 +73,8 @@ fn query_loop(
         results.push(QueryStats{
             acorn_latency: acorn_latency,
             acorn_recall_10: acorn_recall,
-            oak_latency: 10,
-            oak_recall_10: true
+            oak_latency: oak_latency,
+            oak_recall_10: oak_recall,
         });
     }
     Ok(results)
