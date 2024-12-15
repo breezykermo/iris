@@ -9,6 +9,7 @@ use oak::dataset::{SimilaritySearchable, OakIndexOptions, TopKSearchResultBatch}
 use oak::fvecs::{FlattenedVecs, FvecsDataset};
 use oak::predicate::PredicateQuery;
 use csv::ReaderBuilder;
+use oak::router::Router;
 
 #[derive(Error, Debug)]
 pub enum ExampleError {
@@ -36,11 +37,11 @@ struct QueryStats {
 }
 
 fn query_loop(
-    dataset: FvecsDataset,
-    queries : Vec<FlattenedVecs>,
+    dataset: &FvecsDataset,
+    queries : &Vec<FlattenedVecs>,
     bitmask : &Bitmask,
     k: usize,
-    gt: Vec<usize>,
+    gt: &Vec<usize>,
     efsearch: i64
 ) -> Result<Vec<QueryStats>> {
     let mut results = vec![];
@@ -59,6 +60,32 @@ fn query_loop(
     }
     Ok(results)
 }
+
+fn oak_loop(
+    router: &Router,
+    queries : &Vec<FlattenedVecs>,
+    bitmask : &Bitmask,
+    k: usize,
+    gt: &Vec<usize>,
+    efsearch: i64
+) -> Result<Vec<QueryStats>> {
+    let mut results = vec![];
+    info!{"We have {} queries and {} gt elts", queries.len(), gt.len()};
+    for (i, q) in queries.iter().enumerate() {
+        let now = tokio::time::Instant::now();
+        let result = router.search_with_bitmask(&q, &bitmask, k, efsearch)?;
+        let end = now.elapsed();
+        let latency = end.as_micros();
+        let r10 = calculate_recall_1(gt[i], result)?;
+        results.push(QueryStats{
+            recall_10: r10,
+            latency: latency
+        });
+
+    }
+    Ok(results)
+}
+
 fn averages(queries: Vec<QueryStats>) -> Result<(f64, f64, f64)> {
     let total_latencies:f64 = queries.iter().map(|qs| qs.latency).sum::<u128>() as f64;
     let total_r10:f64 = queries.iter().filter(|qs| qs.recall_10).count() as f64;
@@ -156,15 +183,16 @@ fn main() -> Result<()> {
     info!("{} gt queries found", gt.len());
 
     info!("Searching full dataset for {topk} similar vectors for {num_queries} random query , where attr is equal to 1...");
-    let efsearch = vec![8, 16, 32, 64, 128, 256];
-    let latencies = vec![];
-    let r10s = vec![];
-    let queries_per_sec = vec![];
-    for efs in efsearch {
-    	let qs = query_loop(dataset, queries, &mask_main, topk, gt, efs)?;
+    let efsearch = vec![1, 4, 8, 16, 32];
+    let mut latencies = vec![];
+    let mut r10s = vec![];
+    let mut queries_per_sec = vec![];
+    // To test ACORN, we simply call search_with_bitmask which routes to the base index for ACORN
+    for efs in &efsearch {
+    	let qs = query_loop(&dataset, &queries, &mask_main, topk, &gt, efs)?;
     	match averages(qs) {
             Ok((lat, qps, r10)) => {
-            	info!("QPS was {qps} microseconds with total latency
+            	info!("ACORN: QPS was {qps} microseconds with total latency
              	being {lat} for {num_queries} and Recall@10 was {r10}");
 		latencies.push(lat);
 		queries_per_sec.push(qps);
@@ -175,6 +203,28 @@ fn main() -> Result<()> {
             }
     	}
     }
+
+    let router = Router::new(&dataset, vec![(&mask_main, &subdataset)]);
+
+    let mut oak_latencies = vec![];
+    let mut oak_r10s = vec![];
+    let mut oak_queries_psec = vec![];
+    for efs in &efsearch {
+       let oak_res  = oak_loop(&router, &queries, &mask_main, topk, &gt, efs)?;
+       match averages(oak_res) {
+           Ok((lat, qps, r10)) => {
+	      info!("OAK: QPS was {qps} microseconds with total latency
+	      being {lat} for {num_queries} and Recall@10 was {r10}");
+	      oak_latencies.push(lat);
+	      oak_r10s.push(r10);
+	      oak_queries_psec.push(qps);
+	   }
+	   Err(_) => {
+		info!("Error calculating averages 2")
+	   }
+       }
+   }
+	   
     info!("Got results.");
     // info!("{}", latencies);
     // info!("{}", queries_per_sec);
