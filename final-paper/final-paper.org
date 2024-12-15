@@ -87,18 +87,22 @@ This literature is relevant as it introduces the idea of routing each query betw
 
 ** HNSW and ACORN 
 The underlying data structure that enables vector similiarity search in both ACORN and OAK is Hierarchical Navigable Small Worlds (HNSW) [cite:@malkovEfficientRobustApproximate2018], an index that makes use of a hierarchical, tree-link structure during search to more quickly work through the plausible search space while retaining reasonable recall.
-More specifically, HNSW leverages a /proximity graph/, in which two vertices are linked based on proximity.
+=TODO lachlan (update citation)=
+More specifically, HNSW leverages a /proximity graph/[cite:https://www.pinecone.io/learn/series/faiss/hnsw/], in which two vertices are linked based on proximity.
 Proximity is usually computed using Euclidean distance, though other similarity metrics exist (e.g. cosine similarity).
 
-ACORN modifies the HNSW construction algorithm to use neighbor expansion, creating a denser graph.
-While HNSW collects $M$ approximate nearest neighbors as candidate edges for each node in the index, ACORN collects $M \dot \gamma$ approximate nearest neighbors as candidate edges per node.
-The intuition is that given enough redundant nodes, the search space is sufficiently large, even when filtering based on the predicate during search.
+ACORN proposes two HNSW variants entitled *ACORN*-$\gamma$ and *ACORN-1*. ACORN-$\gamma$ is designed to achieve efficient search performance, and ACORN-1 is designed achieve similar performance while reducing the time to index (TTI) and space footprint.
 
+ACORN-$\gamma$ modifies the HNSW construction algorithm by introducing /neighbor expansion/, which creates a denser graph.
+While HNSW collects $M$ approximate nearest neighbors as candidate edges for each node in the index, ACORN-$\gamma$ collects $M \cdot \gamma$ approximate nearest neighbors as candidate edges per node.
+The intuition is that given enough redundant nodes, the search space is sufficiently large, even when filtering based on the predicate during search.
 
 This is not always the case, though. 
 If the predicate selectivity falls below a minimum specified threshold, ACORN resorts to pre-filtering and brute force search, favoring recall over performance.
 This may explain the difference in throughput between ACORN-$\gamma$ and the opportunistic index in Figure 1.
 
+ACORN-1 performs neighbor expansion during search, not construction.
+Thus ACORN-1 collects exactly $M$ approximate nearest neighbors as candidates edges per node during construction.
 
 
 * Main Design
@@ -110,7 +114,7 @@ When OAK receives a query $q$ with predicate $p$, sending to an opportunistic in
 
 OAK's query routing strategy leverages these insights to manage the performance-accuracy tradeoff at hand.
 It is worth mentioning that this tradeoff is inherent to the ANNS problem space as a whole, and that using additional space in order to deliver better latency is the specific goal of ANNS.
-As such, we see OAK's use of additional indexes to speed up certain queries as a reasonable research direction, especially as memory is relatively cheap while Moore's law is no longer in effect. =TODO find some citations for this.=
+As such, we see OAK's use of additional indexes to speed up certain queries as a reasonable research direction, especially as memory is relatively cheap while Moore's law is no longer in effect. ==TODO find some sources for this==
 
 In order to make routing decisions, opportunistic indexes are stored as values in a hash map for which the key is a bitmask.
 Each bitmask/key is constructed over all vectors in the database, so as to provide OAK with an efficient way to consider which vectors exist in available opportunistic indexes.
@@ -151,7 +155,7 @@ OAK has many opportunities for future work.
 *Dynamic index construction*. 
 Right now, OAK constructs indexes only once and before queries are dispatched.
 In a production system, it may be advantageous to construct indexes while queries are received to increase throughput.
-The overhead incurred by index construction could be measured with respect to the time to index (TTI), the size of the index, and the compute/memory resources required to construct the index.
+The overhead incurred by index construction could be measured with respect to the time TTI, the size of the index, and the compute/memory resources required to construct the index.
 
 *Index type*.
 OAK uses ACORN for opportunistic indexes primarily because writing bindings to additional indexes is unnecessary for a proof-of-concept.
