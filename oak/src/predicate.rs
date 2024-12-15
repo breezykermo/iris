@@ -1,5 +1,3 @@
-
-
 /// ACORN specifies the predicates for queries as one bitmap per query, where the bitmap is an
 /// array of length N (the number of total entries in the database). This is presumably so that
 /// ACORN is capable of arbitrary predicates; but it does mean that the query language for the cpp

@@ -11,7 +11,6 @@ use anyhow::Result;
 use byteorder::{ByteOrder, LittleEndian};
 use csv::ReaderBuilder;
 use memmap2::Mmap;
-// use slog_scope::debug;
 use std::fs::File;
 use std::path::PathBuf;
 
@@ -437,4 +436,3 @@ mod tests {
         assert_eq!(vecs.len(), dataset_len);
     }
 }
-
