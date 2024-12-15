@@ -14,8 +14,7 @@ use std::fs::OpenOptions;
 use thiserror::Error;
 
 use oak::dataset::{OakIndexOptions, SimilaritySearchable};
-use oak::fvecs::{FlattenedVecs, FvecsDataset};
-use oak::predicate::PredicateQuery;
+use oak::fvecs::FvecsDataset;
 // use oak::stubs::generate_random_vector;
 
 // Ensure that only one of FAISS or hnsw_rs is used.
@@ -90,7 +89,7 @@ impl OakApi for ServerImpl {
     }
 
     async fn oak_anns_query(
-        rqctx: RequestContext<Self::Context>,
+        _rqctx: RequestContext<Self::Context>,
     ) -> Result<HttpResponseOk<OakAnnsResult>, HttpError> {
         unimplemented!();
         // info!("Constructing random vector to query with {dimensionality} dimensions");
@@ -129,7 +128,7 @@ async fn main() -> Result<()> {
         m_beta: 64,
     };
 
-    let _ = dataset.build_index(&opts);
+    let _ = dataset.initialize(&opts);
     info!("Seed index constructed.");
 
     let dimensionality = dataset.get_dimensionality() as usize;

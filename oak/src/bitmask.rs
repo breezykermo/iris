@@ -3,24 +3,6 @@ use crate::predicate::{PredicateOp, PredicateQuery};
 use core::ffi::c_char;
 use std::collections::HashSet;
 
-// TODO: should probably represent Bitmasks as HashSets
-fn jaccard_similarity_vecs(vec1: Vec<i8>, vec2: Vec<i8>) -> f64 {
-    // Convert vectors to sets
-    let set1: HashSet<i8> = vec1.into_iter().collect();
-    let set2: HashSet<i8> = vec2.into_iter().collect();
-
-    // Calculate the intersection and union
-    let intersection: HashSet<_> = set1.intersection(&set2).cloned().collect();
-    let union: HashSet<_> = set1.union(&set2).cloned().collect();
-
-    // Calculate Jaccard similarity
-    if union.is_empty() {
-        0.0 // Handle edge case when both sets are empty
-    } else {
-        intersection.len() as f64 / union.len() as f64
-    }
-}
-
 pub struct Bitmask {
     pub map: Vec<i8>,
     pub bitcount: usize,
