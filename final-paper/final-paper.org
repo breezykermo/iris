@@ -83,18 +83,21 @@ Though OAK is not inherently distributed, our learnings from this literature rev
 This literature is relevant as it introduces the idea of routing each query between a series of choices, and selecting and/or aggregating results.
 
 *** Replication
-=TODO=
+Replication is the simplest way of distributing a vector database.
+Though it can improve fault tolerance and throughput (as replication can in a regular database), it does not have any benefit in terms of *scalability*, i.e. constructing a database that can store a greater number of vectors than on a single node. 
+
 *** Random Partitioning
 
 When an index does not fit in RAM, it can be partitioned across multiple nodes.
-Many commerical services [cite:@FacebookresearchFaiss2024][cite:https://qdrant.tech/documentation/guides/distributed_deployment/#sharding] support this functionality through *random partioning*.
+Many commerical services [cite:@FacebookresearchFaiss2024;@DistributedDeploymentQdrant] support this functionality through *random partioning*.
 
 The general approach is as follows:
 1. Split the entire database into random, equally-sized partitions.
 2. For each data node, train an index on one partition.
 
 This design addresses the memory constraint incurred by large datasets but is not performant.
-The router must dispatch every query to every node, potentially scanning many unnecessary vectors during the search process. [cite:https://www.research-collection.ethz.ch/handle/20.500.11850/664643]
+The router must dispatch every query to every node, potentially scanning many unnecessary vectors during the search process [cite:@sunDistributedSystemLarge2024].
+Thus random partitioning does not offer tangible benefit in terms of throughput.
 
 *** Balanced Partitioning
 
@@ -106,16 +109,15 @@ Concretely, shards are computed by partitioning vertices into roughly equal size
 A shardmaster/router can then dispatch queries to only a subset of the total shards, thus improving performance and scalability.
 
 Balanced graph partitioning is a well-studied problem.
-For example, Pyramid [cite:https://ieeexplore.ieee.org/document/9006219] proposes building a much smaller meta-HNSW that captures the structure of the entire dataset, which can then be used to route queries to the correct partition HNSW index(es).
-More recently, Gottesburen et al. proposed a balanced graph partitioning strategy using k-means clustering with theoretical routing guarantees. [cite:https://arxiv.org/abs/2403.01797]
+For example, Pyramid [cite:@dengPyramidGeneralFramework2019] proposes building a much smaller meta-HNSW that captures the structure of the entire dataset, which can then be used to route queries to the correct partition HNSW index(es).
+More recently, Gottesburen et al. proposed a balanced graph partitioning strategy using k-means clustering with theoretical routing guarantees [cite:@gottesburenUnleashingGraphPartitioning2024].
 
-Despite these advancements, balanced partitioning is still not supported on platforms such as FAISS or QDrant.
+Despite these advancements, balanced partitioning is still not supported on platforms such as FAISS or Qdrant.
 This could be explained by the significantly greater complexity of balanced partitioning compared to random partitioning, which requires substantial engineering effort to implement.
 
 ** HNSW and ACORN 
 The underlying data structure that enables vector similarity search in both ACORN and OAK is Hierarchical Navigable Small Worlds (HNSW) [cite:@malkovEfficientRobustApproximate2018], an index that makes use of a hierarchical, tree-link structure during search to more quickly work through the plausible search space while retaining reasonable recall.
-=TODO lachlan (update citation)=
-More specifically, HNSW leverages a /proximity graph/[cite:https://www.pinecone.io/learn/series/faiss/hnsw/], in which two vertices are linked based on proximity.
+More specifically, HNSW leverages a /proximity graph/ [cite:@pineconeHierarchicalNavigableSmall], in which two vertices are linked based on proximity.
 Proximity is usually computed using Euclidean distance, though other similarity metrics exist (e.g. cosine similarity).
 
 ACORN proposes two HNSW variants entitled *ACORN*-$\gamma$ and *ACORN-1*. ACORN-$\gamma$ is designed to achieve efficient search performance, and ACORN-1 is designed achieve similar performance while reducing the time to index (TTI) and space footprint.
@@ -141,12 +143,28 @@ When OAK receives a query $q$ with predicate $p$, sending to an opportunistic in
 
 OAK's query routing strategy leverages these insights to manage the performance-accuracy tradeoff at hand.
 It is worth mentioning that this tradeoff is inherent to the ANNS problem space as a whole, and that using additional space in order to deliver better latency is the specific goal of ANNS.
-As such, we see OAK's use of additional indexes to speed up certain queries as a reasonable research direction, especially as memory is relatively cheap while Moore's law is no longer in effect. ==TODO find some sources for this==
 
 In order to make routing decisions, opportunistic indexes are stored as values in a hash map for which the key is a bitmask.
 Each bitmask/key is constructed over all vectors in the database, so as to provide OAK with an efficient way to consider which vectors exist in available opportunistic indexes.
 
-Query routing =TODO lachlan=
+*** Query routing
+#+LABEL: sec:queryrouting
+The key insight for OAK's routing strategy is that queries can be sent to an opportunistic subindex even if the query bitmask $M_q$ and the subindex bitmask $M_s$ do not wholly overlap.
+$M_x$ denotes a bitmask over OAK's root index $r$ (which contains /all/ vectors in the database, regardless of predicate).
+
+If $M_q$ is a strict subset of (or is equal to) $M_{s_i}$, then similarity search on $s_i$ will be strictly preferable to search on $r$. 
+We use a bitmask's *Hamming weight* (the number of ones in the mask) as a proxy for how much more performant a subindex will be.
+The smaller the Hamming weight of $M_{s_i}$, the more performant a search within $s_i$ will be in comparison a search in $r$. 
+We consider this a reasonable heuristic for OAK's current implementation in part because all indexes (both $r$ and all $s_i$) are ACORN indexes constructed with the same base parameters.
+
+If $M_q$ is /not/ a subset of $M_{s_i}$, then we consider the *Jaccard similarity* between $M_q$ and $M_{s_i}$ as a proxy for how significant the reduction in recall will be when routing to $s_i$.
+If there is significant overlap between $M_{s_i}$ and $M_q$, and if the number of vectors specified by the query ($k$) is significantly high, then we consider it more desirable to service the query in $s$ than in $r$.
+
+Concretely, we consider servicing a query in subindex $s_i$ preferable to the base index $r$ if it satisfies the following condition: 
+
+\begin{equation}                        % arbitrary environments,
+x=\sqrt{b}                              % even tables, figures, etc
+\end{equation}
 
 
 * Implementation 
@@ -170,9 +188,21 @@ For each vector, if the predicate is true (e.g. year $=$ 2024), the element in t
 The ACORN ~search~ function, by contrast, accepts a ~filter_id_map~ bit mask that is used to filter vectors that do not satisfy the predicate during search.
 
 ** SimilaritySearchable
-=TODO detail this trait and how it works across the global index, subindexes, and router=
+The ~SimilaritySearchable~ trait is the mechanism through which OAK clients can easily switch between using OAK's base index $r$, a subindex $s_i$, or an index dynamically selected by way of the routing strategy described in Section @@latex:\ref{sec:queryrouting}@@ to search for similar vectors.
+Each of the structs that represent these three entities implement the ~SimilaritySearchable~ trait.
+
+Structs that implement the trait offer three methods:
+*** ~initialize~
+Takes one ~OakIndexOptions~ argument, and prepares the search mechanism.
+*** ~search~
+Takes the ~query_vectors~ (multiple are permitted for batch search), an optional ~PredicateQuery~, and a ~topk~ specification.
+This method relieves the client of the complexity of generating a predicate bitmask.
+*** ~search_with_bitmask~
+Takes the ~query_vectors~, a ~Bitmask~ (constructed over all available searchable vectors), and a ~topk~ specification.
+This is the method that we evaluate in the next section.
 
 * Evaluation
+=TODO lachlan and mithi=
 
 * Future Work
 #+LABEL: sec:future
@@ -184,8 +214,9 @@ Right now, OAK constructs indexes only once and before queries are dispatched.
 In a production system, it may be advantageous to construct indexes while queries are received to increase throughput.
 The overhead incurred by index construction could be measured with respect to the time TTI, the size of the index, and the compute/memory resources required to construct the index.
 
-*Index type*.
+*Index configuration and type*.
 OAK uses ACORN for opportunistic indexes primarily because writing bindings to additional indexes is unnecessary for a proof-of-concept.
+The construction parameters for an ACORN index affect its recall-performance tradeoff, however, and it would be interesting to consider whether variations of ACORN index could factor into a more efficient subindex architecture. 
 However, given the bounded and well-defined nature of the opportunistic index type, a /specialized index/ may yield better performance.
 For example, Qdrant [cite:https://qdrant.tech/articles/filtrable-hnsw/] has proposed denser HNSW graph by knowledge of the search predicates to add additional edges.
 While this is ill-suited for ACORN's goal to be predicate-agnostic, the principle idea of opportunistic indexes is /predicate-knowledge/, and thus we can leverage the known predicate to construct a better index.
