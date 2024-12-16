@@ -5,7 +5,7 @@ use crate::dataset::{
     SimilaritySearchable, TopKSearchResult,
 };
 use crate::predicate::PredicateQuery;
-use slog_scope::debug;
+use slog_scope::{debug, info};
 
 use anyhow::Result;
 use byteorder::{ByteOrder, LittleEndian};
@@ -35,7 +35,7 @@ fn read_csv_to_vec(file_path: &PathBuf) -> Result<Vec<i32>> {
         }
     }
 
-    debug!("{} attributes loaded from CSV.", numbers.len());
+    // debug!("{} attributes loaded from CSV.", numbers.len());
 
     Ok(numbers)
 }
@@ -51,10 +51,10 @@ fn read_csv_to_vec(file_path: &PathBuf) -> Result<Vec<i32>> {
 /// # Returns
 /// A vector of `f32` values parsed from the byte slice.
 pub fn parse_u8_to_f32(data: &[u8]) -> Vec<f32> {
-    assert!(
-        data.len() % 4 == 0,
-        "Input data length must be a multiple of 4"
-    );
+    // assert!(
+    //     data.len() % 4 == 0,
+    //     "Input data length must be a multiple of 4"
+    // );
 
     let mut result = Vec::with_capacity(data.len() / FOUR_BYTES);
 
@@ -96,13 +96,16 @@ impl FlattenedVecs {
 
     /// Creates a new FlattenedVecs based on a bitmask and an original one.
     /// Only the necessary items (items that match the bitmask) are copied.
-    pub fn clone_via_bitmask(&self, bitmask: &Bitmask) -> Self {
+    pub fn clone_via_bitmask(&self, bitmask: &Bitmask) -> (Vec<usize>, Self) {
+        let mut indexes = vec![];
         let new_data: Vec<f32> = self
             .data
             .chunks_exact(self.dimensionality)
+            .enumerate()
             .zip(bitmask.map.iter())
-            .filter_map(|(vector, &keep)| {
+            .filter_map(|((og_idx, vector), &keep)| {
                 if keep == 1 {
+                    indexes.push(og_idx);
                     Some(vector) // Keep the vector if bitmask says so
                 } else {
                     None
@@ -111,10 +114,13 @@ impl FlattenedVecs {
             .flat_map(|vector| vector.iter().copied())
             .collect();
 
-        Self {
-            dimensionality: self.dimensionality,
-            data: new_data,
-        }
+        (
+            indexes,
+            Self {
+                dimensionality: self.dimensionality,
+                data: new_data,
+            },
+        )
     }
 
     /// Create a 'flattened' representation of fvecs (meaning that the vectors are simply contiguous to
@@ -199,18 +205,18 @@ impl FvecsDataset {
         // let _ = mmap.lock()?;
 
         let dimensionality = LittleEndian::read_u32(&mmap[..FOUR_BYTES]) as usize;
-        assert_eq!(
-            dimensionality,
-            LittleEndian::read_u32(&mmap[0..FOUR_BYTES]) as usize
-        );
+        // assert_eq!(
+        //     dimensionality,
+        //     LittleEndian::read_u32(&mmap[0..FOUR_BYTES]) as usize
+        // );
 
         // Each fvec is a dimensionality (4 bytes) followed by `dimensionality` number of f32
         // values. Fvecs are contiguous in the file.
         let count = &mmap[..].len() / ((1 + dimensionality) * FOUR_BYTES);
-        debug!(
-            "First dimensionality read from file is {dimensionality}; assuming the same for all remaining."
-        );
-        debug!("The file read has {count} vectors.");
+        // debug!(
+        //     "First dimensionality read from file is {dimensionality}; assuming the same for all remaining."
+        // );
+        // debug!("The file read has {count} vectors.");
 
         let metadata = if load_csv {
             let mut metadata_fname = PathBuf::new();
@@ -251,11 +257,14 @@ impl FvecsDataset {
         let mask = Bitmask::new(pq, self);
         let metadata = HybridSearchMetadata::new_from_bitmask(&self.metadata, &mask);
 
+        // assert_eq!(metadata.len(), mask.bitcount());
+
         FvecsDatasetPartition {
             base: self,
             mask,
             flat: None,
             index: None,
+            original_indices: None,
             metadata,
         }
     }
@@ -275,7 +284,8 @@ impl SimilaritySearchable for FvecsDataset {
     }
 
     fn initialize(&mut self, opts: &OakIndexOptions) -> Result<(), ConstructionError> {
-        let index = AcornHnswIndex::new(self, &self.flat, opts)?;
+        let dimensionality = self.dimensionality as i32;
+        let index = AcornHnswIndex::new(dimensionality, &self.metadata, &self.flat, opts)?;
         self.index = Some(index);
         Ok(())
     }
@@ -291,8 +301,8 @@ impl SimilaritySearchable for FvecsDataset {
             return Err(SearchableError::DatasetIsNotIndexed);
         }
 
-        debug!("query_vectors len: {}", query_vectors.len());
-        debug!("fvecs dataset len: {}", self.len());
+        // debug!("query_vectors len: {}", query_vectors.len());
+        // debug!("fvecs dataset len: {}", self.len());
 
         let mut mask = match predicate_query {
             None => Bitmask::new_full(self),
@@ -326,6 +336,7 @@ impl SimilaritySearchable for FvecsDataset {
 pub struct FvecsDatasetPartition<'a> {
     base: &'a FvecsDataset,
     mask: Bitmask,
+    pub original_indices: Option<Vec<usize>>,
     index: Option<AcornHnswIndex>,
     /// We have an Option here so that the copying of the base vectors can be deferred to the point
     /// at which we decide to build the index. This is an implementation detail, as one could
@@ -351,12 +362,17 @@ impl<'a> SimilaritySearchable for FvecsDatasetPartition<'a> {
 
     fn initialize(&mut self, opts: &OakIndexOptions) -> Result<(), ConstructionError> {
         let og = &self.base.flat;
-        let flat = og.clone_via_bitmask(&self.mask);
+        let (original_indices, flat) = og.clone_via_bitmask(&self.mask);
 
-        let index = AcornHnswIndex::new(self, &flat, opts)?;
+        // assert_eq!(flat.len(), self.mask.bitcount());
+        // assert_eq!(self.metadata.len(), self.mask.bitcount());
+
+        let dimensionality = self.get_dimensionality() as i32;
+        let index = AcornHnswIndex::new(dimensionality, &self.metadata, &flat, opts)?;
 
         self.index = Some(index);
         self.flat = Some(flat);
+        self.original_indices = Some(original_indices);
 
         Ok(())
     }
@@ -372,8 +388,8 @@ impl<'a> SimilaritySearchable for FvecsDatasetPartition<'a> {
             return Err(SearchableError::DatasetIsNotIndexed);
         }
 
-        debug!("query_vectors len: {}", query_vectors.len());
-        debug!("fvecs dataset len: {}", self.len());
+        // debug!("query_vectors len: {}", query_vectors.len());
+        // debug!("fvecs dataset len: {}", self.len());
 
         let mut mask = match predicate_query {
             None => Bitmask::new_full(self),
