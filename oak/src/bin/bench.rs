@@ -66,7 +66,7 @@ fn query_loop(
     for (i, q) in queries.iter().enumerate() {
         // First we benchmark ACORN
         let now = tokio::time::Instant::now();
-        let result = dataset.search_with_bitmask(&q, &bitmask, k, efsearch)?;
+        let result = dataset.search_with_bitmask(q, &bitmask, k, efsearch)?;
         let end = now.elapsed();
         let acorn_latency = end.as_micros();
         let acorn_recall = calculate_recall_1(gt[i], result)?;
@@ -74,7 +74,7 @@ fn query_loop(
         // Then we direct only to OI showing that searching in a smaller index is more performant
 
         let sub_now = tokio::time::Instant::now();
-        let sub_result = subdataset.search_with_bitmask(&q, &submask, k, efsearch)?;
+        let sub_result = subdataset.search_with_bitmask(q, &submask, k, efsearch)?;
         let sub_end = sub_now.elapsed();
         let sub_latency = sub_end.as_micros();
         let sub_recall = calculate_recall_1(gt[i], sub_result)?;
@@ -83,18 +83,18 @@ fn query_loop(
         // We use a router that makes a decision based on performance gain
         // and loss of precision whether to direct it to one of the OIs
         let oak_now = tokio::time::Instant::now();
-        let oak_result = router.search_with_bitmask(&q, &bitmask, k, efsearch)?;
+        let oak_result = router.search_with_bitmask(q, &bitmask, k, efsearch)?;
         let oak_end = oak_now.elapsed();
         let oak_latency = oak_end.as_micros();
         let oak_recall = calculate_recall_1(gt[i], oak_result)?;
 
         // We compile these results for a singular query
         results.push(QueryStats {
-            acorn_latency: acorn_latency,
+            acorn_latency,
             acorn_recall_10: acorn_recall,
-            sub_latency: sub_latency,
+            sub_latency,
             sub_recall_10: sub_recall,
-            oak_latency: oak_latency,
+            oak_latency,
             oak_recall_10: oak_recall,
         });
     }
