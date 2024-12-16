@@ -1,16 +1,17 @@
 use crate::bitmask::Bitmask;
 use crate::dataset::SimilaritySearchable;
+use crate::fvecs::FvecsDatasetPartition;
 use slog_scope::debug;
 
 pub struct Router<'a> {
     base: &'a dyn SimilaritySearchable,
-    opportunistic: Vec<(&'a Bitmask, &'a dyn SimilaritySearchable)>,
+    opportunistic: Vec<(&'a Bitmask, &'a FvecsDatasetPartition<'a>)>,
 }
 
 impl<'a> Router<'a> {
     pub fn new(
         base: &'a dyn SimilaritySearchable,
-        opportunistic: Vec<(&'a Bitmask, &'a dyn SimilaritySearchable)>,
+        opportunistic: Vec<(&'a Bitmask, &'a FvecsDatasetPartition<'a>)>,
     ) -> Self {
         Router {
             base,
