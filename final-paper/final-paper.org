@@ -1,7 +1,7 @@
 #+TITLE: OAK
 #+SUBTITLE: 
 #+AUTHOR: Cedric Sirianni, Mithi Jethwa, Lachlan Kermode
-#+OPTIONS: toc:nil
+#+OPTIONS: num:1
 #+LATEX_CLASS: acmart
 #+LATEX_CLASS_OPTIONS: [sigconf]
 #+LATEX_HEADER: \usepackage{hyperref}
@@ -35,7 +35,7 @@ In RAG it is often desirable to perform ANNS with predicates that help to narrow
 Creating separate vector databases for predicates manually and maintaining routing strategies among them is unwieldy and suboptimal in terms of space, as many there may be significant overlap between many of the indexes, and deciding which predicate subgraphs to build manually requires engineering effort and effective observability instrumentation on the part of the vector database client.
 
 Executing *hybrid search*, i.e. vector similarity search results are additionally constrained by unbounded and arbitrary predicates over the set of all possible vectors in a vector database, is therefore an important problem in vector databases, as it relieves the database client of managing this complexity.  
-The performance profile of ANNS becomes more complex when introducing such predicate filtering, however, as will be discussed in Section @@latex:\ref{sec:motivation}@@.
+The performance profile of ANNS becomes more complex when introducing such predicate filtering, however, as will be discussed in [[#motivation][the Motivation Section]] 
 One recent approach, ACORN [cite:@patelACORNPerformantPredicateAgnostic2024], proposes an architecture for a /predicate-agnostic/ ANNS index that addresses some of these performance complexities.
 # Efficient ANNS is a challenging problem when considering multi-million or billion scale datasets.
 # Both NeurIPS'21 [cite:https://big-ann-benchmarks.com/neurips21.html]and NeurIPS'23 [cite:https://big-ann-benchmarks.com/neurips23.html] hosted a competition for billion-scale indexing data structures and search algorithms, showcasing a wide range of solutions that improved search accuracy and efficiency.
@@ -48,7 +48,9 @@ One recent approach, ACORN [cite:@patelACORNPerformantPredicateAgnostic2024], pr
 In this paper, we present *OAK* (Opportunistic ANNS K-Subgraphs), a system that applies ACORN's principle of predicate-agnostic hybrid vector similarity search in a system that offers better performance for certain query loads by maintaining indexes of predicate subgraphs in addition to a base index and intelligently routing to these indexes when there is significant overlap between such an index and a query predicate.
 
 * Research Problem/Motivation
-#+LABEL: sec:motivation
+:PROPERTIES:
+:CUSTOM_ID: motivation 
+:END:
 We now discuss the existing predicate filtering strategies.
 
 /Pre-filtering/ first finds all vectors that satisfy a given predicate and then performs a similarity search on the remaining vectors.
@@ -79,7 +81,7 @@ Intelligently routing to supplemental indexes in such cases is the goal of OAK.
 ** Distributed Vector Databases
 Our project began as an attempt to build a distributed vector database.
 Though OAK is not inherently distributed, our learnings from this literature review greatly impacted our decision to build OAK and influenced its design. 
-(We also outline OAK's distributed horizons in Section @@latex:\ref{sec:future}@@.)
+(We also outline OAK's distributed horizons in [[#future][the Future Work Section]].
 This literature is relevant as it introduces the idea of routing each query between a series of choices, and selecting and/or aggregating results.
 
 *** Replication
@@ -135,6 +137,9 @@ Thus ACORN-1 collects exactly $M$ approximate nearest neighbors as candidates ed
 
 
 * Main Design
+:PROPERTIES:
+:CUSTOM_ID: maindesign 
+:END:
 
 The central premise of OAK is to route queries with high-frequency predicates to an /opportunistic index/ constructed using the same or a significantly similar predicate.
 When OAK receives a query $q$ with predicate $p$, sending to an opportunistic index is
@@ -148,7 +153,6 @@ In order to make routing decisions, opportunistic indexes are stored as values i
 Each bitmask/key is constructed over all vectors in the database, so as to provide OAK with an efficient way to consider which vectors exist in available opportunistic indexes.
 
 *** Query routing
-#+LABEL: sec:queryrouting
 The key insight for OAK's routing strategy is that queries can be sent to an opportunistic subindex even if the query bitmask $M_q$ and the subindex bitmask $M_s$ do not wholly overlap.
 $M_x$ denotes a bitmask over OAK's root index $r$ (which contains /all/ vectors in the database, regardless of predicate).
 
@@ -193,7 +197,7 @@ For each vector, if the predicate is true (e.g. year $=$ 2024), the element in t
 The ACORN ~search~ function, by contrast, accepts a ~filter_id_map~ bit mask that is used to filter vectors that do not satisfy the predicate during search.
 
 ** SimilaritySearchable
-The ~SimilaritySearchable~ trait is the mechanism through which OAK clients can easily switch between using OAK's base index $r$, a subindex $s_i$, or an index dynamically selected by way of the routing strategy described in Section @@latex:\ref{sec:queryrouting}@@ to search for similar vectors.
+The ~SimilaritySearchable~ trait is the mechanism through which OAK clients can easily switch between using OAK's base index $r$, a subindex $s_i$, or an index dynamically selected by way of the routing strategy described in [[#maindesign][the Main Design Section]] when searching for similar vectors.
 Each of the structs that represent these three entities implement the ~SimilaritySearchable~ trait.
 
 Structs that implement the trait offer three methods:
@@ -228,7 +232,6 @@ Search strategy & Latency \\
 \hline
 $r$ & 2.091142ms \\
 $s_i$ & 536.498µs \\
-oak($r$ + $s_{1-6}$) & X \\
 \hline
 \end{tabular}
 \caption{Table of search strategies and latency}
@@ -236,7 +239,9 @@ oak($r$ + $s_{1-6}$) & X \\
 
 
 * Future Work
-#+LABEL: sec:future
+:PROPERTIES:
+:CUSTOM_ID: future 
+:END:
 
 OAK has many opportunities for future work.
 
