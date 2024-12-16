@@ -17,8 +17,6 @@
 Vector databases are growing in popularity as they become widely used in similarity search and RAG (Retrieval Augmented Generation) systems as part of ML workloads.
 Recent work in ACORN helps improve the feasibility of /hybrid search/ by providing a performant and predicate-agnostic index built on Hierarchical Navigable Small Worlds (HNSW), a state-of-the-art graph based index for approximate nearest neighbor search (ANNS).
 This paper presents OAK, a system that improves upon ACORN's performance for certain query loads by routing to subgraph indexes when there are gains to be had.
-To evaluate OAK, we compare OAK to ACORN ... =TODO=. 
-We show that OAK achieves improved performance ... =TODO=. 
 Our code is available on Github [cite:@kermodeBreezykermoOak2024].
 
 * Introduction
@@ -59,7 +57,7 @@ This approach performs poorly when using medium to high selectivity predicates o
 /Post-filtering/ first performs a similarity search on the dataset, then filters results that do not match the given predicate. 
 Since vectors with the greatest similarity may not satisfy the predicate, this approach sometimes requires searching repeatedly with increasingly large search spaces (top-1k, top-10k, etc.), incurring large amounts of overhead.
 
-/Specialized indexes/ such as Filtered-DiskANN [cite:] use predicates during index construction to eliminate the need for pre- or post-filtering.
+/Specialized indexes/ such as Filtered-DiskANN [cite:@gollapudiFilteredDiskANNGraphAlgorithms2023] use predicates during index construction to eliminate the need for pre- or post-filtering.
 However, these indexes restrict predicate set cardinalities to about 1,000 and only support equality predicates.
 
 Recently, ACORN [cite:@patelACORNPerformantPredicateAgnostic2024] has proposed a /predicate-agnostic/ index which supports unbounded and arbitrary predicates.
