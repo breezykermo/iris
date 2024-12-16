@@ -202,26 +202,47 @@ Takes the ~query_vectors~, a ~Bitmask~ (constructed over all available searchabl
 This is the method that we evaluate in the next section.
 
 * Evaluation
-=TODO lachlan and mithi=
+In order to evaluate, we first sought to plot three recall/QPS graphs.
+1. For the root index $r$
+2. For an opportunistic index $s_i$ constructed over $\frac{1}{12}$ of the SIFT_1M dataset [cite:@jegouProductQuantizationNearest2010]. Following the experimentation method in ACORN, we generated a number between 1 and 12 drawn from a uniformly random distribution for each vector in the dataset, allowing us to benchmark it with hybrid search (using the predicate ``equals $x$").
+3. For search using OAK's routing strategy over a router that consisted of $r$ and six subindexes $s_{1-6}$.
+
+All graphs were to be plotted by first creating the necessary indexes over the one million vectors in SIFT_1M, and then using the 10K vectors in the provided query set with a singular query predicate, i.e. ``equals $5$".  
+Though this experiment is contrived in a way that does not adequately put OAK's routing strategy to test (as all $M_q$ will either be a perfect subset of an $M_{s_i}$ or will have no overlap), we hoped that these initial experiments would at least show that there are potential performance gains to be had from routing to subindexes, and that the basic overhead of OAK's routing layer is not prohibitive of these gains.
+
+Due to the amount of time that we spent investigating the plausibility of distributing a vector database and getting OAK off the ground, however, we were unable to run these experiments meaningfully this semester.
+In an ideal world, we would have run both this set of basic experiments, as well as benchmarks on hybrid search datasets that are /not/ uniformly distributed such as TripClick [cite:@rekabsazTripClickLogFiles2021] and LAION [cite:@schuhmannLAION400MOpenDataset2021]. 
+Despite the very limited evaluation that we had time to run, we are encouraged by the very preliminary result that at least confirms that smaller indexes provide improved search latency.
+Querying a randomly generated vector in SIFT_1M produces the following latencies:
+
+| Search strategy     | Latency    |
+|---------------------+------------|
+| $r$                 | 2.091142ms |
+| $s_i$               | 536.498µs  |
+| oak($r$ + $s_{1-6}) | X          |
+
+
 
 * Future Work
 #+LABEL: sec:future
 
 OAK has many opportunities for future work.
+*** Better experimentation
+First and foremost, a continuation of this work would run a reasonable set of experiments to validate OAK's basic premise and routing strategy.
 
-*Dynamic index construction*. 
+*** Dynamic index construction 
 Right now, OAK constructs indexes only once and before queries are dispatched.
 In a production system, it may be advantageous to construct indexes while queries are received to increase throughput.
 The overhead incurred by index construction could be measured with respect to the time TTI, the size of the index, and the compute/memory resources required to construct the index.
 
-*Index configuration and type*.
+*** Index configuration and type
 OAK uses ACORN for opportunistic indexes primarily because writing bindings to additional indexes is unnecessary for a proof-of-concept.
 The construction parameters for an ACORN index affect its recall-performance tradeoff, however, and it would be interesting to consider whether variations of ACORN index could factor into a more efficient subindex architecture. 
 However, given the bounded and well-defined nature of the opportunistic index type, a /specialized index/ may yield better performance.
 For example, Qdrant [cite:https://qdrant.tech/articles/filtrable-hnsw/] has proposed denser HNSW graph by knowledge of the search predicates to add additional edges.
 While this is ill-suited for ACORN's goal to be predicate-agnostic, the principle idea of opportunistic indexes is /predicate-knowledge/, and thus we can leverage the known predicate to construct a better index.
 
-*Distribution*.
+*** Distribution
 The system design of OAK is also easily transferrable to a distributed context. 
 We could construct and/or host indexes on different nodes, as network communication costs are dominated by the ANNS latency. [cite:]
 This would help remove the bottleneck of commodity hardware when hosting multiple indexes and enable horizontal scaling and load balancing during bursty workloads.

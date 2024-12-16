@@ -52,14 +52,22 @@ fn main() -> Result<()> {
     let _ = dataset.initialize(&opts);
     info!("Seed index constructed.");
 
-    let query = PredicateQuery::new(5);
+    let queries: Vec<_> = (1..7).map(|i| PredicateQuery::new(i)).collect();
 
-    let mut subdataset = dataset.view(&query);
-    let _ = subdataset.initialize(&opts);
-    info!("Subindex as view constructed.");
+    let subdatasets: Vec<_> = queries
+        .iter()
+        .enumerate()
+        .map(|(idx, q)| {
+            let idx = idx + 1;
+            let mut subdataset = dataset.view(&q);
+            let _ = subdataset.initialize(&opts);
+            info!("Subindex {idx} as view constructed.");
+            subdataset
+        })
+        .collect();
 
     let dimensionality = dataset.get_dimensionality() as usize;
-    assert_eq!(dimensionality, subdataset.get_dimensionality() as usize);
+    assert_eq!(dimensionality, subdatasets[0].get_dimensionality() as usize);
 
     // Experiments
     // --------=--
@@ -72,65 +80,88 @@ fn main() -> Result<()> {
     let topk = 10;
     let num_queries = query_vector.len();
 
-    let mask_main = Bitmask::new(&query, &dataset);
-    let mask_sub = Bitmask::new_full(&subdataset);
-
-    debug!(
-        "Mask main filled: {} / {}",
-        mask_main.bitcount(),
-        mask_main.capacity()
-    );
-    debug!(
-        "Mask sub filled: {} / {}",
-        mask_sub.bitcount(),
-        mask_sub.capacity()
-    );
-
-    info!("Searching full dataset for {topk} similar vectors for {num_queries} random query , where attr is equal to 5...");
-
-    let big_start = Instant::now();
-    let big_result = dataset.search_with_bitmask(&query_vector, &mask_main, topk, 16);
-    let big_end = big_start.elapsed();
-
-    info!("Searching dataset partition for {topk} similar vectors for {num_queries} random query, with no predicate as we know all vectors match...");
-
-    let small_start = Instant::now();
-    let small_result = subdataset.search_with_bitmask(&query_vector, &mask_sub, topk, 16);
-    let small_end = small_start.elapsed();
-
-    let big_mean_distance = big_result.unwrap()[0]
+    let masks: Vec<_> = subdatasets
         .iter()
-        .fold(0, |acc, (distance, _)| acc + distance)
-        / topk;
+        .enumerate()
+        .map(|(idx, subdataset)| {
+            let mask_main = Bitmask::new(&queries[idx], &dataset);
+            let mask_sub = Bitmask::new_full(subdataset);
+            let mask_sub_2 = Bitmask::new(&queries[idx], subdataset);
 
-    info!("Results from full search:");
-    info!("Mean distance: {:?}", big_mean_distance);
-    info!("Time taken: {:?}", big_end);
+            let idx = idx + 1;
+            debug!(
+                "Mask main 'equals {idx}' filled: {} / {}",
+                mask_main.bitcount(),
+                mask_main.capacity()
+            );
 
-    let small_mean_distance = small_result.unwrap()[0]
-        .iter()
-        .fold(0, |acc, (distance, _)| acc + distance)
-        / topk;
-    info!("Results from sub search:");
-    info!("Mean distance: {:?}", small_mean_distance);
+            assert_eq!(mask_sub.bitcount(), mask_main.bitcount());
+            assert_eq!(mask_sub.bitcount(), mask_sub_2.bitcount());
+            assert_eq!(mask_sub.capacity(), mask_sub_2.capacity());
 
-    info!("Time taken: {:?}", small_end);
+            debug!(
+                "Mask filled: {} / {}",
+                mask_sub.bitcount(),
+                mask_sub.capacity()
+            );
 
-    // Using router
-    // ----------------------------
-    let router = Router::new(&dataset, vec![(&mask_main, &subdataset)]);
+            (mask_main, mask_sub)
+        })
+        .collect();
 
-    let routed_start = Instant::now();
-    let routed_result = router.search_with_bitmask(&query_vector, &mask_main, topk, 16);
-    let routed_end = routed_start.elapsed();
+    let submask_dataset_pairs: Vec<_> = std::iter::zip(&masks, &subdatasets)
+        .map(|((mask, _), ds)| (mask, ds))
+        .collect();
 
-    let routed_mean_distance = routed_result.unwrap()[0]
-        .iter()
-        .fold(0, |acc, (distance, _)| acc + distance)
-        / topk;
-    info!("Results from routed search:");
-    info!("Mean distance: {:?}", routed_mean_distance);
-    info!("Time taken: {:?}", routed_end);
+    let router = Router::new(&dataset, submask_dataset_pairs);
+
+    // Run experiments for Dataset, DatasetPartition, and Router
+    for (idx, ((mask_main, mask_sub), subdataset)) in
+        std::iter::zip(&masks, &subdatasets).enumerate()
+    {
+        let idx = idx + 1;
+        info!("\n\n---------------------\nExperiment {idx} started:\n---------------------");
+        debug!("Searching full dataset for {topk} similar vectors for {num_queries} random query , where attr is equal to 5...");
+
+        let big_start = Instant::now();
+        let big_result = dataset.search_with_bitmask(&query_vector, &mask_main, topk, 16);
+        let big_end = big_start.elapsed();
+
+        debug!("Searching dataset partition for {topk} similar vectors for {num_queries} random query, with no predicate as we know all vectors match...");
+
+        let small_start = Instant::now();
+        let small_result = subdataset.search_with_bitmask(&query_vector, &mask_sub, topk, 16);
+        let small_end = small_start.elapsed();
+
+        let big_mean_distance = big_result.unwrap()[0]
+            .iter()
+            .fold(0, |acc, (distance, _)| acc + distance)
+            / topk;
+
+        info!("Results from full search:");
+        info!("Mean distance: {:?}", big_mean_distance);
+        info!("Time taken: {:?}", big_end);
+
+        let small_mean_distance = small_result.unwrap()[0]
+            .iter()
+            .fold(0, |acc, (distance, _)| acc + distance)
+            / topk;
+        info!("Results from sub search:");
+        info!("Mean distance: {:?}", small_mean_distance);
+        info!("Time taken: {:?}", small_end);
+
+        // let routed_start = Instant::now();
+        // let routed_result = router.search_with_bitmask(&query_vector, &mask_main, topk, 16);
+        // let routed_end = routed_start.elapsed();
+        //
+        // let routed_mean_distance = routed_result.unwrap()[0]
+        //     .iter()
+        //     .fold(0, |acc, (distance, _)| acc + distance)
+        //     / topk;
+        // info!("Results from routed search:");
+        // info!("Mean distance: {:?}", routed_mean_distance);
+        // info!("Time taken: {:?}", routed_end);
+    }
 
     Ok(())
 }
