@@ -215,20 +215,29 @@ In an ideal world, we would have run both this set of basic experiments, as well
 Despite the very limited evaluation that we had time to run, we are encouraged by the very preliminary result that at least confirms that smaller indexes provide improved search latency.
 Querying a randomly generated vector in SIFT_1M produces the following latencies:
 
-| Search strategy     | Latency    |
-|---------------------+------------|
-| $r$                 | 2.091142ms |
-| $s_i$               | 536.498µs  |
-| oak($r$ + $s_{1-6}) | X          |
-
+\begin{table}[h!]
+\centering
+\begin{tabular}{|l|l|}
+\hline
+Search strategy & Latency \\
+\hline
+$r$ & 2.091142ms \\
+$s_i$ & 536.498µs \\
+oak($r$ + $s_{1-6}$) & X \\
+\hline
+\end{tabular}
+\caption{Table of search strategies and latency}
+\end{table}
 
 
 * Future Work
 #+LABEL: sec:future
 
 OAK has many opportunities for future work.
+
 *** Better experimentation
 First and foremost, a continuation of this work would run a reasonable set of experiments to validate OAK's basic premise and routing strategy.
+Due to early failures in experimentation, as well as bugs in OAK's API logic that we uncovered through these experiments, we were unable to run a full enough suite of tests to get a read on at what order of magnitude and for which query distributions the overhead cost of OAK's routing heuristic would become significantly beneficial. 
 
 *** Dynamic index construction 
 Right now, OAK constructs indexes only once and before queries are dispatched.
@@ -239,12 +248,12 @@ The overhead incurred by index construction could be measured with respect to th
 OAK uses ACORN for opportunistic indexes primarily because writing bindings to additional indexes is unnecessary for a proof-of-concept.
 The construction parameters for an ACORN index affect its recall-performance tradeoff, however, and it would be interesting to consider whether variations of ACORN index could factor into a more efficient subindex architecture. 
 However, given the bounded and well-defined nature of the opportunistic index type, a /specialized index/ may yield better performance.
-For example, Qdrant [cite:https://qdrant.tech/articles/filtrable-hnsw/] has proposed denser HNSW graph by knowledge of the search predicates to add additional edges.
+For example, Qdrant has proposed denser HNSW graph by knowledge of the search predicates to add additional edges [cite:@vasnetsovFiltrableHNSWQdrant].
 While this is ill-suited for ACORN's goal to be predicate-agnostic, the principle idea of opportunistic indexes is /predicate-knowledge/, and thus we can leverage the known predicate to construct a better index.
 
 *** Distribution
 The system design of OAK is also easily transferrable to a distributed context. 
-We could construct and/or host indexes on different nodes, as network communication costs are dominated by the ANNS latency. [cite:]
+We could construct and/or host indexes on different nodes, as in a sufficiently large database network communication costs (on the order of microseconds) would be negligible compared to the ANNS latency (on the order of milliseconds in indexes with $> 1M$ vectors).
 This would help remove the bottleneck of commodity hardware when hosting multiple indexes and enable horizontal scaling and load balancing during bursty workloads.
 
 * Logistics
@@ -252,9 +261,9 @@ Much of the literature review in the early stages of our project was done collec
 Lachlan and Cedric implemented the FFI interface between OAK and ACORN.
 Mithi and Lachlan implemented the SIFT dataset preparation scripts (as attributes needed to be randomly added to the vectors there, following the approach in the ACORN paper).
 Though the concepts and talking points for the presentation were discussed and determined collectively, Cedric was principally responsible for the visual integrity and flair.
-Mithi implemented the experimentation infrastructure, as well as the graph generation code.
+Mithi implemented the majority of the experimentation harness, as well as the graph generation code.
 Lachlan conceived and implemented OAK's routing logic (and is solely responsible for any senselessness it contains).
-Mithi and Lachlan worked together to run the experiments on AWS.
+Mithi and Lachlan worked together debug OAK's results in the experiment harness, as initially the incorrect indices were being returned (indices over subindexes used, rather than indexes in the global search space), which resulted in incorrect recall statistics for both OAK and subindexes.
 Cedric drafted and was chief editor for the final paper, though it was collectively edited and written.
 
 * Bibliography

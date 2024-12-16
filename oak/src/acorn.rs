@@ -1,6 +1,5 @@
 use crate::dataset::{
-    ConstructionError, HybridSearchMetadata, OakIndexOptions, SearchableError,
-    SimilaritySearchable, TopKSearchResult,
+    ConstructionError, HybridSearchMetadata, OakIndexOptions, SearchableError, TopKSearchResult,
 };
 use crate::ffi;
 use crate::fvecs::FlattenedVecs;

@@ -97,8 +97,8 @@ fn query_loop(
             info!("result: {:?}", result);
             let index = gt[i];
 
-            let attribute = dataset.metadata.attrs[index];
-            info!("attribute: {attribute}");
+            // let attribute = dataset.metadata.attrs[index];
+            // info!("attribute: {attribute}");
         }
 
         // Lastly we integrate OAK's performance

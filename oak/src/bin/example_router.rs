@@ -150,17 +150,17 @@ fn main() -> Result<()> {
         info!("Mean distance: {:?}", small_mean_distance);
         info!("Time taken: {:?}", small_end);
 
-        // let routed_start = Instant::now();
-        // let routed_result = router.search_with_bitmask(&query_vector, &mask_main, topk, 16);
-        // let routed_end = routed_start.elapsed();
-        //
-        // let routed_mean_distance = routed_result.unwrap()[0]
-        //     .iter()
-        //     .fold(0, |acc, (distance, _)| acc + distance)
-        //     / topk;
-        // info!("Results from routed search:");
-        // info!("Mean distance: {:?}", routed_mean_distance);
-        // info!("Time taken: {:?}", routed_end);
+        let routed_start = Instant::now();
+        let routed_result = router.search_with_bitmask(&query_vector, &mask_main, topk, 16);
+        let routed_end = routed_start.elapsed();
+
+        let routed_mean_distance = routed_result.unwrap()[0]
+            .iter()
+            .fold(0, |acc, (distance, _)| acc + distance)
+            / topk;
+        info!("Results from routed search:");
+        info!("Mean distance: {:?}", routed_mean_distance);
+        info!("Time taken: {:?}", routed_end);
     }
 
     Ok(())

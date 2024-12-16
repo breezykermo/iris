@@ -6,6 +6,7 @@ use slog_scope::debug;
 pub struct Router<'a> {
     base: &'a dyn SimilaritySearchable,
     opportunistic: Vec<(&'a Bitmask, &'a FvecsDatasetPartition<'a>)>,
+    search_masks: Vec<Bitmask>,
 }
 
 impl<'a> Router<'a> {
@@ -13,9 +14,15 @@ impl<'a> Router<'a> {
         base: &'a dyn SimilaritySearchable,
         opportunistic: Vec<(&'a Bitmask, &'a FvecsDatasetPartition<'a>)>,
     ) -> Self {
+        let search_masks: Vec<Bitmask> = opportunistic
+            .iter()
+            .map(|(_, partition)| Bitmask::new_full(*partition))
+            .collect();
+
         Router {
             base,
             opportunistic,
+            search_masks,
         }
     }
 }
@@ -86,18 +93,33 @@ impl SimilaritySearchable for Router<'_> {
             best_index, best_score
         );
 
-        let score_threshold = 10.;
-        let index_to_search = if best_score > score_threshold {
-            let (_, opp_index) = self.opportunistic[best_index];
-            opp_index
-        } else {
-            self.base
-        };
-
         // TODO: if using the subindex, shouldn't use `query_bitmask` but rather should use
         // mask_sub equivalent
-        index_to_search.search_with_bitmask(query_vectors, query_bitmask, topk, efsearch)
 
-        // TODO: if it uses an opportunistic index, map the indexes back to global
+        let score_threshold = 10.;
+        if best_score > score_threshold {
+            let (_, opp_index) = self.opportunistic[best_index];
+            let search_mask = &self.search_masks[best_index];
+            let search_results = opp_index
+                .search_with_bitmask(query_vectors, search_mask, topk, efsearch)
+                .unwrap();
+            // if it uses an opportunistic index, we need to map those inner indexes back to
+            // indexes over the global search space
+            let mapped_results: Vec<(usize, f32)> = search_results
+                .get(0)
+                .unwrap()
+                .iter()
+                .map(|(inner_index, distance)| {
+                    (
+                        opp_index.original_indices.as_ref().unwrap()[inner_index.clone()],
+                        distance.clone(),
+                    )
+                })
+                .collect();
+            Ok(vec![mapped_results])
+        } else {
+            self.base
+                .search_with_bitmask(query_vectors, query_bitmask, topk, efsearch)
+        }
     }
 }
