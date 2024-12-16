@@ -31,7 +31,7 @@ struct Args {
 
 fn main() -> Result<()> {
     let log = ConfigLogging::StderrTerminal {
-        level: ConfigLoggingLevel::Info,
+        level: ConfigLoggingLevel::Debug,
     }
     .to_logger("oak-logger")
     .map_err(|e| ExampleError::ServerStartError(e.to_string()))?;
@@ -85,15 +85,22 @@ fn main() -> Result<()> {
         .enumerate()
         .map(|(idx, subdataset)| {
             let mask_main = Bitmask::new(&queries[idx], &dataset);
+            let mask_sub = Bitmask::new_full(subdataset);
+            let mask_sub_2 = Bitmask::new(&queries[idx], subdataset);
+
+            let idx = idx + 1;
             debug!(
-                "Mask main filled: {} / {}",
+                "Mask main 'equals {idx}' filled: {} / {}",
                 mask_main.bitcount(),
                 mask_main.capacity()
             );
 
-            let mask_sub = Bitmask::new_full(subdataset);
+            assert_eq!(mask_sub.bitcount(), mask_main.bitcount());
+            assert_eq!(mask_sub.bitcount(), mask_sub_2.bitcount());
+            assert_eq!(mask_sub.capacity(), mask_sub_2.capacity());
+
             debug!(
-                "Mask sub filled: {} / {}",
+                "Mask filled: {} / {}",
                 mask_sub.bitcount(),
                 mask_sub.capacity()
             );
@@ -143,17 +150,17 @@ fn main() -> Result<()> {
         info!("Mean distance: {:?}", small_mean_distance);
         info!("Time taken: {:?}", small_end);
 
-        let routed_start = Instant::now();
-        let routed_result = router.search_with_bitmask(&query_vector, &mask_main, topk, 16);
-        let routed_end = routed_start.elapsed();
-
-        let routed_mean_distance = routed_result.unwrap()[0]
-            .iter()
-            .fold(0, |acc, (distance, _)| acc + distance)
-            / topk;
-        info!("Results from routed search:");
-        info!("Mean distance: {:?}", routed_mean_distance);
-        info!("Time taken: {:?}", routed_end);
+        // let routed_start = Instant::now();
+        // let routed_result = router.search_with_bitmask(&query_vector, &mask_main, topk, 16);
+        // let routed_end = routed_start.elapsed();
+        //
+        // let routed_mean_distance = routed_result.unwrap()[0]
+        //     .iter()
+        //     .fold(0, |acc, (distance, _)| acc + distance)
+        //     / topk;
+        // info!("Results from routed search:");
+        // info!("Mean distance: {:?}", routed_mean_distance);
+        // info!("Time taken: {:?}", routed_end);
     }
 
     Ok(())

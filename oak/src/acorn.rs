@@ -1,5 +1,6 @@
 use crate::dataset::{
-    ConstructionError, OakIndexOptions, SearchableError, SimilaritySearchable, TopKSearchResult,
+    ConstructionError, HybridSearchMetadata, OakIndexOptions, SearchableError,
+    SimilaritySearchable, TopKSearchResult,
 };
 use crate::ffi;
 use crate::fvecs::FlattenedVecs;
@@ -15,15 +16,12 @@ pub struct AcornHnswIndex {
 
 #[cfg(feature = "hnsw_faiss")]
 impl AcornHnswIndex {
-    pub fn new<D: SimilaritySearchable>(
-        dataset: &D,
+    pub fn new(
+        dimensionality: i32,
+        metadata: &HybridSearchMetadata,
         flattened: &FlattenedVecs,
         options: &OakIndexOptions,
     ) -> Result<Self, ConstructionError> {
-        let dimensionality = i32::try_from(dataset.get_dimensionality())
-            .expect("dimensionality should not be greater than 2,147,483,647");
-
-        let metadata = dataset.get_metadata();
         let mut index = ffi::new_index_acorn(
             dimensionality,
             options.m,
@@ -37,7 +35,10 @@ impl AcornHnswIndex {
         );
 
         // NOTE: this brings the data into memory.
-        let num_fvecs = dataset.len();
+        let num_fvecs = flattened.len();
+
+        assert_eq!(flattened.len(), metadata.len(), "When constructing a new index, there must be one and only one piece of metadata for each vector");
+
         debug!("Adding {num_fvecs} vectors to the index...");
 
         // SAFETY: this is unsafe because we pass a raw ptr to the fvecs data; but we are SURE that

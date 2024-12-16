@@ -5,7 +5,7 @@ use crate::dataset::{
     SimilaritySearchable, TopKSearchResult,
 };
 use crate::predicate::PredicateQuery;
-use slog_scope::debug;
+use slog_scope::{debug, info};
 
 use anyhow::Result;
 use byteorder::{ByteOrder, LittleEndian};
@@ -251,6 +251,8 @@ impl FvecsDataset {
         let mask = Bitmask::new(pq, self);
         let metadata = HybridSearchMetadata::new_from_bitmask(&self.metadata, &mask);
 
+        assert_eq!(metadata.len(), mask.bitcount());
+
         FvecsDatasetPartition {
             base: self,
             mask,
@@ -275,7 +277,8 @@ impl SimilaritySearchable for FvecsDataset {
     }
 
     fn initialize(&mut self, opts: &OakIndexOptions) -> Result<(), ConstructionError> {
-        let index = AcornHnswIndex::new(self, &self.flat, opts)?;
+        let dimensionality = self.dimensionality as i32;
+        let index = AcornHnswIndex::new(dimensionality, &self.metadata, &self.flat, opts)?;
         self.index = Some(index);
         Ok(())
     }
@@ -353,7 +356,11 @@ impl<'a> SimilaritySearchable for FvecsDatasetPartition<'a> {
         let og = &self.base.flat;
         let flat = og.clone_via_bitmask(&self.mask);
 
-        let index = AcornHnswIndex::new(self, &flat, opts)?;
+        assert_eq!(flat.len(), self.mask.bitcount());
+        assert_eq!(self.metadata.len(), self.mask.bitcount());
+
+        let dimensionality = self.get_dimensionality() as i32;
+        let index = AcornHnswIndex::new(dimensionality, &self.metadata, &flat, opts)?;
 
         self.index = Some(index);
         self.flat = Some(flat);

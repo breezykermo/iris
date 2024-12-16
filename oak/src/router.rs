@@ -94,6 +94,8 @@ impl SimilaritySearchable for Router<'_> {
             self.base
         };
 
+        // TODO: if using the subindex, shouldn't use `query_bitmask` but rather should use
+        // mask_sub equivalent
         index_to_search.search_with_bitmask(query_vectors, query_bitmask, topk, efsearch)
     }
 }
