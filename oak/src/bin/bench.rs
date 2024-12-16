@@ -71,7 +71,7 @@ fn query_loop(
         let result = dataset.search_with_bitmask(q, &bitmask, k, efsearch)?;
         let end = now.elapsed();
         let acorn_latency = end.as_micros();
-        let acorn_recall = calculate_recall_1_at_k(gt[i], result, &None, k)?;
+        let acorn_recall = calculate_recall_1_at_k(gt[i], &result, k)?;
 
         // Then we direct only to OI showing that searching in a smaller index is more performant
 
@@ -79,8 +79,27 @@ fn query_loop(
         let sub_result = subdataset.search_with_bitmask(q, &submask, k, efsearch)?;
         let sub_end = sub_now.elapsed();
         let sub_latency = sub_end.as_micros();
-        let sub_recall =
-            calculate_recall_1_at_k(gt[i], sub_result, &subdataset.original_indices, k)?;
+        let sub_result: Vec<_> = vec![sub_result[0]
+            .iter()
+            .map(|(index, distance)| {
+                (
+                    subdataset.original_indices.as_ref().unwrap()[index.clone()] as usize,
+                    distance.clone(),
+                )
+            })
+            .collect()];
+
+        let sub_recall = calculate_recall_1_at_k(gt[i], &sub_result, k)?;
+
+        if !sub_recall {
+            info!("groundtruth: {:?}", gt[i]);
+            info!("sub_result: {:?}", sub_result);
+            info!("result: {:?}", result);
+            let index = gt[i];
+
+            let attribute = dataset.metadata.attrs[index];
+            info!("attribute: {attribute}");
+        }
 
         // Lastly we integrate OAK's performance
         // We use a router that makes a decision based on performance gain
@@ -89,7 +108,7 @@ fn query_loop(
         let oak_result = router.search_with_bitmask(q, &bitmask, k, efsearch)?;
         let oak_end = oak_now.elapsed();
         let oak_latency = oak_end.as_micros();
-        let oak_recall = calculate_recall_1_at_k(gt[i], oak_result, &None, k)?;
+        let oak_recall = calculate_recall_1_at_k(gt[i], &oak_result, k)?;
 
         // We compile these results for a singular query
         results.push(QueryStats {
@@ -139,18 +158,13 @@ fn averages(queries: Vec<QueryStats>) -> Result<ExperimentResults> {
 // }
 fn calculate_recall_1_at_k(
     gt: usize,
-    acorn_result: TopKSearchResultBatch,
-    index_map: &Option<Vec<usize>>,
+    acorn_result: &TopKSearchResultBatch,
     k: usize,
 ) -> Result<bool> {
     let mut first_value_exists: bool = false;
 
     for (i, j) in acorn_result[0].iter().enumerate() {
-        let index_to_compare = match index_map {
-            Some(arr) => arr[j.0],
-            None => j.0,
-        };
-
+        let index_to_compare = j.0;
         if index_to_compare == gt {
             if i < k {
                 first_value_exists = true;
