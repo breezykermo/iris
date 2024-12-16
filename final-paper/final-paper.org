@@ -240,7 +240,7 @@ $s_i$ & 536.498µs \\
 \caption{Table of search strategies and latency}
 \end{table}
 
-Querying 100 vectors with a single query predicate yields the following results:
+Using a consistent query predicate, we calculated the recall and measured the throughput of 100 queries to produce the following results:
 
 #+ATTR_LATEX: :width 0.45\textwidth :align c
 [[./figures/latency_throughput_plot.png]]
