@@ -240,9 +240,21 @@ $s_i$ & 536.498µs \\
 \caption{Table of search strategies and latency}
 \end{table}
 
-Querying 100 vectors with a single query predicate yields the following results
-[[./figures/latency_throughput_plot_long.png]]
-Here, we primarily discuss the tradeoffs between ACORN and directly sending to the opportunistic index responsible for the query predicate (marked SUB for subdataset). The above figure marks the results from the SIFT10K dataset. Since the dataset is small, both methods are able to reach near-perfect recall@10 scores. However, since ACORN's search searches over the dataset of 10k base vectors it takes comparatively longer on each query than the opportunistic index, allowing the opportunistic index to serve ~3.5x more queries. This is likely to scale further as the size of the base vectors grows providing performance gains for predicate search. The discrepancy in recall@10 (from 1 for ACORN to 0.97 for the opportunistic index) is unclear since the opportunistic index should create a view over all the base vectors that satisfy the single predicate that we use for query searching. We weren't able to pin down an exact cause but we made sure that the opportunistic index consisted of all the vectors matching the query predicate and no more. Theoretically, for a query predicate that eaxctly matches the opportunistic index's mask, all the nearest neighbors would be contained in the index and running a normal ANNS search over the smaller subset would yield equivalent recall and higher throughput (and subsequently lower latencies).
+Querying 100 vectors with a single query predicate yields the following results:
+
+#+ATTR_LATEX: :width 0.45\textwidth :align c
+[[./figures/latency_throughput_plot.png]]
+
+Here, we primarily discuss the tradeoffs between ACORN and directly sending to the opportunistic index responsible for the query predicate (marked SUB for subdataset).
+The above figure marks the results from the SIFT10K dataset.
+Since the dataset is small, both methods are able to reach near-perfect recall@10 scores.
+However, since ACORN's search searches over the dataset of 10k base vectors it takes comparatively longer on each query than the opportunistic index, allowing the opportunistic index to serve ~3.5x more queries.
+This is likely to scale further as the size of the base vectors grows providing performance gains for predicate search.
+The discrepancy in recall@10 (from 1 for ACORN to 0.97 for the opportunistic index) is unclear since the opportunistic index should create a view over all the base vectors that satisfy the single predicate that we use for query searching.
+We weren't able to pin down an exact cause but we made sure that the opportunistic index consisted of all the vectors matching the query predicate and no more.
+Theoretically, for a query predicate that eaxctly matches the opportunistic index's mask, all the nearest neighbors would be contained in the index and running a normal ANNS search over the smaller subset would yield equivalent recall and higher throughput (and subsequently lower latencies).
+
+The OAK results shown (with both lower recall and lower throughput) is as expected, as there is some overhead from the routing logic, and it appears that the scale of our experiments is not large enough for this overhead to be offset by the better latency of subindexes.
 
 
 * Future Work
@@ -281,7 +293,7 @@ Though the concepts and talking points for the presentation were discussed and d
 Mithi implemented the majority of the experimentation harness, as well as the graph generation code.
 Lachlan conceived and implemented OAK's routing logic (and is solely responsible for any senselessness it contains).
 Mithi and Lachlan worked together debug OAK's results in the experiment harness, as initially the incorrect indices were being returned (indices over subindexes used, rather than indexes in the global search space), which resulted in incorrect recall statistics for both OAK and subindexes.
-Cedric drafted and was chief editor for the final paper, though it was collectively edited and written.
+Cedric drafted the final paper, but is was edited and written by all three of us.
 
 * Bibliography
 
