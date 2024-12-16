@@ -225,13 +225,13 @@ fn main() -> Result<()> {
     let batched_queries = FlattenedVecs::from(&query_set);
     info!("Query set loaded from disk.");
 
-    let topk = 5;
+    let topk = 10;
     let num_queries = batched_queries.len();
     // info!("Total {num_queries} queries loaded");
     let queries = batched_queries.to_vec();
 
     let mask_main = Bitmask::new(&query, &dataset);
-    let mask_sub = Bitmask::new_full(&subdataset);
+    let mask_sub = Bitmask::new(&query, &subdataset);
 
     // info!("GT loading...");
     // let variable_gt_path = "./outdir/sift_groundtruth.csv";

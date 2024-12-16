@@ -1,6 +1,0 @@
-ACORN Latency (microseconds),ACORN Queries per microsecond,ACORN Recall@10,OAK Latency (microseconds),OAK Queries per microsecond,OAK Recall@10,SUB Latency (microseconds),SUB Queries per microsecond,SUB Recall@10
-35870,3587,1,103650,10365,0,3548,354.8,0.8
-14515,1451.5,1,102386,10238.6,0,15893,1589.3,0.8
-8171,817.1,1,108406,10840.6,0,2258,225.8,0.8
-32856,3285.6,1,98687,9868.7,0,2383,238.3,0.8
-9807,980.7,1,103295,10329.5,0,3855,385.5,0.8
