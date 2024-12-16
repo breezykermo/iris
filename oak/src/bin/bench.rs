@@ -9,7 +9,7 @@ use oak::fvecs::FvecsDatasetPartition;
 use oak::fvecs::{FlattenedVecs, FvecsDataset};
 use oak::predicate::PredicateQuery;
 use oak::router::Router;
-use slog_scope::info;
+use slog_scope::{debug, info};
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -64,12 +64,14 @@ fn query_loop(
 ) -> Result<Vec<QueryStats>> {
     let mut results = vec![];
     for (i, q) in queries.iter().enumerate() {
+        // info!("Recall 1: {:?}", gt[i]);
+
         // First we benchmark ACORN
         let now = tokio::time::Instant::now();
         let result = dataset.search_with_bitmask(q, &bitmask, k, efsearch)?;
         let end = now.elapsed();
         let acorn_latency = end.as_micros();
-        let acorn_recall = calculate_recall_1(gt[i], result)?;
+        let acorn_recall = calculate_recall_1_at_k(gt[i], result, &None, k)?;
 
         // Then we direct only to OI showing that searching in a smaller index is more performant
 
@@ -77,7 +79,8 @@ fn query_loop(
         let sub_result = subdataset.search_with_bitmask(q, &submask, k, efsearch)?;
         let sub_end = sub_now.elapsed();
         let sub_latency = sub_end.as_micros();
-        let sub_recall = calculate_recall_1(gt[i], sub_result)?;
+        let sub_recall =
+            calculate_recall_1_at_k(gt[i], sub_result, &subdataset.original_indices, k)?;
 
         // Lastly we integrate OAK's performance
         // We use a router that makes a decision based on performance gain
@@ -86,7 +89,7 @@ fn query_loop(
         let oak_result = router.search_with_bitmask(q, &bitmask, k, efsearch)?;
         let oak_end = oak_now.elapsed();
         let oak_latency = oak_end.as_micros();
-        let oak_recall = calculate_recall_1(gt[i], oak_result)?;
+        let oak_recall = calculate_recall_1_at_k(gt[i], oak_result, &None, k)?;
 
         // We compile these results for a singular query
         results.push(QueryStats {
@@ -122,17 +125,40 @@ fn averages(queries: Vec<QueryStats>) -> Result<ExperimentResults> {
     })
 }
 
-fn calculate_recall_1(gt: usize, acorn_result: TopKSearchResultBatch) -> Result<bool> {
-    let mut n_10: bool = false;
+// fn validate_recall_1(
+//     subdataset: &FvecsDatasetPartition,
+//     acorn_result: TopKSearchResultBatch,
+// ) -> Result<bool> {
+//     let metadata = subdataset.get_metadata();
+//
+//     for (i, (idx, distance)) in acorn_result[0].iter().enumerate() {
+//
+//     }
+//
+//     Ok(true)
+// }
+fn calculate_recall_1_at_k(
+    gt: usize,
+    acorn_result: TopKSearchResultBatch,
+    index_map: &Option<Vec<usize>>,
+    k: usize,
+) -> Result<bool> {
+    let mut first_value_exists: bool = false;
+
     for (i, j) in acorn_result[0].iter().enumerate() {
-        if j.0 == gt {
-            if i < 10 {
-                n_10 = true;
+        let index_to_compare = match index_map {
+            Some(arr) => arr[j.0],
+            None => j.0,
+        };
+
+        if index_to_compare == gt {
+            if i < k {
+                first_value_exists = true;
             }
             break;
         }
     }
-    Ok(n_10)
+    Ok(first_value_exists)
 }
 
 fn read_csv(file_path: String) -> Result<Vec<usize>> {
@@ -185,7 +211,7 @@ fn main() -> Result<()> {
     let batched_queries = FlattenedVecs::from(&query_set);
     info!("Query set loaded from disk.");
 
-    let topk = 10;
+    let topk = 5;
     let num_queries = batched_queries.len();
     // info!("Total {num_queries} queries loaded");
     let queries = batched_queries.to_vec();

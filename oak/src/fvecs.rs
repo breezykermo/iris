@@ -96,13 +96,16 @@ impl FlattenedVecs {
 
     /// Creates a new FlattenedVecs based on a bitmask and an original one.
     /// Only the necessary items (items that match the bitmask) are copied.
-    pub fn clone_via_bitmask(&self, bitmask: &Bitmask) -> Self {
+    pub fn clone_via_bitmask(&self, bitmask: &Bitmask) -> (Vec<usize>, Self) {
+        let mut indexes = vec![];
         let new_data: Vec<f32> = self
             .data
             .chunks_exact(self.dimensionality)
+            .enumerate()
             .zip(bitmask.map.iter())
-            .filter_map(|(vector, &keep)| {
+            .filter_map(|((og_idx, vector), &keep)| {
                 if keep == 1 {
+                    indexes.push(og_idx);
                     Some(vector) // Keep the vector if bitmask says so
                 } else {
                     None
@@ -111,10 +114,13 @@ impl FlattenedVecs {
             .flat_map(|vector| vector.iter().copied())
             .collect();
 
-        Self {
-            dimensionality: self.dimensionality,
-            data: new_data,
-        }
+        (
+            indexes,
+            Self {
+                dimensionality: self.dimensionality,
+                data: new_data,
+            },
+        )
     }
 
     /// Create a 'flattened' representation of fvecs (meaning that the vectors are simply contiguous to
@@ -258,6 +264,7 @@ impl FvecsDataset {
             mask,
             flat: None,
             index: None,
+            original_indices: None,
             metadata,
         }
     }
@@ -329,6 +336,7 @@ impl SimilaritySearchable for FvecsDataset {
 pub struct FvecsDatasetPartition<'a> {
     base: &'a FvecsDataset,
     mask: Bitmask,
+    pub original_indices: Option<Vec<usize>>,
     index: Option<AcornHnswIndex>,
     /// We have an Option here so that the copying of the base vectors can be deferred to the point
     /// at which we decide to build the index. This is an implementation detail, as one could
@@ -354,7 +362,7 @@ impl<'a> SimilaritySearchable for FvecsDatasetPartition<'a> {
 
     fn initialize(&mut self, opts: &OakIndexOptions) -> Result<(), ConstructionError> {
         let og = &self.base.flat;
-        let flat = og.clone_via_bitmask(&self.mask);
+        let (original_indices, flat) = og.clone_via_bitmask(&self.mask);
 
         assert_eq!(flat.len(), self.mask.bitcount());
         assert_eq!(self.metadata.len(), self.mask.bitcount());
@@ -364,6 +372,7 @@ impl<'a> SimilaritySearchable for FvecsDatasetPartition<'a> {
 
         self.index = Some(index);
         self.flat = Some(flat);
+        self.original_indices = Some(original_indices);
 
         Ok(())
     }
