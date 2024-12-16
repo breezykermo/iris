@@ -191,7 +191,7 @@ fn read_csv(file_path: String) -> Result<Vec<usize>> {
 
 fn main() -> Result<()> {
     let log = ConfigLogging::StderrTerminal {
-        level: ConfigLoggingLevel::Info,
+        level: ConfigLoggingLevel::Debug,
     }
     .to_logger("oak-logger")
     .map_err(|e| ExampleError::ServerStartError(e.to_string()))?;
@@ -239,7 +239,7 @@ fn main() -> Result<()> {
     // info!("{} gt queries found", gt.len());
 
     info!("Searching full dataset for {topk} similar vectors for {num_queries} random query , where attr is equal to 1...");
-    let efsearch = vec![1, 4, 8, 16, 32];
+    let efsearch = vec![4, 8, 16, 32, 64, 128];
     // To test ACORN, we simply call search_with_bitmask which routes to the
     // base index for ACORN
 
