@@ -77,9 +77,9 @@ impl SimilaritySearchable for Router<'_> {
             .map(|(opp_mask, opp_index)| {
                 let opp_meta = opp_index.get_metadata();
                 let perf_gain = base_meta_len / (opp_meta.len() as f32);
-                debug!("Performance gain: {}", perf_gain);
+                // debug!("Performance gain: {}", perf_gain);
                 let recall_loss = query_bitmask.jaccard_similarity(opp_mask);
-                debug!("Recall loss: {}", recall_loss);
+                // debug!("Recall loss: {}", recall_loss);
                 // Recall is a maximum of 1 (if masks perfectly overlap).
                 (perf_gain as f64) * recall_loss
             })
@@ -88,10 +88,10 @@ impl SimilaritySearchable for Router<'_> {
             .max_by(|&(_, a), (_, b)| a.partial_cmp(b).unwrap())
             .unwrap();
 
-        debug!(
-            "The best opportunistic index is at position {} with a score of {}",
-            best_index, best_score
-        );
+        // debug!(
+        //     "The best opportunistic index is at position {} with a score of {}",
+        //     best_index, best_score
+        // );
 
         // TODO: if using the subindex, shouldn't use `query_bitmask` but rather should use
         // mask_sub equivalent

@@ -91,15 +91,15 @@ fn query_loop(
 
         let sub_recall = calculate_recall_1_at_k(gt[i], &sub_result, k)?;
 
-        if !sub_recall {
-            info!("groundtruth: {:?}", gt[i]);
-            info!("sub_result: {:?}", sub_result);
-            info!("result: {:?}", result);
-            let index = gt[i];
+        // if !sub_recall {
+        //     info!("groundtruth: {:?}", gt[i]);
+        //     info!("sub_result: {:?}", sub_result);
+        //     info!("result: {:?}", result);
+        //     let index = gt[i];
 
-            // let attribute = dataset.metadata.attrs[index];
-            // info!("attribute: {attribute}");
-        }
+        //     // let attribute = dataset.metadata.attrs[index];
+        //     // info!("attribute: {attribute}");
+        // }
 
         // Lastly we integrate OAK's performance
         // We use a router that makes a decision based on performance gain
@@ -219,7 +219,7 @@ fn main() -> Result<()> {
     info!("Subindex as view constructed.");
 
     let dimensionality = dataset.get_dimensionality() as usize;
-    assert_eq!(dimensionality, subdataset.get_dimensionality() as usize);
+    // assert_eq!(dimensionality, subdataset.get_dimensionality() as usize);
 
     let query_set = FvecsDataset::new(args.query, false)?;
     let batched_queries = FlattenedVecs::from(&query_set);
@@ -263,24 +263,24 @@ fn main() -> Result<()> {
         )?;
         match averages(qs) {
             Ok(exp_result) => {
-                info!(
-                    "ACORN: QPS was {} microseconds with total latency
-                    being {} for {} and Recall@10 was {}",
-                    exp_result.acorn_qps,
-                    exp_result.acorn_latency,
-                    num_queries,
-                    exp_result.acorn_recall,
-                );
-                info!(
-                    "SUB: QPS was {} queries per microsecond with total latency
-                    as {} and Recall@10 as {}",
-                    exp_result.sub_qps, exp_result.sub_latency, exp_result.sub_recall,
-                );
-                info!(
-                    "OAK: QPS was {} microseconds with total latency
-                    being {} for {} and Recall@10 was {}",
-                    exp_result.oak_qps, exp_result.oak_latency, num_queries, exp_result.oak_recall
-                );
+                // info!(
+                //     "ACORN: QPS was {} microseconds with total latency
+                //     being {} for {} and Recall@10 was {}",
+                //     exp_result.acorn_qps,
+                //     exp_result.acorn_latency,
+                //     num_queries,
+                //     exp_result.acorn_recall,
+                // );
+                // info!(
+                //     "SUB: QPS was {} queries per microsecond with total latency
+                //     as {} and Recall@10 as {}",
+                //     exp_result.sub_qps, exp_result.sub_latency, exp_result.sub_recall,
+                // );
+                // info!(
+                //     "OAK: QPS was {} microseconds with total latency
+                //     being {} for {} and Recall@10 was {}",
+                //     exp_result.oak_qps, exp_result.oak_latency, num_queries, exp_result.oak_recall
+                // );
                 results.push(exp_result);
             }
             Err(_) => {
@@ -289,7 +289,7 @@ fn main() -> Result<()> {
         }
     }
 
-    info!("Got results.");
+    // info!("Got results.");
 
     let mut wtr = Writer::from_path("experiments.csv")?;
 

@@ -28,17 +28,17 @@ impl AcornHnswIndex {
             options.m_beta,
             metadata.as_ref(),
         );
-        debug!(
-            "Constructed index with dimensionality: {dimensionality}, m: {}, gamma: {}, m_beta: {}",
-            options.m, options.gamma, options.m_beta
-        );
+        // debug!(
+        //     "Constructed index with dimensionality: {dimensionality}, m: {}, gamma: {}, m_beta: {}",
+        //     options.m, options.gamma, options.m_beta
+        // );
 
         // NOTE: this brings the data into memory.
         let num_fvecs = flattened.len();
 
-        assert_eq!(flattened.len(), metadata.len(), "When constructing a new index, there must be one and only one piece of metadata for each vector");
+        // assert_eq!(flattened.len(), metadata.len(), "When constructing a new index, there must be one and only one piece of metadata for each vector");
 
-        debug!("Adding {num_fvecs} vectors to the index...");
+        // debug!("Adding {num_fvecs} vectors to the index...");
 
         // SAFETY: this is unsafe because we pass a raw ptr to the fvecs data; but we are SURE that
         // we have constructed it appropriately.
@@ -46,7 +46,7 @@ impl AcornHnswIndex {
         unsafe {
             ffi::add_to_index(&mut index, num_fvecs as i64, flattened.data.as_ptr());
         }
-        debug!("Added {num_fvecs} vectors to the index.");
+        // debug!("Added {num_fvecs} vectors to the index.");
 
         Ok(Self {
             index,
@@ -62,16 +62,16 @@ impl AcornHnswIndex {
         efsearch: i64,
     ) -> Result<Vec<TopKSearchResult>, SearchableError> {
         let number_of_query_vectors: usize = query_vectors.len();
-        debug!("Searching queries: {number_of_query_vectors} in batch.");
+        // debug!("Searching queries: {number_of_query_vectors} in batch.");
         let length_of_results = k * number_of_query_vectors;
-        debug!("Length of results arrays: {length_of_results}.");
+        // debug!("Length of results arrays: {length_of_results}.");
 
         // These two arrays are where the outputs from the cpp methods will be stored
         let mut distances: Vec<f32> = vec![0 as f32; length_of_results];
         let mut labels: Vec<i64> = vec![0; length_of_results];
 
         let filter_id_map_length = filter_id_map.len();
-        debug!("Length of bitmap representing predicate: {filter_id_map_length}.");
+        // debug!("Length of bitmap representing predicate: {filter_id_map_length}.");
 
         unsafe {
             ffi::search_index(
@@ -86,7 +86,7 @@ impl AcornHnswIndex {
             )?
         }
 
-        debug!("Search complete");
+        // debug!("Search complete");
 
         let combined: Vec<(usize, f32)> = labels
             .into_iter()

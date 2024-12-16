@@ -89,21 +89,21 @@ fn main() -> Result<()> {
             let mask_sub_2 = Bitmask::new(&queries[idx], subdataset);
 
             let idx = idx + 1;
-            debug!(
-                "Mask main 'equals {idx}' filled: {} / {}",
-                mask_main.bitcount(),
-                mask_main.capacity()
-            );
+            // debug!(
+            //     "Mask main 'equals {idx}' filled: {} / {}",
+            //     mask_main.bitcount(),
+            //     mask_main.capacity()
+            // );
 
             assert_eq!(mask_sub.bitcount(), mask_main.bitcount());
             assert_eq!(mask_sub.bitcount(), mask_sub_2.bitcount());
             assert_eq!(mask_sub.capacity(), mask_sub_2.capacity());
 
-            debug!(
-                "Mask filled: {} / {}",
-                mask_sub.bitcount(),
-                mask_sub.capacity()
-            );
+            // debug!(
+            //     "Mask filled: {} / {}",
+            //     mask_sub.bitcount(),
+            //     mask_sub.capacity()
+            // );
 
             (mask_main, mask_sub)
         })

@@ -3,6 +3,7 @@ use crate::fvecs::FlattenedVecs;
 use crate::predicate::PredicateQuery;
 
 use anyhow::Result;
+use slog::info;
 use thiserror::Error;
 
 /// The errors that can be returned from searching an OAK dataset.
@@ -54,6 +55,7 @@ impl HybridSearchMetadata {
             .iter()
             .zip(mask.map.iter())
             .filter_map(|(&attr, &keep)| {
+                // info!("{}", keep);
                 if keep == 1 {
                     Some(attr) // Keep the attribute if the bitmask allows
                 } else {

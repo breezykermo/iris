@@ -35,7 +35,7 @@ fn read_csv_to_vec(file_path: &PathBuf) -> Result<Vec<i32>> {
         }
     }
 
-    debug!("{} attributes loaded from CSV.", numbers.len());
+    // debug!("{} attributes loaded from CSV.", numbers.len());
 
     Ok(numbers)
 }
@@ -51,10 +51,10 @@ fn read_csv_to_vec(file_path: &PathBuf) -> Result<Vec<i32>> {
 /// # Returns
 /// A vector of `f32` values parsed from the byte slice.
 pub fn parse_u8_to_f32(data: &[u8]) -> Vec<f32> {
-    assert!(
-        data.len() % 4 == 0,
-        "Input data length must be a multiple of 4"
-    );
+    // assert!(
+    //     data.len() % 4 == 0,
+    //     "Input data length must be a multiple of 4"
+    // );
 
     let mut result = Vec::with_capacity(data.len() / FOUR_BYTES);
 
@@ -205,18 +205,18 @@ impl FvecsDataset {
         // let _ = mmap.lock()?;
 
         let dimensionality = LittleEndian::read_u32(&mmap[..FOUR_BYTES]) as usize;
-        assert_eq!(
-            dimensionality,
-            LittleEndian::read_u32(&mmap[0..FOUR_BYTES]) as usize
-        );
+        // assert_eq!(
+        //     dimensionality,
+        //     LittleEndian::read_u32(&mmap[0..FOUR_BYTES]) as usize
+        // );
 
         // Each fvec is a dimensionality (4 bytes) followed by `dimensionality` number of f32
         // values. Fvecs are contiguous in the file.
         let count = &mmap[..].len() / ((1 + dimensionality) * FOUR_BYTES);
-        debug!(
-            "First dimensionality read from file is {dimensionality}; assuming the same for all remaining."
-        );
-        debug!("The file read has {count} vectors.");
+        // debug!(
+        //     "First dimensionality read from file is {dimensionality}; assuming the same for all remaining."
+        // );
+        // debug!("The file read has {count} vectors.");
 
         let metadata = if load_csv {
             let mut metadata_fname = PathBuf::new();
@@ -257,7 +257,7 @@ impl FvecsDataset {
         let mask = Bitmask::new(pq, self);
         let metadata = HybridSearchMetadata::new_from_bitmask(&self.metadata, &mask);
 
-        assert_eq!(metadata.len(), mask.bitcount());
+        // assert_eq!(metadata.len(), mask.bitcount());
 
         FvecsDatasetPartition {
             base: self,
@@ -301,8 +301,8 @@ impl SimilaritySearchable for FvecsDataset {
             return Err(SearchableError::DatasetIsNotIndexed);
         }
 
-        debug!("query_vectors len: {}", query_vectors.len());
-        debug!("fvecs dataset len: {}", self.len());
+        // debug!("query_vectors len: {}", query_vectors.len());
+        // debug!("fvecs dataset len: {}", self.len());
 
         let mut mask = match predicate_query {
             None => Bitmask::new_full(self),
@@ -364,8 +364,8 @@ impl<'a> SimilaritySearchable for FvecsDatasetPartition<'a> {
         let og = &self.base.flat;
         let (original_indices, flat) = og.clone_via_bitmask(&self.mask);
 
-        assert_eq!(flat.len(), self.mask.bitcount());
-        assert_eq!(self.metadata.len(), self.mask.bitcount());
+        // assert_eq!(flat.len(), self.mask.bitcount());
+        // assert_eq!(self.metadata.len(), self.mask.bitcount());
 
         let dimensionality = self.get_dimensionality() as i32;
         let index = AcornHnswIndex::new(dimensionality, &self.metadata, &flat, opts)?;
@@ -388,8 +388,8 @@ impl<'a> SimilaritySearchable for FvecsDatasetPartition<'a> {
             return Err(SearchableError::DatasetIsNotIndexed);
         }
 
-        debug!("query_vectors len: {}", query_vectors.len());
-        debug!("fvecs dataset len: {}", self.len());
+        // debug!("query_vectors len: {}", query_vectors.len());
+        // debug!("fvecs dataset len: {}", self.len());
 
         let mut mask = match predicate_query {
             None => Bitmask::new_full(self),
