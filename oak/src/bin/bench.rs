@@ -124,11 +124,12 @@ fn query_loop(
 }
 
 fn averages(queries: Vec<QueryStats>) -> Result<ExperimentResults> {
-    let acorn_latencies: f64 = queries.iter().map(|qs| qs.acorn_latency).sum::<u128>() as f64;
+    let acorn_latencies: f64 =
+        queries.iter().map(|qs| qs.acorn_latency).sum::<u128>() as f64 / 1000.;
     let acorn_r10s: f64 = queries.iter().filter(|qs| qs.acorn_recall_10).count() as f64;
-    let oak_latencies: f64 = queries.iter().map(|qs| qs.oak_latency).sum::<u128>() as f64;
+    let oak_latencies: f64 = queries.iter().map(|qs| qs.oak_latency).sum::<u128>() as f64 / 1000.;
     let oak_r10s: f64 = queries.iter().filter(|qs| qs.oak_recall_10).count() as f64;
-    let sub_latencies: f64 = queries.iter().map(|qs| qs.sub_latency).sum::<u128>() as f64;
+    let sub_latencies: f64 = queries.iter().map(|qs| qs.sub_latency).sum::<u128>() as f64 / 1000.;
     let sub_r10s: f64 = queries.iter().filter(|qs| qs.sub_recall_10).count() as f64;
     let count: f64 = queries.len() as f64;
     Ok(ExperimentResults {
