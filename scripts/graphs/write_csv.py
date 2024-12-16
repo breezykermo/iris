@@ -46,12 +46,12 @@ def plot(output: str, data: str):
     # Plot the graph
     plt.figure(figsize=(10, 6)) 
     plt.plot(acorn_throughput, acorn_recall, marker='o', color='b', label="ACORN")  
-    plt.plot(oak_throughput, oak_recall, marker='o', color='g', label="OAK")
+    # plt.plot(oak_throughput, oak_recall, marker='o', color='g', label="OAK")
     plt.plot(sub_throughput, sub_recall, marker='o', color='y', label="SUB")
 
     # Add labels and title
-    plt.xlabel("Throughput (requests per second)") 
-    plt.ylabel("Latency (ms)")  
+    plt.xlabel("Throughput (requests per millisecond)") 
+    plt.ylabel("Recall@10")  
     plt.title("Latency vs Throughput")
     plt.legend()
     plt.grid(True)
