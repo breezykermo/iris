@@ -208,20 +208,23 @@ Takes the ~query_vectors~ (multiple are permitted for batch search), an optional
 This method relieves the client of the complexity of generating a predicate bitmask.
 *** ~search_with_bitmask~
 Takes the ~query_vectors~, a ~Bitmask~ (constructed over all available searchable vectors), and a ~topk~ specification.
-This is the method that we evaluate in the next section.
+This is the method that we use primarily for the evaluation as it factors out any time needed for bitmask construction
 
 * Evaluation
 In order to evaluate, we first sought to plot three recall/QPS graphs.
-1. For the root index $r$
-2. For an opportunistic index $s_i$ constructed over $\frac{1}{12}$ of the SIFT_1M dataset [cite:@jegouProductQuantizationNearest2010]. Following the experimentation method in ACORN, we generated a number between 1 and 12 drawn from a uniformly random distribution for each vector in the dataset, allowing us to benchmark it with hybrid search (using the predicate ``equals $x$").
+1. For the root index $r$, modelling ACORN's search
+2. For an opportunistic index $s_i$ constructed over $\frac{1}{12}$ of the dataset.
 3. For search using OAK's routing strategy over a router that consisted of $r$ and six subindexes $s_{1-6}$.
 
-All graphs were to be plotted by first creating the necessary indexes over the one million vectors in SIFT_1M, and then using the 10K vectors in the provided query set with a singular query predicate, i.e. ``equals $5$".  
+We chose to evaluate against the SIFT10k dataset [cite:@jegouProductQuantizationNearest2010] as it is one of the most widely used ANN benchmarks and was used to evaluate ACORN. Following the experimentation method in ACORN, we generated a number between 1 and 12 drawn from a uniformly random distribution for each vector in the dataset, allowing us to benchmark it with hybrid search (using the predicate ``equals $x$"). We also construct a groundtruth by comparing the results of the original groundtruth vectors and choosing the nearest neighbor that satisfies the query predicate.
+
+All graphs were to be plotted by first creating the necessary indexes over the one million vectors in SIFT_10K with the query predicate chosen, and then using the 100 vectors in the provided query set to search for the top-10 nearest neighbors in the dataset with a singular query predicate, i.e. ``equals $1$". We measure the latency at the individual query level and compute queries per millisecond to compare throughput across the 3 strategies. Here, we primarily discuss the tradeoffs between ACORN and directly sending to the opportunistic index responsible for the query predicate (marked SUB for subdataset). We map this against the Recall@10 which measures the accuracy of the search results by checking if the nearest neighbor matching the query predicate (from the groundtruth) is present in the top-10 vectors yielded from the 3 search methods. The recall is a value between 0 and 1 indicating the percentage of queries where the groundtruth value was found in the search results.
+
 Though this experiment is contrived in a way that does not adequately put OAK's routing strategy to test (as all $M_q$ will either be a perfect subset of an $M_{s_i}$ or will have no overlap), we hoped that these initial experiments would at least show that there are potential performance gains to be had from routing to subindexes, and that the basic overhead of OAK's routing layer is not prohibitive of these gains.
 
 Due to the amount of time that we spent investigating the plausibility of distributing a vector database and getting OAK off the ground, however, we were unable to run these experiments meaningfully this semester.
 In an ideal world, we would have run both this set of basic experiments, as well as benchmarks on hybrid search datasets that are /not/ uniformly distributed such as TripClick [cite:@rekabsazTripClickLogFiles2021] and LAION [cite:@schuhmannLAION400MOpenDataset2021]. 
-Despite the very limited evaluation that we had time to run, we are encouraged by the very preliminary result that at least confirms that smaller indexes provide improved search latency.
+Despite the very limited evaluation that we had time to run, we are encouraged by the very preliminary result that at least confirms that searching over smaller indexes, keeping the rest of the search parameters constant, provide improved search latency.
 Querying a randomly generated vector in SIFT_1M produces the following latencies:
 
 \begin{table}[h!]
@@ -237,6 +240,10 @@ $s_i$ & 536.498µs \\
 \caption{Table of search strategies and latency}
 \end{table}
 
+Querying 100 vectors with a single query predicate yields the following results
+[[./figures/latency_throughput_plot_long.png]]
+Here, we primarily discuss the tradeoffs between ACORN and directly sending to the opportunistic index responsible for the query predicate (marked SUB for subdataset). The above figure marks the results from the SIFT10K dataset. Since the dataset is small, both methods are able to reach near-perfect recall@10 scores. However, since ACORN's search searches over the dataset of 10k base vectors it takes comparatively longer on each query than the opportunistic index, allowing the opportunistic index to serve ~3.5x more queries. This is likely to scale further as the size of the base vectors grows providing performance gains for predicate search. The discrepancy in recall@10 (from 1 for ACORN to 0.97 for the opportunistic index) is unclear since the opportunistic index should create a view over all the base vectors that satisfy the single predicate that we use for query searching. We weren't able to pin down an exact cause but we made sure that the opportunistic index consisted of all the vectors matching the query predicate and no more. Theoretically, for a query predicate that eaxctly matches the opportunistic index's mask, all the nearest neighbors would be contained in the index and running a normal ANNS search over the smaller subset would yield equivalent recall and higher throughput (and subsequently lower latencies).
+
 
 * Future Work
 :PROPERTIES:
@@ -247,7 +254,7 @@ OAK has many opportunities for future work.
 
 *** Better experimentation
 First and foremost, a continuation of this work would run a reasonable set of experiments to validate OAK's basic premise and routing strategy.
-Due to early failures in experimentation, as well as bugs in OAK's API logic that we uncovered through these experiments, we were unable to run a full enough suite of tests to get a read on at what order of magnitude and for which query distributions the overhead cost of OAK's routing heuristic would become significantly beneficial. 
+Due to early failures in experimentation, as well as bugs in OAK's API logic that we uncovered through these experiments, we were unable to run a full enough suite of tests to get a read on at what order of magnitude and for which query distributions the overhead cost of OAK's routing heuristic would become significantly beneficial. Concretely, OAK can be tested on query and base vector sets with non-uniform distributions of predicates to measure tradeoffs and finetune the routing strategy. Further, the use of opportunistic indices can be even more pronounced with larger datasets. We struggled to construct indices for SIFT1M and would  need to provision hardware to be able to run billion-scale datasets. 
 
 *** Dynamic index construction 
 Right now, OAK constructs indexes only once and before queries are dispatched.
