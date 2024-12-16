@@ -89,7 +89,7 @@ Though it can improve fault tolerance and throughput (as replication can in a re
 *** Random Partitioning
 
 When an index does not fit in RAM, it can be partitioned across multiple nodes.
-Many commerical services [cite:@FacebookresearchFaiss2024;@DistributedDeploymentQdrant] support this functionality through *random partioning*.
+Many commerical services [cite:@FacebookresearchFaiss2024;@DistributedDeploymentQdrant] support this functionality through random partioning.
 
 The general approach is as follows:
 1. Split the entire database into random, equally-sized partitions.
@@ -102,7 +102,7 @@ Thus random partitioning does not offer tangible benefit in terms of throughput.
 *** Balanced Partitioning
 
 Random partitioning can be improved by searching only nodes relevant to the query vector.
-*Balanced partitioning* implements this idea by partitioning vectors based on similarity.
+Balanced partitioning implements this idea by partitioning vectors based on similarity.
 
 The approach is analogous to sharding in a RDBMS or KV Store.
 Concretely, shards are computed by partitioning vertices into roughly equal size sets such that the number of edges which connect different sets is approximately minimized. 
@@ -162,14 +162,19 @@ If there is significant overlap between $M_{s_i}$ and $M_q$, and if the number o
 
 Concretely, we consider servicing a query in subindex $s_i$ preferable to the base index $r$ if it satisfies the following condition: 
 
-\begin{equation}                        % arbitrary environments,
-x=\sqrt{b}                              % even tables, figures, etc
-\end{equation}
+\begin{align}                        
+M_q &\subseteq M_{s_i} \quad \lor \quad 
+\frac{|r|}{|s_i|} \cdot J\left(M_q, M_{s_i}\right) - \text{efRouting} \geq 0 \notag \\
+&\text{where} \quad J\left(M_q, M_{s_i}\right) = \frac{|M_q \cap M_{s_i}|}{|M_q \cup M_{s_i}|}
+\end{align}
 
+Though this routing strategy is yet untested, we present it here to detail a basic approach that could be modified with experimentation.
+~efRouting~ is considered the threshold at which the performance gain $\frac{|r|}{|s_i|}$ is significant enough that the recall degradation $J\left(M_q, M_{s_i}\right)$ is acceptable.
+(We acknowledge that this routing strategy requires several more phases of conceptual iteration in order to result in meaningful improvement over search in $r$; we present it here as demonstrative of our thinking.)
 
 * Implementation 
 
-OAK is built in approximately 700 lines of Rust.
+OAK is built in approximately 1k lines of Rust.
 We encountered three main engineering challenges, which we now discuss in sections.
 
 ** Bindings
