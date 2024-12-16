@@ -13,9 +13,14 @@ RUN pip install --upgrade pip && \
     pip install -r requirements.txt 
 
 # Download the SIFT dataset
-RUN wget ftp://ftp.irisa.fr/local/texmex/corpus/sift.tar.gz
-RUN tar -xzvf sift.tar.gz
-RUN rm sift.tar.gz
+# RUN wget ftp://ftp.irisa.fr/local/texmex/corpus/sift.tar.gz
+# RUN tar -xzvf sift.tar.gz
+# RUN rm sift.tar.gz
+
+RUN wget ftp://ftp.irisa.fr/local/texmex/corpus/siftsmall.tar.gz
+RUN tar -xzvf siftsmall.tar.gz
+RUN rm siftsmall.tar.gz
+
 
 # Ensure outdir exists
 RUN mkdir -p outdir
