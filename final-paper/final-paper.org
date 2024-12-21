@@ -1,7 +1,7 @@
 #+TITLE: OAK
 #+SUBTITLE: 
 #+AUTHOR: Cedric Sirianni, Mithi Jethwa, Lachlan Kermode
-#+OPTIONS: toc:nil
+#+OPTIONS: num:1
 #+LATEX_CLASS: acmart
 #+LATEX_CLASS_OPTIONS: [sigconf]
 #+LATEX_HEADER: \usepackage{hyperref}
@@ -17,8 +17,6 @@
 Vector databases are growing in popularity as they become widely used in similarity search and RAG (Retrieval Augmented Generation) systems as part of ML workloads.
 Recent work in ACORN helps improve the feasibility of /hybrid search/ by providing a performant and predicate-agnostic index built on Hierarchical Navigable Small Worlds (HNSW), a state-of-the-art graph based index for approximate nearest neighbor search (ANNS).
 This paper presents OAK, a system that improves upon ACORN's performance for certain query loads by routing to subgraph indexes when there are gains to be had.
-To evaluate OAK, we compare OAK to ACORN ... =TODO=. 
-We show that OAK achieves improved performance ... =TODO=. 
 Our code is available on Github [cite:@kermodeBreezykermoOak2024].
 
 * Introduction
@@ -35,7 +33,7 @@ In RAG it is often desirable to perform ANNS with predicates that help to narrow
 Creating separate vector databases for predicates manually and maintaining routing strategies among them is unwieldy and suboptimal in terms of space, as many there may be significant overlap between many of the indexes, and deciding which predicate subgraphs to build manually requires engineering effort and effective observability instrumentation on the part of the vector database client.
 
 Executing *hybrid search*, i.e. vector similarity search results are additionally constrained by unbounded and arbitrary predicates over the set of all possible vectors in a vector database, is therefore an important problem in vector databases, as it relieves the database client of managing this complexity.  
-The performance profile of ANNS becomes more complex when introducing such predicate filtering, however, as will be discussed in Section @@latex:\ref{sec:motivation}@@.
+The performance profile of ANNS becomes more complex when introducing such predicate filtering, however, as will be discussed in [[#motivation][the Motivation Section]] 
 One recent approach, ACORN [cite:@patelACORNPerformantPredicateAgnostic2024], proposes an architecture for a /predicate-agnostic/ ANNS index that addresses some of these performance complexities.
 # Efficient ANNS is a challenging problem when considering multi-million or billion scale datasets.
 # Both NeurIPS'21 [cite:https://big-ann-benchmarks.com/neurips21.html]and NeurIPS'23 [cite:https://big-ann-benchmarks.com/neurips23.html] hosted a competition for billion-scale indexing data structures and search algorithms, showcasing a wide range of solutions that improved search accuracy and efficiency.
@@ -48,7 +46,9 @@ One recent approach, ACORN [cite:@patelACORNPerformantPredicateAgnostic2024], pr
 In this paper, we present *OAK* (Opportunistic ANNS K-Subgraphs), a system that applies ACORN's principle of predicate-agnostic hybrid vector similarity search in a system that offers better performance for certain query loads by maintaining indexes of predicate subgraphs in addition to a base index and intelligently routing to these indexes when there is significant overlap between such an index and a query predicate.
 
 * Research Problem/Motivation
-#+LABEL: sec:motivation
+:PROPERTIES:
+:CUSTOM_ID: motivation 
+:END:
 We now discuss the existing predicate filtering strategies.
 
 /Pre-filtering/ first finds all vectors that satisfy a given predicate and then performs a similarity search on the remaining vectors.
@@ -57,7 +57,7 @@ This approach performs poorly when using medium to high selectivity predicates o
 /Post-filtering/ first performs a similarity search on the dataset, then filters results that do not match the given predicate. 
 Since vectors with the greatest similarity may not satisfy the predicate, this approach sometimes requires searching repeatedly with increasingly large search spaces (top-1k, top-10k, etc.), incurring large amounts of overhead.
 
-/Specialized indexes/ such as Filtered-DiskANN [cite:] use predicates during index construction to eliminate the need for pre- or post-filtering.
+/Specialized indexes/ such as Filtered-DiskANN [cite:@gollapudiFilteredDiskANNGraphAlgorithms2023] use predicates during index construction to eliminate the need for pre- or post-filtering.
 However, these indexes restrict predicate set cardinalities to about 1,000 and only support equality predicates.
 
 Recently, ACORN [cite:@patelACORNPerformantPredicateAgnostic2024] has proposed a /predicate-agnostic/ index which supports unbounded and arbitrary predicates.
@@ -79,7 +79,7 @@ Intelligently routing to supplemental indexes in such cases is the goal of OAK.
 ** Distributed Vector Databases
 Our project began as an attempt to build a distributed vector database.
 Though OAK is not inherently distributed, our learnings from this literature review greatly impacted our decision to build OAK and influenced its design. 
-(We also outline OAK's distributed horizons in Section @@latex:\ref{sec:future}@@.)
+(We also outline OAK's distributed horizons in [[#future][the Future Work Section]].
 This literature is relevant as it introduces the idea of routing each query between a series of choices, and selecting and/or aggregating results.
 
 *** Replication
@@ -135,6 +135,9 @@ Thus ACORN-1 collects exactly $M$ approximate nearest neighbors as candidates ed
 
 
 * Main Design
+:PROPERTIES:
+:CUSTOM_ID: maindesign 
+:END:
 
 The central premise of OAK is to route queries with high-frequency predicates to an /opportunistic index/ constructed using the same or a significantly similar predicate.
 When OAK receives a query $q$ with predicate $p$, sending to an opportunistic index is
@@ -148,7 +151,6 @@ In order to make routing decisions, opportunistic indexes are stored as values i
 Each bitmask/key is constructed over all vectors in the database, so as to provide OAK with an efficient way to consider which vectors exist in available opportunistic indexes.
 
 *** Query routing
-#+LABEL: sec:queryrouting
 The key insight for OAK's routing strategy is that queries can be sent to an opportunistic subindex even if the query bitmask $M_q$ and the subindex bitmask $M_s$ do not wholly overlap.
 $M_x$ denotes a bitmask over OAK's root index $r$ (which contains /all/ vectors in the database, regardless of predicate).
 
@@ -193,7 +195,7 @@ For each vector, if the predicate is true (e.g. year $=$ 2024), the element in t
 The ACORN ~search~ function, by contrast, accepts a ~filter_id_map~ bit mask that is used to filter vectors that do not satisfy the predicate during search.
 
 ** SimilaritySearchable
-The ~SimilaritySearchable~ trait is the mechanism through which OAK clients can easily switch between using OAK's base index $r$, a subindex $s_i$, or an index dynamically selected by way of the routing strategy described in Section @@latex:\ref{sec:queryrouting}@@ to search for similar vectors.
+The ~SimilaritySearchable~ trait is the mechanism through which OAK clients can easily switch between using OAK's base index $r$, a subindex $s_i$, or an index dynamically selected by way of the routing strategy described in [[#maindesign][the Main Design Section]] when searching for similar vectors.
 Each of the structs that represent these three entities implement the ~SimilaritySearchable~ trait.
 
 Structs that implement the trait offer three methods:
@@ -204,20 +206,23 @@ Takes the ~query_vectors~ (multiple are permitted for batch search), an optional
 This method relieves the client of the complexity of generating a predicate bitmask.
 *** ~search_with_bitmask~
 Takes the ~query_vectors~, a ~Bitmask~ (constructed over all available searchable vectors), and a ~topk~ specification.
-This is the method that we evaluate in the next section.
+This is the method that we use primarily for the evaluation as it factors out any time needed for bitmask construction
 
 * Evaluation
 In order to evaluate, we first sought to plot three recall/QPS graphs.
-1. For the root index $r$
-2. For an opportunistic index $s_i$ constructed over $\frac{1}{12}$ of the SIFT_1M dataset [cite:@jegouProductQuantizationNearest2010]. Following the experimentation method in ACORN, we generated a number between 1 and 12 drawn from a uniformly random distribution for each vector in the dataset, allowing us to benchmark it with hybrid search (using the predicate ``equals $x$").
+1. For the root index $r$, modelling ACORN's search
+2. For an opportunistic index $s_i$ constructed over $\frac{1}{12}$ of the dataset.
 3. For search using OAK's routing strategy over a router that consisted of $r$ and six subindexes $s_{1-6}$.
 
-All graphs were to be plotted by first creating the necessary indexes over the one million vectors in SIFT_1M, and then using the 10K vectors in the provided query set with a singular query predicate, i.e. ``equals $5$".  
+We chose to evaluate against the SIFT10k dataset [cite:@jegouProductQuantizationNearest2010] as it is one of the most widely used ANN benchmarks and was used to evaluate ACORN. Following the experimentation method in ACORN, we generated a number between 1 and 12 drawn from a uniformly random distribution for each vector in the dataset, allowing us to benchmark it with hybrid search (using the predicate ``equals $x$"). We also construct a groundtruth by comparing the results of the original groundtruth vectors and choosing the nearest neighbor that satisfies the query predicate.
+
+All graphs were to be plotted by first creating the necessary indexes over the one million vectors in SIFT_10K with the query predicate chosen, and then using the 100 vectors in the provided query set to search for the top-10 nearest neighbors in the dataset with a singular query predicate, i.e. ``equals $1$". We measure the latency at the individual query level and compute queries per millisecond to compare throughput across the 3 strategies. Here, we primarily discuss the tradeoffs between ACORN and directly sending to the opportunistic index responsible for the query predicate (marked SUB for subdataset). We map this against the Recall@10 which measures the accuracy of the search results by checking if the nearest neighbor matching the query predicate (from the groundtruth) is present in the top-10 vectors yielded from the 3 search methods. The recall is a value between 0 and 1 indicating the percentage of queries where the groundtruth value was found in the search results.
+
 Though this experiment is contrived in a way that does not adequately put OAK's routing strategy to test (as all $M_q$ will either be a perfect subset of an $M_{s_i}$ or will have no overlap), we hoped that these initial experiments would at least show that there are potential performance gains to be had from routing to subindexes, and that the basic overhead of OAK's routing layer is not prohibitive of these gains.
 
 Due to the amount of time that we spent investigating the plausibility of distributing a vector database and getting OAK off the ground, however, we were unable to run these experiments meaningfully this semester.
 In an ideal world, we would have run both this set of basic experiments, as well as benchmarks on hybrid search datasets that are /not/ uniformly distributed such as TripClick [cite:@rekabsazTripClickLogFiles2021] and LAION [cite:@schuhmannLAION400MOpenDataset2021]. 
-Despite the very limited evaluation that we had time to run, we are encouraged by the very preliminary result that at least confirms that smaller indexes provide improved search latency.
+Despite the very limited evaluation that we had time to run, we are encouraged by the very preliminary result that at least confirms that searching over smaller indexes, keeping the rest of the search parameters constant, provide improved search latency.
 Querying a randomly generated vector in SIFT_1M produces the following latencies:
 
 \begin{table}[h!]
@@ -228,21 +233,38 @@ Search strategy & Latency \\
 \hline
 $r$ & 2.091142ms \\
 $s_i$ & 536.498µs \\
-oak($r$ + $s_{1-6}$) & X \\
 \hline
 \end{tabular}
 \caption{Table of search strategies and latency}
 \end{table}
 
+Using a consistent query predicate, we calculated the recall and measured the throughput of 100 queries to produce the following results:
+
+#+ATTR_LATEX: :width 0.45\textwidth :align c
+[[./figures/latency_throughput_plot.png]]
+
+Here, we primarily discuss the tradeoffs between ACORN and directly sending to the opportunistic index responsible for the query predicate (marked SUB for subdataset).
+The above figure marks the results from the SIFT10K dataset.
+Since the dataset is small, both methods are able to reach near-perfect recall@10 scores.
+However, since ACORN's search searches over the dataset of 10k base vectors it takes comparatively longer on each query than the opportunistic index, allowing the opportunistic index to serve ~3.5x more queries.
+This is likely to scale further as the size of the base vectors grows providing performance gains for predicate search.
+The discrepancy in recall@10 (from 1 for ACORN to 0.97 for the opportunistic index) is unclear since the opportunistic index should create a view over all the base vectors that satisfy the single predicate that we use for query searching.
+We weren't able to pin down an exact cause but we made sure that the opportunistic index consisted of all the vectors matching the query predicate and no more.
+Theoretically, for a query predicate that eaxctly matches the opportunistic index's mask, all the nearest neighbors would be contained in the index and running a normal ANNS search over the smaller subset would yield equivalent recall and higher throughput (and subsequently lower latencies).
+
+The OAK results shown (with both lower recall and lower throughput) is as expected, as there is some overhead from the routing logic, and it appears that the scale of our experiments is not large enough for this overhead to be offset by the better latency of subindexes.
+
 
 * Future Work
-#+LABEL: sec:future
+:PROPERTIES:
+:CUSTOM_ID: future 
+:END:
 
 OAK has many opportunities for future work.
 
 *** Better experimentation
 First and foremost, a continuation of this work would run a reasonable set of experiments to validate OAK's basic premise and routing strategy.
-Due to early failures in experimentation, as well as bugs in OAK's API logic that we uncovered through these experiments, we were unable to run a full enough suite of tests to get a read on at what order of magnitude and for which query distributions the overhead cost of OAK's routing heuristic would become significantly beneficial. 
+Due to early failures in experimentation, as well as bugs in OAK's API logic that we uncovered through these experiments, we were unable to run a full enough suite of tests to get a read on at what order of magnitude and for which query distributions the overhead cost of OAK's routing heuristic would become significantly beneficial. Concretely, OAK can be tested on query and base vector sets with non-uniform distributions of predicates to measure tradeoffs and finetune the routing strategy. Further, the use of opportunistic indices can be even more pronounced with larger datasets. We struggled to construct indices for SIFT1M and would  need to provision hardware to be able to run billion-scale datasets. 
 
 *** Dynamic index construction 
 Right now, OAK constructs indexes only once and before queries are dispatched.
@@ -269,7 +291,7 @@ Though the concepts and talking points for the presentation were discussed and d
 Mithi implemented the majority of the experimentation harness, as well as the graph generation code.
 Lachlan conceived and implemented OAK's routing logic (and is solely responsible for any senselessness it contains).
 Mithi and Lachlan worked together debug OAK's results in the experiment harness, as initially the incorrect indices were being returned (indices over subindexes used, rather than indexes in the global search space), which resulted in incorrect recall statistics for both OAK and subindexes.
-Cedric drafted and was chief editor for the final paper, though it was collectively edited and written.
+Cedric drafted the final paper, but is was edited and written by all three of us.
 
 * Bibliography
 

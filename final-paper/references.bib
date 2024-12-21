@@ -90,6 +90,24 @@
   howpublished = {Meta Research}
 }
 
+@inproceedings{gollapudiFilteredDiskANNGraphAlgorithms2023,
+  title = {Filtered-{{DiskANN}}: {{Graph Algorithms}} for {{Approximate Nearest Neighbor Search}} with {{Filters}}},
+  shorttitle = {Filtered-{{DiskANN}}},
+  booktitle = {Proceedings of the {{ACM Web Conference}} 2023},
+  author = {Gollapudi, Siddharth and Karia, Neel and Sivashankar, Varun and Krishnaswamy, Ravishankar and Begwani, Nikit and Raz, Swapnil and Lin, Yiyong and Zhang, Yin and Mahapatro, Neelam and Srinivasan, Premkumar and Singh, Amit and Simhadri, Harsha Vardhan},
+  year = {2023},
+  month = apr,
+  series = {{{WWW}} '23},
+  pages = {3406--3416},
+  publisher = {Association for Computing Machinery},
+  address = {New York, NY, USA},
+  doi = {10.1145/3543507.3583552},
+  urldate = {2024-12-16},
+  abstract = {As Approximate Nearest Neighbor Search (ANNS)-based dense retrieval becomes ubiquitous for search and recommendation scenarios, efficiently answering filtered ANNS queries has become a critical requirement. Filtered ANNS queries ask for the nearest neighbors of a query's embedding from the points in the index that match the query's labels such as date, price range, language. There has been little prior work on algorithms that use label metadata associated with vector data to build efficient indices for filtered ANNS queries. Consequently, current indices have high search latency or low recall which is not practical in interactive web-scenarios. We present two algorithms with native support for faster and more accurate filtered ANNS queries: one with streaming support, and another based on batch construction. Central to our algorithms is the construction of a graph-structured index which forms connections not only based on the geometry of the vector data, but also the associated label set. On real-world data with natural labels, both algorithms are an order of magnitude or more efficient for filtered queries than the current state of the art algorithms. The generated indices also be queried from an SSD and support thousands of queries per second at over recall@10.},
+  isbn = {978-1-4503-9416-1},
+  file = {/home/alice/apps/Zotero/storage/HNSAFNM7/Gollapudi et al. - 2023 - Filtered-DiskANN Graph Algorithms for Approximate Nearest Neighbor Search with Filters.pdf}
+}
+
 @misc{gottesburenUnleashingGraphPartitioning2024,
   title = {Unleashing {{Graph Partitioning}} for {{Large-Scale Nearest Neighbor Search}}},
   author = {Gottesb{\"u}ren, Lars and Dhulipala, Laxman and Jayaram, Rajesh and Lacki, Jakub},
